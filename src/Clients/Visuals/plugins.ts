@@ -314,4 +314,10 @@ module powerbi.visuals.plugins {
         capabilities: samples.StreamGraph.capabilities,
         create: () => new samples.StreamGraph()
     };
+    
+    export var radarChart: IVisualPlugin = {
+        name: 'radarChart',
+        capabilities: RadarChart.capabilities,
+        create: () => new RadarChart()
+    };
 }
