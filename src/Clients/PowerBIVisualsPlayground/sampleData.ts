@@ -40,6 +40,7 @@ module powerbi.visuals.sampleData {
             new sampleDataViews.RichtextData(),
             new sampleDataViews.SalesByCountryData(),
             new sampleDataViews.SalesByDayOfWeekData(),
+            new sampleDataViews.ServicesByUsers(),
             new sampleDataViews.SimpleFunnelData(),
             new sampleDataViews.SimpleGaugeData(),
             new sampleDataViews.SimpleMatrixData(),

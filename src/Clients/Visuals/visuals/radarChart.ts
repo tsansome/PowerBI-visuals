@@ -32,8 +32,7 @@ module powerbi.visuals {
  
     export interface RadarDatapoint {
         color: string;
-        sliceHeight: number;
-        sliceWidth: number;
+        value: number;
         label: string;
         selector: SelectionId;
         tooltipInfo: TooltipDataItem[];
@@ -77,321 +76,353 @@ module powerbi.visuals {
                             type: { fill: { solid: { color: true } } }
                         }
                     }
-                },
-                outerLine: {
-                    displayName: 'Outer line',
-                    properties: {
-                        show: {
-                            displayName: 'Show',
-                            type: { bool: true }
-                        },
-                        thickness: {
-                            displayName: 'Thickness',
-                            type: { numeric: true }
-                        }
-                    }
                 }
             }
         };
 
         private static VisualClassName = 'RadarChart';
-        private static RadarSlice: ClassAndSelector = {
-            class: 'radarSlice',
-            selector: '.radarSlice'
-        };
         
-        private static OuterLine: ClassAndSelector = {
-            class: 'outerLine',
-            selector: '.outerLine'
+        private static Segments: ClassAndSelector = {
+            class: 'segments',
+            selector: '.segments'
         };
 
-        private svg: D3.Selection;
+        private static SegmentNode: ClassAndSelector = {
+            class: 'segmentNode',
+            selector: '.segmentNode'
+        };
+                
+        
+        private static Axis: ClassAndSelector = {
+            class: 'axis',
+            selector: '.axis'
+        };
+
+        private static AxisNode: ClassAndSelector = {
+            class: 'axisNode',
+            selector: '.axisNode'
+        };
+
+        private static AxisLabel: ClassAndSelector = {
+            class: 'axisLabel',
+            selector: '.axisLabel'
+        };
+                
+        
+        private static Chart: ClassAndSelector = {
+            class: 'chart',
+            selector: '.chart'
+        };
+
+        private static ChartNode: ClassAndSelector = {
+            class: 'chartNode',
+            selector: '.chartNode'
+        };
+
+        private static ChartPoint: ClassAndSelector = {
+            class: 'chartPoint',
+            selector: '.chartPoint'
+        };
+
+        private root: D3.Selection;
+        private segments: D3.Selection;
+        private axis: D3.Selection;
+        private chart: D3.Selection;
+        
         private mainGroupElement: D3.Selection;
-        private centerText: D3.Selection;
         private colors: IDataColorPalette;
         private selectionManager: SelectionManager;
         private dataView: DataView;
+        private viewport: IViewport;
 
-        public static converter(dataView: DataView, colors: IDataColorPalette): RadarDatapoint[] {
-            var catDv: DataViewCategorical = dataView.categorical;
-            var cat = catDv.categories[0];
-            var catValues = cat.values;
-            var values = catDv.values;
-            var dataPoints: RadarDatapoint[] = [];
+        private margin: IMargin;
+        
+        private SEGMENT_LEVELS: number = 6;
+        private SEGMENT_FACTOR: number = 1;
+        private RADIANS: number = 2 * Math.PI;
+        private SCALE: number = 1;
+        private angle: number;
+        private radius: number;
+        
+        private static createDataPoints(values, categories: DataViewCategoricalColumn, maxScore): RadarDatapoint[] {
+            
+            return values.map((value, i) => {
+                
+                const max = Math.max(value, 0);
+                const score = max / maxScore;
 
-            var formatStringProp = <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' };
-            var categorySourceFormatString = valueFormatter.getFormatString(cat.source, formatStringProp);
-
-            for (var i = 0, len = catValues.length; i < len; i++) {
-                var formattedCategoryValue = valueFormatter.format(catValues[i], categorySourceFormatString);
-
-                var tooltipInfo: TooltipDataItem[] = TooltipBuilder.createTooltipInfo(
-                    formatStringProp,
-                    catDv.categories, formattedCategoryValue,
-                    values,
-                    values[0].values[i],
-                    null,
-                    0);
-
-                if (values.length > 1) {
-                    var toolTip = TooltipBuilder.createTooltipInfo(
-                        formatStringProp,
-                        catDv.categories, formattedCategoryValue,
-                        values,
-                        values[1].values[i],
-                        null,
-                        1)[1];
-                    if (toolTip) {
-                        tooltipInfo.push(toolTip);
-                    }
-                }
-
-                dataPoints.push({
-                    sliceHeight: values[0].values[i],
-                    sliceWidth: values.length > 1 ? values[1].values[i] : 1,
-                    label: catValues[i],
+                return {
+                    color: "white",
+                    value: value,
+                    score: score,
+                    label: categories.values[i],
+                    selector: '.value',
+                    tooltipInfo: []
+                };
+            });            
+        }
+        
+        public static converter(dataView: DataView, colors: IDataColorPalette) {
+            let catDv: DataViewCategorical = dataView.categorical;
+            let categories: DataViewCategoricalColumn = catDv.categories[0];
+            
+            const maxScore = d3.max(dataView.categorical.values, item => {
+                return d3.max(item.values); 
+            });
+              
+            let series = dataView.categorical.values.map((item, i) => {
+                
+                let dataPoints: RadarDatapoint[] = this.createDataPoints(item.values, categories, maxScore);
+                
+                return {
+                    displayName: item.source.displayName,
                     color: colors.getColorByIndex(i).value,
-                    selector: SelectionId.createWithId(cat.identity[i]),
-                    tooltipInfo: tooltipInfo
-                });
-            }
-
-            return dataPoints;
+                    data: dataPoints,
+                    //identity: identity,
+                    selected: false,
+                };                
+            });
+            
+            return {
+                categories: categories.values,
+                values: series
+            };
         }
 
         public init(options: VisualInitOptions): void {
-            var element = options.element;
+            let element = options.element;
             this.selectionManager = new SelectionManager({ hostServices: options.host });
-            var svg = this.svg = d3.select(element.get(0))
+
+            this.root = d3.select(element.get(0))
                 .append('svg')
                 .classed(RadarChart.VisualClassName, true);
 
+            this.margin = {
+                top: 50,
+                right: 100,
+                bottom: 50,
+                left: 100
+            };
+
             this.colors = options.style.colorPalette.dataColors;
-            this.mainGroupElement = svg.append('g');
-            this.centerText = this.mainGroupElement.append('text');
+            this.mainGroupElement = this.root.append('g');
+            
+            this.segments = this.mainGroupElement
+                .append('g')
+                .classed(RadarChart.Segments.class, true);
+
+            this.axis = this.mainGroupElement
+                .append('g')
+                .classed(RadarChart.Axis.class, true);
+
+            this.chart = this.mainGroupElement
+                .append('g')
+                .classed(RadarChart.Chart.class, true);
         }
 
         public update(options: VisualUpdateOptions) {
-            if (!options.dataViews || !options.dataViews[0]) return; // or clear the view, display an error, etc.
-            
-            var dataView = this.dataView = options.dataViews[0];
-            var dataPoints = RadarChart.converter(dataView, this.colors);
-            var duration = options.suppressAnimations ? 0 : AnimatorCommon.MinervaAnimationDuration;
-            var viewport = options.viewport;
+            if (!options.dataViews || !options.dataViews[0]) return;
+            let dataView = this.dataView = options.dataViews[0];
+            let dataPoints = RadarChart.converter(dataView, this.colors);
+            let viewport = this.viewport = options.viewport;
 
-            this.svg
+            this.root
                 .attr({
                     'height': viewport.height,
                     'width': viewport.width
-                })
-                .on('click', () => this.selectionManager.clear().then(() => selection.style('opacity', 1)));
+                });
 
-            var width = viewport.width;
-            var height = viewport.height;
-            var radius = Math.min(width, height) / 2;
-            var innerRadius = 0.3 * radius;
-
-            var mainGroup = this.mainGroupElement;
-
-            mainGroup.attr('transform', SVGUtil.translate(width / 2, height / 2));
-
-            var maxScore = d3.max(dataPoints, d => d.sliceHeight);
-            var totalWeight = d3.sum(dataPoints, d => d.sliceWidth);
-
-            var pie = d3.layout.pie()
-                .sort(null)
-                .value(d => d.sliceWidth / totalWeight);
-
-            var arc = d3.svg.arc()
-                .innerRadius(innerRadius)
-                .outerRadius(d => (radius - innerRadius) * (d.data.sliceHeight / maxScore) + innerRadius);
-
-            var selectionManager = this.selectionManager;
-
-            var selection = mainGroup.selectAll(RadarChart.RadarSlice.selector)
-                .data(pie(dataPoints));
-
-            selection.enter()
-                .append('path')
-                .attr('stroke', '#333')
-                .classed(RadarChart.RadarSlice.class, true);
-
-            selection
-                .on('click', function (d) {
-                    selectionManager.select(d.data.selector).then((ids) => {
-                        if (ids.length > 0) {
-                            selection.style('opacity', 0.5);
-                            d3.select(this).style('opacity', 1);
-                        } else {
-                            selection.style('opacity', 1);
-                        }
-                    });
-                    d3.event.stopPropagation();
-                })
-                .attr('fill', d => d.data.color)
-                .transition().duration(duration)
-                .attr('d', arc);
-
-            selection.exit().remove();
-
-            this.drawCircularSegments(viewport);            
-            //this.drawCenterText(innerRadius);
-            //this.drawOuterLine(innerRadius, radius, pie(dataPoints));
-            //TooltipManager.addTooltip(selection, (tooltipEvent: TooltipEvent) => tooltipEvent.data.data.tooltipInfo);
-        }
-        
-        private drawCircularSegments(viewport: IViewport) {
             let mainGroup = this.mainGroupElement;
-            let levels = 6;
-            let factor = 1;
-            let radians = 2 * Math.PI;
-            let width = viewport.height;
-            let height = viewport.width;
-            let radius = factor * Math.min(width / 2, height / 2);
+            mainGroup.attr('transform', SVGUtil.translate(viewport.width / 2, viewport.height / 2));
+
+            let width: number = viewport.width - this.margin.left - this.margin.right;
+            let height: number = viewport.height - this.margin.top - this.margin.bottom;
             
+            this.angle = this.RADIANS / dataPoints.categories.length;
+            this.radius = this.SEGMENT_FACTOR * this.SCALE * Math.min(width, height) / 2;
+                                
+            this.drawCircularSegments(dataPoints.categories);
+            this.drawAxes(dataPoints.categories);
+            this.drawAxesLabels(dataPoints.categories);
+            this.drawChart(dataPoints.values);
+        }
+        
+        private drawCircularSegments(dataPoints) {
+  
+            const angle: number = this.angle,
+                factor: number = this.SEGMENT_FACTOR, 
+                levels: number = this.SEGMENT_LEVELS,
+                radius: number  = this.radius;
+ 
+            let selection:D3.Selection = this.mainGroupElement
+                                .select(RadarChart.Segments.selector)
+                .selectAll(RadarChart.SegmentNode.selector);
+           
+            let data = [];
+           
+            for (let level = 0; level < levels - 1; level++) {
+                const levelFactor: number = radius * ((level + 1) / levels);
+                const transform: number = -1 * levelFactor;
+
+                for (let i = 0; i < dataPoints.length; i++) {
+                    data.push({
+                        x1: levelFactor * (1 - factor * Math.sin(i * angle)),
+                        y1: levelFactor * (1 - factor * Math.cos(i * angle)),
+                        x2: levelFactor * (1 - factor * Math.sin((i + 1) * angle)),
+                        y2: levelFactor * (1 - factor * Math.cos((i + 1) * angle)),
+                        translate: `translate(${transform},${transform})`
+                    });
+                   
+                }
+            }  
+
+            let segments = selection.data(data);
+            segments
+                .enter()
+                .append("svg:line");
+            segments
+                .attr("x1", item => item.x1)
+                .attr("y1", item => item.y1)
+                .attr("x2", item => item.x2)
+                .attr("y2", item => item.y2)
+                .attr("class", "line")
+                .style("stroke", "grey")
+                .style("stroke-opacity", "0.75")
+                .style("stroke-width", "0.3px")
+                .attr("transform", item => item.translate)
+                .classed(RadarChart.SegmentNode.class, true);
+        }       
+                
+        private drawAxes(dataPoints) {
+
+            const angle: number = this.angle,
+                radius: number = this.radius;
+
+            let selection: D3.Selection = this.mainGroupElement
+                .select(RadarChart.Axis.selector)
+                .selectAll(RadarChart.AxisNode.selector);
+                
+            let axis = selection.data(dataPoints);
+     
+            axis
+                .enter()
+                .append("svg:line");
+            axis
+                .attr("label", item => item)
+                .attr("x1", 0)
+                .attr("y1", 0)
+                .attr("x2", (name, i) => radius * Math.sin(i * angle))
+                .attr("y2", (name, i) => radius * Math.cos(i * angle))
+                .attr("class", "line")
+                .style("stroke", "grey")
+                .style("stroke-width", "1px")
+                .classed(RadarChart.AxisNode.class, true);
+                
+            axis.exit().remove();
+        }    
+                
+        private drawAxesLabels(dataPoints) {
+
+            const angle: number = this.angle,
+                radius: number = this.radius;
+
+            let selection: D3.Selection = this.mainGroupElement
+                .select(RadarChart.Axis.selector)
+                .selectAll(RadarChart.AxisLabel.selector);
+                
+            let labels = selection.data(dataPoints);     
+
+            labels
+                .enter()
+                .append("svg:text");
+
+            labels
+                .attr("class", "legend")
+                .style("font-family", "sans-serif")
+                .style("font-size", "11px")
+                .attr("text-anchor", "middle")
+                .attr("dy", "1.5em")
+                .attr("transform", "translate(0, -10)")
+                .attr("x", (name, i) => {
+                    return radius * Math.sin(i * angle) + 20 * Math.sin(i * angle);
+                })
+                .attr("y", (name, i) => {
+                    return radius * Math.cos(i * angle) + 10 * Math.cos(i * angle);
+                })
+                .text(item => item)
+                .classed(RadarChart.AxisLabel.class, true);
+                
+            labels.exit().remove();
+        }
+        
+        private drawChart(dataPoints) {
+
+            const angle: number = this.angle,
+                radius: number = this.radius,
+                opacity: number = .5,
+                circleRadius = 5;
             
-            let allAxis = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];//(d[0].map(function(i, j) { return i.axis }));
-            let total = allAxis.length + 1;
-            //Circular segments
-            for (let j = 0; j < levels - 1; j++) {
-                var levelFactor = factor * radius * ((j + 1) / levels);
-                var outerLine = mainGroup.selectAll(RadarChart.OuterLine.selector);
-                outerLine
-                    .data(allAxis)
+            let selection: D3.Selection = this.mainGroupElement
+                .select(RadarChart.Chart.selector);
+
+            dataPoints.forEach((dataPoint, i) => {
+                let data:any[] = dataPoint.data;
+                const color: string = dataPoint.color;
+                
+                data.forEach((value, i) => {
+                    value.x = value.score * radius * Math.sin(i * angle);
+                    value.y = value.score * radius * Math.cos(i * angle);
+                });
+                
+                let chart = selection
+                            .selectAll(RadarChart.ChartNode.selector + '-' + i)
+                            .data([data]);
+                chart
                     .enter()
-                    .append("svg:line")
-                    .attr("x1", (d, i) => levelFactor * (1 - factor * Math.sin(i * radians / total)))
-                    .attr("y1", (d, i) => levelFactor * (1 - factor * Math.cos(i * radians / total)))
-                    .attr("x2", (d, i) => levelFactor * (1 - factor * Math.sin((i + 1) * radians / total)))
-                    .attr("y2", (d, i) => levelFactor * (1 - factor * Math.cos((i + 1) * radians / total)))
-                    .attr("class", "line")
-                    .style("stroke", "grey")
-                    .style("stroke-opacity", "0.75")
-                    .style("stroke-width", "0.3px")
-                    .attr("transform", "translate(" + (width / 2 - levelFactor) + ", " + (height / 2 - levelFactor) + ")");
-            }
-        }        
-/*
-        private drawOuterLine(innerRadius: number, radius: number, data) {
-            var mainGroup = this.mainGroupElement;
-            var outlineArc = d3.svg.arc()
-                .innerRadius(innerRadius)
-                .outerRadius(radius);
-            if (this.getShowOuterline(this.dataView)) {
-                var outerLine = mainGroup.selectAll(RadarChart.OuterLine.selector).data(data);
-                outerLine.enter().append('path');
-                outerLine.attr("fill", "none")
-                    .attr({
-                        'stroke': '#333',
-                        'stroke-width': this.getOuterThickness(this.dataView) + 'px',
-                        'd': outlineArc
+                    .append("polygon");
+                chart
+                    .style("stroke-width", "2px")
+                    .style("stroke", color)
+                    .attr("points", value => {
+                        return value.map(point => `${point.x},${point.y}`).join(' ');
                     })
-                    .style('opacity', 1)
-                    .classed(RadarChart.OuterLine.class, true);
-            } else {
-                mainGroup.selectAll(RadarChart.OuterLine.selector).style('opacity', 0);
-            }
-        }*/
- /*
-        private getCenterText(dataView: DataView) {
-            var columns = dataView.metadata.columns;
-            for (var i = 0; i < columns.length; i++) {
-                if (!columns[i].isMeasure) {
-                    return columns[i].displayName;
-                }
-            }
+                    .style("fill", color)
+                    .style("fill-opacity", opacity)
+                    .classed(RadarChart.ChartNode.class + '-' + i, true)
+                    .on('mouseover', function() {
+                        let z = "polygon." + d3.select(this).attr("class");
+                        selection.selectAll("polygon")
+                            .transition()
+                            .duration(200)
+                            .style("fill-opacity", 0.1);
+                        selection.selectAll(z)
+                            .transition()
+                            .duration(200)
+                            .style("fill-opacity", .7);
+                    })
+                    .on('mouseout', function() {
+                        selection.selectAll("polygon")
+                            .transition()
+                            .duration(200)
+                            .style("fill-opacity", opacity);
+                    });
+                chart.exit().remove();
 
-            return '';
+                let points = selection
+                            .selectAll(RadarChart.ChartPoint.selector + '-' + i)
+                            .data(data);
+                points
+                    .enter()
+                    .append("svg:circle");
+                points
+                    .attr("r", circleRadius)
+                    .attr("cx", point => point.x)
+                    .attr("cy", point => point.y)
+                    .style("fill", color)
+                    .classed(RadarChart.ChartPoint.class + '-' + i, true);
+                 
+                points.exit().remove();
+            });
         }
-        
-        
-        private drawCenterText(innerRadius: number) {
-            var text = this.getCenterText(this.dataView);
-
-            this.centerText
-                .style({
-                    'line-height': 1,
-                    'font-weight': 'bold',
-                    'font-size': innerRadius * 0.4 + 'px',
-                    'fill': this.getLabelFill(this.dataView).solid.color
-                })
-                .attr({
-                    'dy': '0.35em',
-                    'text-anchor': 'middle'
-                })
-                .text(text);
-        }*/
-/*
-        private getShowOuterline(dataView: DataView): boolean {
-            if (dataView && dataView.metadata.objects) {
-                var outerLine = dataView.metadata.objects['outerLine'];
-                if (outerLine) {
-                    return <boolean>outerLine['show'];
-                }
-            }
-
-            return false;
-        }
-
-        private getOuterThickness(dataView: DataView): number {
-            if (dataView && dataView.metadata.objects) {
-                var outerLine: DataViewObject = dataView.metadata.objects['outerLine'];
-                if (outerLine) {
-                    var thickness = <number>outerLine['thickness'];
-                    if (thickness !== undefined) {
-                        return thickness;
-                    }
-                }
-            }
-
-            return 1;
-        }
-
-        // This extracts fill color of the label from the DataView
-        private getLabelFill(dataView: DataView): Fill {
-            if (dataView && dataView.metadata.objects) {
-                var label = dataView.metadata.objects['label'];
-                if (label) {
-                    return <Fill>label['fill'];
-                }
-            }
-
-            return { solid: { color: '#333' } };
-        }
-        /*
-        // This function retruns the values to be displayed in the property pane for each object.
-        // Usually it is a bind pass of what the property pane gave you, but sometimes you may want to do
-        // validation and return other values/defaults
-        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] {
-            var instances: VisualObjectInstance[] = [];
-            switch (options.objectName) {
-                case 'label':
-                    var label: VisualObjectInstance = {
-                        objectName: 'label',
-                        displayName: 'Label',
-                        selector: null,
-                        properties: {
-                            fill: this.getLabelFill(this.dataView)
-                        }
-                    };
-                    instances.push(label);
-                    break;
-                case 'outerLine':
-                    var outerLine: VisualObjectInstance = {
-                        objectName: 'outerLine',
-                        displayName: 'Outer Line',
-                        selector: null,
-                        properties: {
-                            show: this.getShowOuterline(this.dataView),
-                            thickness: this.getOuterThickness(this.dataView)
-                        }
-                    };
-                    instances.push(outerLine);
-                    break;
-            }
-
-            return instances;
-        }
-        */
     }
 }
