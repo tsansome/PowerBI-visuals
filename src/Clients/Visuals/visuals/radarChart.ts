@@ -170,7 +170,7 @@ module powerbi.visuals {
                 return d3.max(item.values); 
             });
               
-            let series = dataView.categorical.values.map((item, i) => {
+            let values = dataView.categorical.values.map((item, i) => {
                 
                 let dataPoints: RadarDatapoint[] = this.createDataPoints(item.values, categories, maxScore);
                 
@@ -185,7 +185,7 @@ module powerbi.visuals {
             
             return {
                 categories: categories.values,
-                values: series
+                values: values
             };
         }
 
