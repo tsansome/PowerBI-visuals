@@ -48,7 +48,7 @@ module powerbi.visuals.sampleDataViews {
 
         public getDataViews(): DataView[] {
 
-            let fieldExpr = powerbi.data.SQExprBuilder.fieldDef({ schema: 's', entity: "table1", column: "country" });
+            let fieldExpr = powerbi.data.SQExprBuilder.fieldExpr({ column: { schema: 's', entity: "table1", name: "country" } });
 
             const categoryValues = ["Email", "Social Networks", "Internet Banking", "News Sportsites", "Search Engine", 
                 "View Shopping sites", "Paying Online", "Buy Online", "Online Gaming", "Offline Gaming", "Photo Video",
