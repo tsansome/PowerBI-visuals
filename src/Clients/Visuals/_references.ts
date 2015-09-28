@@ -29,41 +29,11 @@
 
 /// <reference path="iVisual.ts"/>
 
-/// <reference path="geocodingManager.ts"/>
-/// <reference path="legend.ts"/>
-
 /// <reference path="animators/animatorCommon.ts"/>
 /// <reference path="animators/columnChartAnimator.ts"/>
 /// <reference path="animators/donutChartAnimator.ts"/>
 /// <reference path="animators/funnelChartAnimator.ts"/>
 /// <reference path="animators/treemapAnimator.ts"/>
-
-/// <reference path="capabilities/animatedNumber.capabilities.ts"/>
-/// <reference path="capabilities/basicShape.capabilities.ts"/>
-/// <reference path="capabilities/columnChart.capabilities.ts"/>
-/// <reference path="capabilities/comboChart.capabilities.ts"/>
-/// <reference path="capabilities/donutChart.capabilities.ts"/>
-/// <reference path="capabilities/dataDotChart.capabilities.ts"/>
-/// <reference path="capabilities/filledMap.capabilities.ts"/>
-/// <reference path="capabilities/funnelChart.capabilities.ts"/>
-/// <reference path="capabilities/gauge.capabilities.ts"/>
-/// <reference path="capabilities/imageVisual.capabilities.ts"/>
-/// <reference path="capabilities/samples/consoleWriter.capabilities.ts"/>
-/// <reference path="visuals/samples/consoleWriter.ts"/>
-/// <reference path="capabilities/lineChart.capabilities.ts"/>
-/// <reference path="capabilities/map.capabilities.ts"/>
-/// <reference path="capabilities/multiRowCard.capabilities.ts"/>
-/// <reference path="capabilities/richTextbox.capabilities.ts"/>
-/// <reference path="capabilities/sampleVisual.capabilities.ts"/>
-/// <reference path="capabilities/scatterChart.capabilities.ts"/>
-/// <reference path="capabilities/playChart.capabilities.ts"/>
-/// <reference path="capabilities/slicer.capabilities.ts"/>
-/// <reference path="capabilities/table.capabilities.ts"/>
-/// <reference path="capabilities/matrix.capabilities.ts"/>
-/// <reference path="capabilities/treemap.capabilities.ts"/>
-/// <reference path="capabilities/card.capabilities.ts"/>
-/// <reference path="capabilities/waterfallChart.capabilities.ts"/>
-/// <reference path="pluginsCapabilities.ts"/>
 
 /// <reference path="behaviours/columnChartBehaviors.ts"/>
 /// <reference path="behaviours/dataDotChartBehavior.ts"/>
@@ -79,7 +49,6 @@
 
 /// <reference path="contracts/contracts.ts"/>
 
-/// <reference path="common/aspectRatioHelper.ts"/>
 /// <reference path="common/axisHelper.ts"/>
 /// <reference path="common/basicShapeUtils.ts"/>
 /// <reference path="common/cartesianHelper.ts"/>
@@ -88,8 +57,8 @@
 /// <reference path="common/converterHelper.ts"/>
 /// <reference path="common/dataLabelUtils.ts"/>
 /// <reference path="common/dataRoleHelper.ts"/>
-/// <reference path="common/kpiUtil.ts"/>
 
+/// <reference path="common/interactionFactory.ts"/>
 /// <reference path="common/invalidDataValuesChecker.ts"/>
 /// <reference path="common/listView.ts"/>
 /// <reference path="common/selectionId.ts"/>
@@ -100,7 +69,6 @@
 /// <reference path="common/urlHelper.ts"/>
 /// <reference path="common/gradientHelper.ts"/>
 /// <reference path="common/visualBackgroundHelper.ts"/>
-/// <reference path="common/objectEnumerationBuilder.ts"/>
 
 /// <reference path="formatting/dataLabelManager.ts"/>
 /// <reference path="formatting/dateTimeSequence.ts"/>
@@ -131,44 +99,82 @@
 
 /// <reference path="visuals/animatedText.ts"/>
 /// <reference path="visuals/animatedNumber.ts"/>
+/// <reference path="capabilities/animatedNumber.capabilities.ts"/>
 
 /// <reference path="visuals/basicShape.ts"/>
+/// <reference path="capabilities/basicShape.capabilities.ts"/>
 
 /// <reference path="cartesian/cartesianChart.ts"/>
 
+/// <reference path="capabilities/columnChart.capabilities.ts"/>
 /// <reference path="cartesian/columnChart.ts"/>
 /// <reference path="cartesian/columnChartClustered.ts"/>
 /// <reference path="cartesian/columnChartStacked.ts"/>
+/// <reference path="capabilities/columnChart.capabilities.ts"/>
 /// <reference path="visuals/samples/helloIVisual.ts"/>
 /// <reference path="visuals/samples/asterPlot.ts"/>
 
+/// <reference path="capabilities/comboChart.capabilities.ts"/>
 /// <reference path="cartesian/comboChart.ts"/>
 
 /// <reference path="dataColorPalette.ts"/>
 
+/// <reference path="capabilities/donutChart.capabilities.ts"/>
 /// <reference path="cartesian/dataDotChart.ts"/>
+/// <reference path="capabilities/dataDotChart.capabilities.ts"/>
+
+/// <reference path="capabilities/filledMap.capabilities.ts"/>
+/// <reference path="capabilities/funnelChart.capabilities.ts"/>
 /// <reference path="visuals/funnelChart.ts"/>
 /// <reference path="visuals/gauge.ts"/>
+/// <reference path="capabilities/gauge.capabilities.ts"/>
 /// <reference path="visuals/imageVisual.ts"/>
+/// <reference path="capabilities/imageVisual.capabilities.ts"/>
+
+/// <reference path="capabilities/samples/consoleWriter.capabilities.ts"/>
+/// <reference path="visuals/samples/consoleWriter.ts"/>
+
 /// <reference path="iVisualStyle.ts"/>
 
+/// <reference path="capabilities/lineChart.capabilities.ts"/>
 /// <reference path="cartesian/lineChart.ts"/>
 
+/// <reference path="GeocodingManager.ts"/>
+/// <reference path="legend.ts"/>
+
+/// <reference path="capabilities/map.capabilities.ts"/>
 /// <reference path="visuals/map.ts"/>
 /// <reference path="visuals/multiRowCard.ts"/>
+/// <reference path="capabilities/multiRowCard.capabilities.ts"/>
 /// <reference path="visuals/richTextbox.ts"/>
+/// <reference path="capabilities/richTextbox.capabilities.ts"/>
 /// <reference path="visuals/sampleVisual.ts"/>
-/// <reference path="cartesian/scatterChart.ts"/>
-/// <reference path="cartesian/playChart.ts"/>
+/// <reference path="capabilities/sampleVisual.capabilities.ts"/>
 
+/// <reference path="capabilities/scatterChart.capabilities.ts"/>
+/// <reference path="cartesian/scatterChart.ts"/>
+
+/// <reference path="capabilities/slicer.capabilities.ts"/>
 /// <reference path="visuals/slicer.ts"/>
 /// <reference path="visuals/table.ts"/>
+/// <reference path="capabilities/table.capabilities.ts"/>
+
 /// <reference path="visuals/matrix.ts"/>
+/// <reference path="capabilities/matrix.capabilities.ts"/>
+
+/// <reference path="capabilities/treemap.capabilities.ts"/>
 /// <reference path="visuals/treemap.ts"/>
 /// <reference path="visuals/card.ts"/>
 /// <reference path="visuals/owlGauge.ts"/>
+
+/// <reference path="capabilities/nodeLink.capabilities.ts"/>
+/// <reference path="visuals/nodeLink.ts"/>
 /// <reference path="visuals/samples/streamGraph.ts"/>
+/// <reference path="capabilities/card.capabilities.ts"/>
+
 /// <reference path="warnings/visualWarnings.ts"/>
+
+/// <reference path="capabilities/waterfallChart.capabilities.ts"/>
 /// <reference path="cartesian/waterfallChart.ts"/>
 
 /// <reference path="tooltip.ts"/>
@@ -177,4 +183,5 @@
 
 /// <reference path="visuals/donutChart.ts"/>
 
+/// <reference path="pluginsCapabilities.ts"/>
 /// <reference path="plugins.ts"/>

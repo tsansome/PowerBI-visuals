@@ -32,11 +32,9 @@ module powerbi.visuals.sampleData {
     
     export class SampleData {
 
-        private static data = [
-            new sampleDataViews.DistrictSalesData(),
+        private static data = [,
             new sampleDataViews.FileStorageData(),
             new sampleDataViews.ImageData(),
-            new sampleDataViews.ProfitLossData(),
             new sampleDataViews.RichtextData(),
             new sampleDataViews.SalesByCountryData(),
             new sampleDataViews.SalesByDayOfWeekData(),
@@ -45,7 +43,8 @@ module powerbi.visuals.sampleData {
             new sampleDataViews.SimpleMatrixData(),
             new sampleDataViews.SimpleTableData(),
             new sampleDataViews.TeamScoreData(),
-            new sampleDataViews.ProductSalesByDate()
+            new sampleDataViews.ProductSalesByDate(),
+            new sampleDataViews.NodeLinkData()
         ];
 
         /**

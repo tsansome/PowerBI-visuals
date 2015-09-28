@@ -308,6 +308,13 @@ module powerbi.visuals.plugins {
         create: () => new OwlGauge()
     };
     
+    export var nodeLink: IVisualPlugin = {
+        name: 'nodeLink',
+        watermarkKey: 'nodeLink',
+        capabilities: nodeLinkCapabilities,
+        create: () => new NodeLink()
+    };
+
     export var streamGraph: IVisualPlugin = {
         name: 'streamGraph',
         watermarkKey: 'lineChart',
