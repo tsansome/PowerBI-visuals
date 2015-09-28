@@ -31,16 +31,12 @@ module powerbi.visuals.sampleDataViews {
 
     export class Group {
         GroupName: string;
-        MeasureDisplayName: string;
-        MeasureQueryName: string;
         Values: any[];
-        public constructor(groupName, measureDisplayName, measureQueryName, values) {
+        public constructor(groupName, values) {
             this.GroupName = groupName;
-            this.MeasureDisplayName = measureDisplayName;
-            this.MeasureQueryName = measureQueryName;
             this.Values = values;
         }
-        public ToDataViewValueColumn(): DataViewValueColumn {
+        public ToDataViewValueColumn(MeasureDisplayName: string, MeasureQueryName: string): DataViewValueColumn {
             return {
                 source: {
                     roles: {
@@ -48,8 +44,8 @@ module powerbi.visuals.sampleDataViews {
                     },
                     type: new ValueType(260, null),
                     format: "0",
-                    displayName: this.MeasureDisplayName,
-                    queryName: this.MeasureQueryName,
+                    displayName: MeasureDisplayName,
+                    queryName: MeasureQueryName,
                     objects: {
                         general: {
                             formatString: "0"
@@ -64,9 +60,9 @@ module powerbi.visuals.sampleDataViews {
         }
     }
 
-    export class NodeLinkData extends SimpleMatrixData {
+    export class NodeLinkDataViewGenerator {
 
-        public createCategory(displayNameEnter: string, queryNameEnter: string, categoryValues: string[]): DataViewCategoryColumn {
+        private static createCategory(displayNameEnter: string, queryNameEnter: string, categoryValues: string[]): DataViewCategoryColumn {
             return {
                 source: {
                     roles: {
@@ -80,57 +76,13 @@ module powerbi.visuals.sampleDataViews {
             };
         }
 
-        public createDataRecord(groupNameEnter, measureDisplayNameEnter, measureQueryName, valuesEnter: number[]): DataViewValueColumn {
-            return {
-                source: {
-                    roles: {
-                        Y: true
-                    },
-                    type: new ValueType(260, null),
-                    format: "0",
-                    displayName: measureDisplayNameEnter,
-                    queryName: measureQueryName,
-                    objects: {
-                        general: {
-                            formatString: "0"
-                        }
-                    },
-                    groupName: groupNameEnter,
-                    index: 2,
-                    isMeasure: true
-                },
-                values: valuesEnter
-            };
-        }
-
-        public name: string = "SimpleNodeLinkData";
-        public displayName: string = "Simple node link data";
-
-        public visuals: string[] = ['nodeLink', ];
-
-        public getDataViews(): DataView[] {
-
-            //var fieldExpr = powerbi.data.SQExprBuilder.fieldDef({ schema: 's', entity: "NodeLinks", column: "NodeTo" });
-            //var nodesToIdentities = nodesToValues.map(function (value) {
-            //    var expr = powerbi.data.SQExprBuilder.equal(fieldExpr, powerbi.data.SQExprBuilder.text(value));
-            //    return powerbi.data.createDataViewScopeIdentity(expr);
-            //});
+        public static gen(name: string, displayName: string, visualsSupported: string[], NodeTo: string[], NodeFrom: Group[], measureDisplayName: string, measureQueryName: string) {
 
             //first we need to create the nodes to within the category variable
-            var category = this.createCategory("NodeTo", "NodeLinks.NodeTo", ["Playstation", "WiiU", "WindowsPhone", "Xbox"]);
-
-            //now we define a measure
-            var measureDisplayName = "StrengthOfRelationship";
-            var measureQueryName = "Sum(NodeLinks.StrengthOfRelationship)";
-
-            var groupings = [
-                new Group("Playstation", measureDisplayName, measureQueryName, [null, null, null, 15]),
-                new Group("WindowsPhone", measureDisplayName, measureQueryName, [null, 70, null, null]),
-                new Group("Xbox", measureDisplayName, measureQueryName, [30, null, 50, null])
-            ];
-
+            var category = NodeLinkDataViewGenerator.createCategory("NodeTo", "NodeLinks.NodeTo", NodeTo);
+            
             //so lets create the data records          
-            var dataValues: DataViewValueColumns = DataViewTransform.createValueColumns(_.map(groupings, function (group) { return group.ToDataViewValueColumn(); }));
+            var dataValues: DataViewValueColumns = DataViewTransform.createValueColumns(_.map(NodeFrom, function (group) { return group.ToDataViewValueColumn(measureDisplayName, measureQueryName); }));
             //now attach the series property to it
             var seriesEntity: DataViewMetadataColumn = {
                 roles: {
@@ -147,19 +99,86 @@ module powerbi.visuals.sampleDataViews {
                 columns: []
             };
 
-            //return the data view        
-            return [{
-
+            var dv = {
                 metadata: dataViewMetadata,
                 categorical: {
                     categories: [category],
                     values: dataValues
                 }
-            }];
+            };
+
+            return dv;
+        }
+
+    }
+
+    export class NodeLinkDataBase extends SampleDataViews {
+        public visuals: string[] = ['nodeLink', ];
+
+        //our measures
+        public measureDisplayName = "StrengthOfRelationship";
+        public measureQueryName = "Sum(NodeLinks.StrengthOfRelationship)";
+        
+        public getRandomValue(min: number, max: number): number {
+            return 1;
+        }
+
+        public randomElement(arr: any[]): any {
+            return {};
         }
 
         public randomize(): void {
         }
+    }
 
+    export class NodeLinkData4Node extends NodeLinkDataBase implements ISampleDataViewsMethods {
+        
+        public name: string = "4NodeNodeLinkData";
+        public displayName: string = "4 Node link data";
+        
+        public getDataViews(): DataView[] {
+            
+            var nodesTo = ["Playstation", "WiiU", "WindowsPhone", "Xbox"];
+
+            var groupings = [
+                new Group("Playstation", [null, null, null, 15]),
+                new Group("WindowsPhone", [null, 70, null, null]),
+                new Group("Xbox", [30, null, 50, null])
+            ];
+
+            //return the data view    
+            var dv = NodeLinkDataViewGenerator.gen(this.name, this.displayName, this.visuals, nodesTo, groupings, this.measureDisplayName, this.measureQueryName);
+                
+            return [dv];
+        }
+    }
+
+    export class NodeLinkData10Node extends NodeLinkDataBase implements ISampleDataViewsMethods {
+
+        public name: string = "10NodeNodeLinkData";
+        public displayName: string = "10 Node link data";
+
+        public getDataViews(): DataView[] {
+
+            var nodesTo = ["Bob", "Fred", "Will", "Joe","Ben","Alice","Penelope","Vanessa","Anna","Alexandra"];
+
+            var groupings = [
+                new Group("Bob", [null, null, 70, null,null,null,null,null,null,null,null]),
+                new Group("Fred", [null, 10, 23, null, null, null, null, null, null, null, null]),
+                new Group("Will", [null, null, null, null, null, null, null, null, null, null, null]),
+                new Group("Joe", [null, null, 90, null, null, null, null, null, null, null, null]),
+                new Group("Ben", [null, null, 95, null, null, null, null, null, null, null, null]),
+                new Group("Alice", [15, 31, null, null, null, null, null, null, null, null, null]),
+                new Group("Penelope", [67, 21, null, null, null, null, null, null, null, null, null]),
+                new Group("Vanessa", [null, null, null, 89, null, null, null, null, null, null, null]),
+                new Group("Anna", [null, null, null, 90, null, null, null, null, null, null, null]),
+                new Group("Alexandra", [null, 51, 23, null, null, null, null, null, null, null, null])
+            ];
+
+            //return the data view    
+            var dv = NodeLinkDataViewGenerator.gen(this.name, this.displayName, this.visuals, nodesTo, groupings, this.measureDisplayName, this.measureQueryName);
+
+            return [dv];
+        }
     }
 }
