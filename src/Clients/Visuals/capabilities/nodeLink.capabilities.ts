@@ -103,6 +103,11 @@ module powerbi.visuals {
             linkproperties: {
                 displayName: "Link General",
                 properties: {
+                    highlightColor: {
+                        description: "Specify the highlight colour for links.",
+                        type: { fill: { solid: { color: true } } },
+                        displayName: "Highlight Color"
+                    },
                     defaultColor: {
                         description: "Specify the default colour for links.",
                         type: { fill: { solid: { color: true } } },

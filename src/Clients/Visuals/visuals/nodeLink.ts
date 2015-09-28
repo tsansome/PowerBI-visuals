@@ -175,17 +175,20 @@ module powerbi.visuals {
 
             var mainArea = visArea.append("g");
 
-            var defs = visArea.append('defs');
-            defs.append("marker")
-                .attr("id", "arrowGray")
-                .attr("viewBox", "0 -5 10 10")
-                .attr("refX", 10)
-                .attr("refY", -1.5)
-                .attr("markerWidth", 3)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto")
-                .append("path")
-                .attr("d", "M0,-5L10,0L0,5");
+            //var defs = visArea.append('defs');
+            //defs.append("marker")
+            //    .attr("id", "arrowGray")
+            //    .attr("markerWidth", 25)
+            //    .attr("markerHeight", 30)
+            //    .attr("refX", 5 * scaleHeight)
+            //    .attr("refY", 15 * scaleHeight)
+            //    .attr("markerUnits", "userSpaceOnUse")
+            //    .append("circle")
+            //    .attr("cx", 10)
+            //    .attr("cy", 10)
+            //    .attr("r", 4 * scaleHeight)
+            //    .attr("fill", "black")
+            //    .attr("stroke", "black");
 
             var linkDist = this.getLinkDistance(this.dataView[0]) * scaleHeight;
             var chargeE = this.getForce(this.dataView[0]);
@@ -210,17 +213,19 @@ module powerbi.visuals {
                 .enter()
                 .append("g");
 
+            var defaultLinkColor = this.getLinkDefaultColor(this.dataView[0]).solid.color;
+
             var link = linkg.append("path")
                 .attr("id", function (d: Link, idx) {
                     return d.source.name + "_" + d.target.name;
                 })
                 .attr("fill", "none")
-                .style("stroke", this.getLinkDefaultColor(this.dataView[0]).solid.color)
+                .style("stroke", defaultLinkColor)
                 .style("stroke-width", function (d: Link) {
                     var pixelVale = (xScale(d.value) * scaleHeight).toString();
                     return pixelVale + "px";
-                })
-                .attr("marker-end", "url(#arrowGray)");
+                });
+                //.attr("marker-end", "url(#arrowGray)");
 
             var linkText = linkg.append("text")
                 .style("font-size", this.getLinkDataLabelFontSize(this.dataView[0]).toString() + "px")
@@ -241,11 +246,29 @@ module powerbi.visuals {
                 .data(nodes)
                 .enter()
                 .append("g");
+            
+            var node = nodeg.append("rect")
+                .attr("height", this.getDefaultRadiusOfNode(this.dataView[0]) * scaleHeight)
+                .attr("width", this.getDefaultRadiusOfNode(this.dataView[0]) * scaleHeight)
+                .attr("fill", this.getNodeDefaultColor(this.dataView[0]).solid.color)
+                .attr("stroke", "black")
+                .attr("stroke-width",1);
 
-            //.attr("r", )
-            var node = nodeg.append("circle")
-                .attr("r", this.getDefaultRadiusOfNode(this.dataView[0]) * scaleHeight)
-                .attr("fill", this.getNodeDefaultColor(this.dataView[0]).solid.color);
+            var highlightColor = this.getLinkHighlightColor(this.dataView[0]).solid.color;
+            node.on("mouseover", function (d) {
+                link.style('stroke', function (l) {
+                    if (d.name === l.source.name || d.name === l.target.name) {
+                        return highlightColor;
+                    }
+                    else {
+                        return defaultLinkColor;
+                    }
+                });
+            });
+
+            node.on("mouseout", function (d) {
+                link.style('stroke',defaultLinkColor);
+            });
 
             var text = nodeg.append("text");
 
@@ -254,8 +277,8 @@ module powerbi.visuals {
                     return d.name;
                 })
                     .attr("class", "nodeLinkText")
-                    .attr("x", 8)
-                    .attr("y", ".31em")
+                    .attr("x", 15 * scaleHeight)
+                    .attr("y", ".61em")
                     .style("font-size", this.getNodeLabelFontSize(this.dataView[0]) + "px");
             }
 
@@ -271,8 +294,8 @@ module powerbi.visuals {
                     var str = linkArc(d);
                     return str;
                 });
-                node.attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
-                text.attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
+                node.attr("transform", function (d) { return "translate(" + (d.x-5) + "," + (d.y-5) + ")"; });
+                text.attr("transform", function (d) { return "translate(" + (d.x) + "," + (d.y) + ")"; });
             });
 
             this.force.start();
@@ -289,6 +312,7 @@ module powerbi.visuals {
                         selector: null,
                         properties: {
                             defaultColor: this.getLinkDefaultColor(dataView),
+                            highlightColor: this.getLinkHighlightColor(dataView),
                             minThickness: this.getMinimumThickness(dataView),
                             maxThickness: this.getMaximumThickness(dataView),
                             linkDistance: this.getLinkDistance(dataView)
@@ -380,7 +404,7 @@ module powerbi.visuals {
                     }
                 }
             }
-            return 5;
+            return 15;
         }
 
         private getNodeDefaultColor(dataView: DataView): Fill {
@@ -397,6 +421,23 @@ module powerbi.visuals {
             }
             return {
                 solid: { color: "#ccc" }
+            };
+        }
+
+        private getLinkHighlightColor(dataView: DataView): Fill {
+            if (dataView) {
+                var objects = dataView.metadata.objects;
+                if (objects) {
+                    var nodeproperties = objects['linkproperties'];
+                    if (nodeproperties) {
+                        var highlightColor = <Fill>nodeproperties['highlightColor'];
+                        if (highlightColor)
+                            return highlightColor;
+                    }
+                }
+            }
+            return {
+                solid: { color: "red" }
             };
         }
 
