@@ -31,8 +31,11 @@ module powerbi.visuals {
 
     export class Node {
         name: string;
-        constructor(name: string) {
+        categoryIndex: number;
+        //size: number;
+        constructor(name: string, categoryIndex:number) {
             this.name = name;
+            this.categoryIndex = categoryIndex;
         }
     }
 
@@ -65,26 +68,53 @@ module powerbi.visuals {
         }
     }
 
+    export class CategoryModel {
+        private categories: string[];
+
+        public constructor() {
+            this.categories = [];
+        }
+
+        public CategoryLength() {
+            return this.categories.length;
+        }
+
+        public addCategory(categoryName: string) {
+            this.categories.push(categoryName);
+        }
+
+        public categoryExists(categoryName: string): boolean {
+            var resultSet = _.filter(this.categories, function (cc) { return cc === categoryName; });
+            return resultSet.length !== 0;
+        }
+        public getCategoryIndexByName(categoryName: string) {
+            return _.indexOf(this.categories, categoryName);
+        }
+    }
+
     export class NodeLinkModel {
         links: Link[];
         nodes: Node[];
 
+        categories: CategoryModel;
+
         public constructor() {
             this.links = [];
             this.nodes = [];
+            this.categories = new CategoryModel();
         }
         public nodeExists(name: string): boolean {
             return _.filter(this.nodes, function (d) {
                 return d.name === name;
             }).length !== 0;
-        }
+        }        
         //todo: put out of bounds test
         public getNodeByIndex(index: number): Node {
             return this.nodes[index];
         }
-        public addNode(name: string): void {
+        public addNode(name: string, categoryIndex: number): void {
             if (this.nodeExists(name) === false) {
-                this.nodes.push(new Node(name));
+                this.nodes.push(new Node(name, categoryIndex));
             }
         }
         public getNodeByName(name: string): Node {
@@ -101,29 +131,82 @@ module powerbi.visuals {
         private selectionManager: SelectionManager;
         private force: D3.Layout.ForceLayout;
 
+        private colors: IDataColorPalette;
+
         public init(options: VisualInitOptions): void {
             this.selectionManager = new SelectionManager({ hostServices: options.host });
 
             this.root = d3.select(options.element.get(0))
                 .append('svg');
 
+            this.colors = options.style.colorPalette.dataColors;
+
         }
 
         public static converter(dataView: DataView[]): NodeLinkModel {
+            //the first data view is our categorical view of the nodes to and from
             var dv1: DataViewCategorical = dataView[0].categorical;
-
+            
             var ndlkmdl = new NodeLinkModel();
+            
+            //the second data view is our target groupings            
+            if (dataView[1] && dataView[1].categorical) {
+                //this will give us the categories                
+                var nodeCategories = dataView[1].categorical.categories[0].values;
+                if (nodeCategories.length > 0) {
+                    //now we need to traverse the values
+                    var categoryValueMapping = dataView[1].categorical.values;
+                    for (var jj = 0; jj < categoryValueMapping.length; jj++) {
+                        var elems = categoryValueMapping[jj];
+                        var node = elems.source.groupName;
+                        for (var kk = 0; kk < elems.values.length; kk++) {
+                            if (elems.values[kk] != null) {
+                                var cat = nodeCategories[kk];
+                                if (ndlkmdl.categories.categoryExists(cat) === false) {
+                                    ndlkmdl.categories.addCategory(cat);
+                                }
+                                var catIndex = ndlkmdl.categories.getCategoryIndexByName(cat);
+                                ndlkmdl.addNode(node, catIndex);
+                            }
+                        }
+                    }
+                }
+            }   
+            
+            //now we look at the third because this will be the source groupings
+            if (dataView[2] && dataView[2].categorical) {
+                //this will give us the categories
+                var nodeCategories = dataView[2].categorical.categories[0].values;
+                //now we need to traverse the values
+                if (nodeCategories.length > 0) {
+                    var categoryValueMapping = dataView[2].categorical.values;
+                    for (var jj = 0; jj < categoryValueMapping.length; jj++) {
+                        var elems = categoryValueMapping[jj];
+                        var node = elems.source.groupName;
+                        for (var kk = 0; kk < elems.values.length; kk++) {
+                            if (elems.values[kk] != null) {
+                                var cat = nodeCategories[kk];
+                                if (ndlkmdl.categories.categoryExists(cat) === false) {
+                                    ndlkmdl.categories.addCategory(cat);
+                                }
+                                var catIndex = ndlkmdl.categories.getCategoryIndexByName(cat);
+                                ndlkmdl.addNode(node, catIndex);
+                            }
+                        }
+                    }
+                }
+            }         
 
             var NodeToVals = dv1.categories[0].values;
             for (var ii = 0; ii < NodeToVals.length; ii++) {
                 var ndvl: string = NodeToVals[ii];
-                ndlkmdl.addNode(ndvl);
+                ndlkmdl.addNode(ndvl,-1);
             }
 
             for (var jj = 0; jj < dv1.values.length; jj++) {
                 //each Node from is a group aka Series
                 var NodeFromText = dv1.values[jj].source.groupName;
-                ndlkmdl.addNode(NodeFromText);
+                ndlkmdl.addNode(NodeFromText,-1);
                 for (var kk = 0; kk < dv1.values[jj].values.length; kk++) {
                     var strength = dv1.values[jj].values[kk];
                     if (strength != null) {
@@ -151,7 +234,7 @@ module powerbi.visuals {
             var viewport = options.viewport;
 
             var dataPoints = NodeLink.converter(dataView);            
-
+            
             //should clear the pallette first
             this.root.selectAll("*").remove();
 
@@ -190,8 +273,8 @@ module powerbi.visuals {
             //    .attr("fill", "black")
             //    .attr("stroke", "black");
 
-            var linkDist = this.getLinkDistance(this.dataView[0]) * scaleHeight;
-            var chargeE = this.getForce(this.dataView[0]);
+            var linkDist = this.GetProperty(this.dataView[0], "linkproperties", "linkDistance", NodeLink.linkDistance) * scaleHeight;
+            var chargeE = this.GetProperty(this.dataView[0], "nodeproperties", "force", NodeLink.nodeForce);
             this.force = d3.layout.force()
                 .nodes(dataPoints.nodes)
                 .links(dataPoints.links)
@@ -206,14 +289,14 @@ module powerbi.visuals {
 
             var xScale = d3.scale.linear()
                 .domain([0, maxLinkValue])
-                .range([this.getMinimumThickness(dataView[0]), this.getMaximumThickness(dataView[0])]);
+                .range([this.GetProperty(this.dataView[0], "linkproperties", "minThickness", NodeLink.linkMinThickness), this.GetProperty(this.dataView[0], "linkproperties", "maxThickness", NodeLink.linkMaxThickness)]);
 
             var linkg = mainArea.selectAll("path")
                 .data(links)
                 .enter()
                 .append("g");
 
-            var defaultLinkColor = this.getLinkDefaultColor(this.dataView[0]).solid.color;
+            var defaultLinkColor = this.GetPropertyColor(this.dataView[0], "linkproperties", "defaultColor", NodeLink.linkDefaultColor).solid.color;
 
             var link = linkg.append("path")
                 .attr("id", function (d: Link, idx) {
@@ -228,10 +311,10 @@ module powerbi.visuals {
                 //.attr("marker-end", "url(#arrowGray)");
 
             var linkText = linkg.append("text")
-                .style("font-size", this.getLinkDataLabelFontSize(this.dataView[0]).toString() + "px")
+                .style("font-size", this.GetProperty(this.dataView[0], "linkdatalabels", "fontSize", NodeLink.linkDataLabelFontSize).toString() + "px")
                 .attr("class", "nodeLinkLinkText");
 
-            if (this.getShowLinkDataLabels(this.dataView[0])) {
+            if (this.GetProperty(this.dataView[0], "linkdatalabels", "showLabels", NodeLink.linkDataLabelShow)) {
                 linkText.append("textPath")
                     .attr("xlink:href", function (d: Link, idx) {
                         return "#" + d.source.name + "_" + d.target.name;
@@ -248,13 +331,26 @@ module powerbi.visuals {
                 .append("g");
             
             var node = nodeg.append("rect")
-                .attr("height", this.getDefaultRadiusOfNode(this.dataView[0]) * scaleHeight)
-                .attr("width", this.getDefaultRadiusOfNode(this.dataView[0]) * scaleHeight)
-                .attr("fill", this.getNodeDefaultColor(this.dataView[0]).solid.color)
+                .attr("height", this.GetProperty(this.dataView[0], "nodeproperties", "defaultRadius", NodeLink.nodeDefaultRadius) * scaleHeight)
+                .attr("width", this.GetProperty(this.dataView[0], "nodeproperties", "defaultRadius", NodeLink.nodeDefaultRadius) * scaleHeight)                
                 .attr("stroke", "black")
                 .attr("stroke-width",1);
 
-            var highlightColor = this.getLinkHighlightColor(this.dataView[0]).solid.color;
+            var defaultColor = this.GetPropertyColor(this.dataView[0], "nodeproperties", "defaultColor", NodeLink.nodeDefaultColor).solid.color;
+            var colors = this.colors;
+            if (dataPoints.categories.CategoryLength() > 0) {
+                node.attr("fill", function (d: Node) {
+                    if (d.categoryIndex === -1) {
+                        return defaultColor;
+                    } else {
+                        return colors.getColorByIndex(d.categoryIndex).value;
+                    }
+                });
+            } else {
+                node.attr("fill", defaultColor);
+            }
+
+            var highlightColor = this.GetPropertyColor(this.dataView[0], 'linkproperties', "highlightColor", NodeLink.linkHighlightColor).solid.color;
             node.on("mouseover", function (d) {
                 link.style('stroke', function (l) {
                     if (d.name === l.source.name || d.name === l.target.name) {
@@ -272,14 +368,14 @@ module powerbi.visuals {
 
             var text = nodeg.append("text");
 
-            if (this.getShowNodeLabels(this.dataView[0])) {
+            if (this.GetProperty(this.dataView[0], "nodelabels", "showLabels", NodeLink.linkDataLabelShow)) {
                 text.text(function (d) {
                     return d.name;
                 })
                     .attr("class", "nodeLinkText")
                     .attr("x", 15 * scaleHeight)
                     .attr("y", ".61em")
-                    .style("font-size", this.getNodeLabelFontSize(this.dataView[0]) + "px");
+                    .style("font-size", this.GetProperty(this.dataView[0], "nodelabels", "fontSize", NodeLink.linkDataLabelFontSize).toString() + "px");
             }
 
             function linkArc(d) {
@@ -301,58 +397,78 @@ module powerbi.visuals {
             this.force.start();
         }
 
+        static linkDefaultColor = "#666";
+        static linkHighlightColor = "red";
+        static linkMinThickness = 1;
+        static linkMaxThickness = 10;
+        static linkDistance = 70;
+
+        static linkDataLabelShow = true;
+        static linkDataLabelFontSize = 11;
+
+        static nodeForce = -400;
+        static nodeDefaultRadius = 15;
+        static nodeDefaultColor = "#ccc";
+
+        static nodeDataLabelShow = true;
+        static nodeDataLabelFontSize = 11;
+
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] {
             var instances: VisualObjectInstance[] = [];
-            var dataView = this.dataView[0];
+            var dV = this.dataView[0];
             switch (options.objectName) {
                 case 'linkproperties':
+                    var objectname = 'linkproperties';
                     var linkproperties: VisualObjectInstance = {
-                        objectName: 'linkproperties',
+                        objectName: objectname,
                         displayName: 'Link General',
                         selector: null,
                         properties: {
-                            defaultColor: this.getLinkDefaultColor(dataView),
-                            highlightColor: this.getLinkHighlightColor(dataView),
-                            minThickness: this.getMinimumThickness(dataView),
-                            maxThickness: this.getMaximumThickness(dataView),
-                            linkDistance: this.getLinkDistance(dataView)
+                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", NodeLink.linkDefaultColor),
+                            highlightColor: this.GetPropertyColor(dV, objectname, "highlightColor", NodeLink.linkHighlightColor),
+                            minThickness: this.GetProperty(dV, objectname, "minThickness", NodeLink.linkMinThickness),
+                            maxThickness: this.GetProperty(dV, objectname, "maxThickness", NodeLink.linkMaxThickness),
+                            linkDistance: this.GetProperty(dV, objectname, "linkDistance", NodeLink.linkDistance)
                         }
                     };
                     instances.push(linkproperties);
                     break;
                 case 'nodelabels':
+                    var objectname = 'nodelabels';
                     var nodelabels: VisualObjectInstance = {
-                        objectName: 'nodelabels',
+                        objectName: objectname,
                         displayName: 'Node Labels',
                         selector: null,
                         properties: {
-                            showLabels: this.getShowNodeLabels(this.dataView[0]),
-                            fontSize: this.getNodeLabelFontSize(this.dataView[0])
+                            showLabels: this.GetProperty(dV, objectname, "showLabels", NodeLink.nodeDataLabelShow),
+                            fontSize: this.GetProperty(dV, objectname, "fontSize", NodeLink.nodeDataLabelFontSize)
                         }
                     };
                     instances.push(nodelabels);
                     break;
                 case 'nodeproperties':
+                    var objectname = 'nodeproperties';                    
                     var nodeproperties: VisualObjectInstance = {
-                        objectName: 'nodeproperties',
+                        objectName: objectname,
                         displayName: 'Node General',
                         selector: null,
                         properties: {
-                            defaultColor: this.getNodeDefaultColor(this.dataView[0]),
-                            defaultRadius: this.getDefaultRadiusOfNode(this.dataView[0]),
-                            force: this.getForce(this.dataView[0])
+                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", NodeLink.nodeDefaultColor),
+                            defaultRadius: this.GetProperty(dV, objectname, "defaultRadius", NodeLink.nodeDefaultRadius),
+                            force: this.GetProperty(dV, objectname, "force", NodeLink.nodeForce)
                         }
                     };
                     instances.push(nodeproperties);
                     break;
                 case 'linkdatalabels':
+                    var objectname = 'linkdatalabels';
                     var linkdatalabels: VisualObjectInstance = {
-                        objectName: 'linkdatalabels',
+                        objectName: objectname,
                         displayName: 'Link Data labels',
                         selector: null,
                         properties: {
-                            showLabels: this.getShowLinkDataLabels(this.dataView[0]),
-                            fontSize: this.getLinkDataLabelFontSize(this.dataView[0])
+                            showLabels: this.GetProperty(dV, objectname, "showLabels", NodeLink.linkDataLabelShow),
+                            fontSize: this.GetProperty(dV, objectname, "fontSize", NodeLink.linkDataLabelFontSize)
                         }
                     };
                     instances.push(linkdatalabels);
@@ -362,192 +478,41 @@ module powerbi.visuals {
             return instances;
         }
 
-        private getShowLinkDataLabels(dataView: DataView): boolean {
+        private GetPropertyColor(dataView: DataView, groupPropertyValue: string, propertyValue: string, defaultValue: string) {
             if (dataView) {
                 var objects = dataView.metadata.objects;
                 if (objects) {
-                    var linkdatalabels = objects['linkdatalabels'];
-                    if (linkdatalabels) {
-                        var showLabels = <boolean>linkdatalabels['showLabels'];
-                        if (showLabels !== undefined)
-                            return showLabels;
+                    var groupProperty = objects[groupPropertyValue];
+                    if (groupProperty) {
+                        var object = <Fill>groupProperty[propertyValue];
+                        if (object !== undefined)
+                            return object;
                     }
                 }
             }
-            return true;
-        }
-
-        private getLinkDataLabelFontSize(dataView: DataView): number {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var linkdatalabels = objects['linkdatalabels'];
-                    if (linkdatalabels) {
-                        var fontSize = <number>linkdatalabels['fontSize'];
-                        if (fontSize)
-                            return fontSize;
-                    }
+            var colorToReturn:Fill = {
+                solid: {
+                    color: defaultValue
                 }
-            }
-            return 11;
-        }
-
-        private getDefaultRadiusOfNode(dataView: DataView): number {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var nodeproperties = objects['nodeproperties'];
-                    if (nodeproperties) {
-                        var defaultRadius = <number>nodeproperties['defaultRadius'];
-                        if (defaultRadius)
-                            return defaultRadius;
-                    }
-                }
-            }
-            return 15;
-        }
-
-        private getNodeDefaultColor(dataView: DataView): Fill {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var nodeproperties = objects['nodeproperties'];
-                    if (nodeproperties) {
-                        var defaultColor = <Fill>nodeproperties['defaultColor'];
-                        if (defaultColor)
-                            return defaultColor;
-                    }
-                }
-            }
-            return {
-                solid: { color: "#ccc" }
             };
+            return colorToReturn; 
         }
 
-        private getLinkHighlightColor(dataView: DataView): Fill {
+        private GetProperty<T>(dataView: DataView, groupPropertyValue: string, propertyValue:string, defaultValue: T) {
             if (dataView) {
                 var objects = dataView.metadata.objects;
                 if (objects) {
-                    var nodeproperties = objects['linkproperties'];
-                    if (nodeproperties) {
-                        var highlightColor = <Fill>nodeproperties['highlightColor'];
-                        if (highlightColor)
-                            return highlightColor;
+                    var groupProperty = objects[groupPropertyValue];
+                    if (groupProperty) {
+                        var object = <T>groupProperty[propertyValue];
+                        if (object !== undefined)
+                            return object;
                     }
                 }
             }
-            return {
-                solid: { color: "red" }
-            };
+            return defaultValue;
         }
-
-        private getLinkDefaultColor(dataView: DataView): Fill {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var nodeproperties = objects['linkproperties'];
-                    if (nodeproperties) {
-                        var defaultColor = <Fill>nodeproperties['defaultColor'];
-                        if (defaultColor)
-                            return defaultColor;
-                    }
-                }
-            }
-            return {
-                solid: { color: "#666" }
-            };
-        }
-
-        private getNodeLabelFontSize(dataView: DataView): number {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var nodeproperties = objects['nodeproperties'];
-                    if (nodeproperties) {
-                        var fontSize = <number>nodeproperties['fontSize'];
-                        if (fontSize)
-                            return fontSize;
-                    }
-                }
-            }
-            return 11;
-        }
-
-        private getShowNodeLabels(dataView: DataView): boolean {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var nodelabels = objects['nodelabels'];
-                    if (nodelabels) {
-                        var showLabels = <boolean>nodelabels['showLabels'];
-                        if (showLabels !== undefined)
-                            return showLabels;
-                    }
-                }
-            }
-            return true;
-        }
-
-        private getForce(dataView: DataView): number {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var nodeproperties = objects['nodeproperties'];
-                    if (nodeproperties) {
-                        var force = <number>nodeproperties['force'];
-                        if (force)
-                            return force;
-                    }
-                }
-            }
-            return -400;
-        }
-
-        private getLinkDistance(dataView: DataView): number {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var linkproperties = objects['linkproperties'];
-                    if (linkproperties) {
-                        var linkDistance = <number>linkproperties['linkDistance'];
-                        if (linkDistance)
-                            return linkDistance;
-                    }
-                }
-            }
-            return 70;
-        }
-
-        private getMinimumThickness(dataView: DataView): number {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var linkproperties = objects['linkproperties'];
-                    if (linkproperties) {
-                        var minThickness = <number>linkproperties['minThickness'];
-                        if (minThickness)
-                            return minThickness;
-                    }
-                }
-            }
-            return 1;
-        }
-
-        private getMaximumThickness(dataView: DataView): number {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var linkproperties = objects['linkproperties'];
-                    if (linkproperties) {
-                        var maxThickness = <number>linkproperties['maxThickness'];
-                        if (maxThickness)
-                            return maxThickness;
-                    }
-                }
-            }
-            return 10;
-        }
-
+        
         public destroy(): void {
             this.root = null;
         }

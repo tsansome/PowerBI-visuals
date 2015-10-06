@@ -28,15 +28,25 @@
 
 module powerbi.visuals {
     export var nodeLinkCapabilities: VisualCapabilities = {
-        dataRoles: [
+        dataRoles: [  
             {
                 name: 'NodeFrom',
                 displayName: 'Node From',
                 kind: VisualDataRoleKind.Grouping,
             },
             {
+                name: 'NodeFromCategory',
+                displayName: 'Node From Category',
+                kind: VisualDataRoleKind.Grouping,
+            },            
+            {
                 name: 'NodeTo',
                 displayName: 'Node To',
+                kind: VisualDataRoleKind.Grouping,
+            },
+            {
+                name: 'NodeToCategory',
+                displayName: 'Node To Category',
                 kind: VisualDataRoleKind.Grouping,
             },
             {
@@ -45,25 +55,56 @@ module powerbi.visuals {
                 kind: VisualDataRoleKind.Measure,
             }
         ],
-        dataViewMappings: [{
-            conditions: [
-                { 'Rows': { max: 2 }, 'Values': { max: 1 } }
-            ],
-            categorical: {
-                categories: {
-                    for: { in: 'NodeFrom' },
-                    dataReductionAlgorithm: { top: {} }
-                },
-                values: {
-                    group: {
-                        by: 'NodeTo',
-                        select: [{ for: { in: 'Values' } }],
+        dataViewMappings: [
+            {
+                categorical: {
+                    categories: {
+                        for: { in: 'NodeFrom' },
                         dataReductionAlgorithm: { top: {} }
-                    }
+                    },
+                    values: {
+                        group: {
+                            by: 'NodeTo',
+                            select: [{ for: { in: 'Values' } }],
+                            dataReductionAlgorithm: { top: {} }
+                        }
+                    },
+                    rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
                 },
-                rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+            },
+            {
+                categorical: {
+                    categories: {
+                        for: { in: 'NodeToCategory' },
+                        dataReductionAlgorithm: { top: {} }
+                    },
+                    values: {
+                        group: {
+                            by: 'NodeTo',
+                            select: [{ for: { in: 'Values' } }],
+                            dataReductionAlgorithm: { top: {} }
+                        }
+                    },
+                    rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+                },
+            },
+            {
+                categorical: {
+                    categories: {
+                        for: { in: 'NodeFromCategory' },
+                        dataReductionAlgorithm: { top: {} }
+                    },
+                    values: {
+                        group: {
+                            by: 'NodeFrom',
+                            select: [{ for: { in: 'Values' } }],
+                            dataReductionAlgorithm: { top: {} }
+                        }
+                    },
+                    rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+                },
             }
-        }],
+        ],
         objects: {
             nodeproperties: {
                 displayName: "Node General",

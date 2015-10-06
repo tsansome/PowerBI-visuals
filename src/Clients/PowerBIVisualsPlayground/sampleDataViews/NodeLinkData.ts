@@ -115,6 +115,9 @@ module powerbi.visuals.sampleDataViews {
     export class NodeLinkDataBase extends SampleDataViews {
         public visuals: string[] = ['nodeLink', ];
 
+        public measureDisplayName_nodeCat = "NodeSize";
+        public measureQueryName_nodeCat = "Sum(NodeLinksCategories.NodeSize)";
+
         //our measures
         public measureDisplayName = "StrengthOfRelationship";
         public measureQueryName = "Sum(NodeLinks.StrengthOfRelationship)";
@@ -148,8 +151,23 @@ module powerbi.visuals.sampleDataViews {
 
             //return the data view    
             var dv = NodeLinkDataViewGenerator.gen(this.name, this.displayName, this.visuals, nodesTo, groupings, this.measureDisplayName, this.measureQueryName);
-                
-            return [dv];
+            
+            //do a node category grouping as well
+
+            var categories = ["Entertainment", "Device"];
+            
+            var groups = [
+                new Group("Playstation", [80, null]),
+                new Group("WiiU", [92, null]),
+                new Group("WindowsPhone", [null, 55]),
+                new Group("Xbox",[22,null])
+            ];
+
+            var nodeFromCat = NodeLinkDataViewGenerator.gen("NodeCategories", "Node Categories", this.visuals, categories, groups, this.measureDisplayName_nodeCat, this.measureQueryName_nodeCat);
+
+            var nodeToCat = NodeLinkDataViewGenerator.gen("NodeCategories", "Node Categories", this.visuals, categories, groups, this.measureDisplayName_nodeCat, this.measureQueryName_nodeCat);
+
+            return [dv, nodeToCat, nodeFromCat];
         }
     }
 
@@ -181,4 +199,118 @@ module powerbi.visuals.sampleDataViews {
             return [dv];
         }
     }
+
+    export class NodeLinkData10NodeWithCategories extends NodeLinkDataBase implements ISampleDataViewsMethods {
+
+        public name: string = "10NodeNodeLinkDataWithCategories";
+        public displayName: string = "10 Node link data with categories";
+
+        public getDataViews(): DataView[] {
+
+            var nodesTo = ["Jane", "Juniper", "Alan", "Bob","Jill","Fred","Bill","Liam"];
+
+            var groupings = [
+                new Group("Jill", [30, 21, 11, 90, null, null, null, null, null, null, null]),
+                new Group("Jane", [null, 88, null, null, null, null, null, null, null, null, null]),
+                new Group("Alice", [null, null, null, null, 90, null, null, null, null, null, null]),
+                new Group("Alan", [null, null, null, 21, null, 65, 14, null, null, null, null]),
+                new Group("Bob", [null, null, null, null, null, null, 120, null, null, null, null]),
+                new Group("Liam", [null, null, 2, null, null, null, null, null, null, null, null]),
+                new Group("Bill", [null, null, null, null, null, null, null, 5, null, null, null]),
+                new Group("Fred", [null, null, null, null, null, null, null, 7, null, null, null]),
+            ];
+
+            //return the data view    
+            var dv = NodeLinkDataViewGenerator.gen(this.name, this.displayName, this.visuals, nodesTo, groupings, this.measureDisplayName, this.measureQueryName);
+
+            var categories = ["Recommender", "Control"];
+
+            var groups = [
+                new Group("Jill", [80, null]),
+                new Group("Jane", [92, null]),
+                new Group("Alice", [55, null]),
+                new Group("Alan", [null, 22]),
+                new Group("Bob", [null, 22]),
+                new Group("Liam", [null, 22]),
+                new Group("Bill", [null, 22]),
+                new Group("Bill", [22, null])
+            ];
+
+            var nodeFromCat = NodeLinkDataViewGenerator.gen("NodeCategories", "Node Categories", this.visuals, categories, groups, this.measureDisplayName_nodeCat, this.measureQueryName_nodeCat);
+
+            var categories = ["Recommender", "Control"];
+
+            var groups = [
+                new Group("Jane", [80, null]),
+                new Group("Juniper", [null, 92]),
+                new Group("Alan", [null, 55]),
+                new Group("Bob", [null, 22]),
+                new Group("Jill", [22, null]),
+                new Group("Fred", [22, null]),
+                new Group("Bill", [null, 22]),
+                new Group("Liam", [null, 22])
+            ];
+
+            var nodeToCat = NodeLinkDataViewGenerator.gen("NodeCategories", "Node Categories", this.visuals, categories, groups, this.measureDisplayName_nodeCat, this.measureQueryName_nodeCat);
+
+            return [dv, nodeToCat, nodeFromCat];
+        }
+    }
+
+    export class NodeLinkData10NodeWithBlankCategory extends NodeLinkDataBase implements ISampleDataViewsMethods {
+
+        public name: string = "10NodeNodeLinkDataWithBlankCategory";
+        public displayName: string = "10 Node link data with blank category";
+
+        public getDataViews(): DataView[] {
+
+            var nodesTo = ["Jane", "Juniper", "Alan", "Bob", "Jill", "Fred", "Bill", "Liam"];
+
+            var groupings = [
+                new Group("Jill", [30, 21, 11, 90, null, null, null, null, null, null, null]),
+                new Group("Jane", [null, 88, null, null, null, null, null, null, null, null, null]),
+                new Group("Alice", [null, null, null, null, 90, null, null, null, null, null, null]),
+                new Group("Alan", [null, null, null, 21, null, 65, 14, null, null, null, null]),
+                new Group("Bob", [null, null, null, null, null, null, 120, null, null, null, null]),
+                new Group("Liam", [null, null, 2, null, null, null, null, null, null, null, null]),
+                new Group("Bill", [null, null, null, null, null, null, null, 5, null, null, null]),
+                new Group("Fred", [null, null, null, null, null, null, null, 7, null, null, null]),
+            ];
+
+            //return the data view    
+            var dv = NodeLinkDataViewGenerator.gen(this.name, this.displayName, this.visuals, nodesTo, groupings, this.measureDisplayName, this.measureQueryName);
+
+            var categories = [];
+
+            var groups = [
+                new Group("Jill", [80]),
+                new Group("Jane", [92]),
+                new Group("Alice", [55]),
+                new Group("Alan", [22]),
+                new Group("Bob", [22]),
+                new Group("Liam", [22]),
+                new Group("Bill", [22])
+            ];
+
+            var nodeFromCat = NodeLinkDataViewGenerator.gen("NodeCategories", "Node Categories", this.visuals, categories, groups, this.measureDisplayName_nodeCat, this.measureQueryName_nodeCat);
+
+            var categories = [];
+
+            var groups = [
+                new Group("Jane", [80]),
+                new Group("Juniper", [92]),
+                new Group("Alan", [55]),
+                new Group("Bob", [22]),
+                new Group("Jill", [22]),
+                new Group("Fred", [22]),
+                new Group("Bill", [22]),
+                new Group("Liam", [22])
+            ];
+
+            var nodeToCat = NodeLinkDataViewGenerator.gen("NodeCategories", "Node Categories", this.visuals, categories, groups, this.measureDisplayName_nodeCat, this.measureQueryName_nodeCat);
+
+            return [dv, nodeToCat, nodeFromCat];
+        }
+    }
+
 }
