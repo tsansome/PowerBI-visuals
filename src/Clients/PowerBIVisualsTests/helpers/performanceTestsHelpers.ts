@@ -364,6 +364,52 @@ module powerbitests.performanceTestsHelpers {
                     }
                 };
 
+            case "radarChart":
+                let radarChartValues: number[] = [59, 56, 42, 34, 48, 14, 11, 5, 7, 78, 85, 90, 18, 7, 8, 9, 10],
+                    radarChartDataViewMetadata: powerbi.DataViewMetadata = {
+                        columns: [
+                            {
+                                displayName: 'Devices',
+                                queryName: 'Devices',
+                                type: powerbi.ValueType.fromDescriptor({ text: true })
+                            },
+                            {
+                                displayName: 'Smartphone',
+                                isMeasure: true,
+                                format: "0.00",
+                                queryName: 'smartphone',
+                                type: powerbi.ValueType.fromDescriptor({ numeric: true }),
+                                objects: { dataPoint: { fill: { solid: { color: '#1F77B4' } } } },
+                            },
+                            {
+                                displayName: 'Tablet',
+                                isMeasure: true,
+                                format: "0.00",
+                                queryName: 'Tablet',
+                                type: powerbi.ValueType.fromDescriptor({ numeric: true }),
+                                objects: { dataPoint: { fill: { solid: { color: '#FF7F0E' } } } }
+                            }
+                        ]
+                    },
+                    radarChartColumns = [{
+                        source: radarChartDataViewMetadata.columns[1],
+                        values: radarChartValues
+                    }],
+                    radarChartDataValues: DataViewValueColumns =
+                        DataViewTransform.createValueColumns(radarChartColumns);
+
+                return {
+                    metadata: radarChartDataViewMetadata,
+                    categorical: {
+                        categories: [{
+                            source: radarChartDataViewMetadata.columns[0],
+                            values: radarChartDataValues,
+                            identity: categoryIdentities,
+                        }],
+                        values: radarChartDataValues
+                    }
+                };
+
             default:
                 var fieldExpr = powerbi.data.SQExprBuilder.fieldExpr({ column: { schema: "s", entity: "table1", name: "country" } });
 
