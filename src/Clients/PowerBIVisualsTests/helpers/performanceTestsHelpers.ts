@@ -363,6 +363,43 @@ module powerbitests.performanceTestsHelpers {
                         ]
                     }
                 };
+            case "dotPlot":
+                let dotPlotValues: number[] = [
+                    1, 2, 3, 4, 5, 6, 7, 8, 9,
+                    2, 3, 3, 4, 4, 4, 5, 5, 5, 5,
+                    6, 6, 6, 7, 7, 8
+                ],
+                dotPlotDataViewMetadata: powerbi.DataViewMetadata = {
+                    columns: [{
+                        displayName: "Observations",
+                        queryName: "Observations",
+                        type: ValueType.fromDescriptor({
+                            text: true
+                        }),
+                        objects: {
+                            dataPoint: {
+                                fill: {
+                                    solid: {
+                                        color: "rgb(1, 184, 170)"
+                                    }
+                                }
+                            }
+                        }
+                    }]
+                },
+                dotPlotColumns = [{
+                    source: dotPlotDataViewMetadata.columns[0],
+                    values: dotPlotValues
+                }],
+                dotPlotDataValues: DataViewValueColumns =
+                    DataViewTransform.createValueColumns(dotPlotColumns);
+
+                return {
+                    metadata: dotPlotDataViewMetadata,
+                    categorical: {
+                        values: dotPlotDataValues
+                    }
+                };
 
             case "radarChart":
                 let radarChartValues: number[] = [59, 56, 42, 34, 48, 14, 11, 5, 7, 78, 85, 90, 18, 7, 8, 9, 10],

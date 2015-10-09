@@ -275,6 +275,10 @@ module powerbi.visuals {
             createPlugin(plugins, powerbi.visuals.plugins.radarChart, () => new samples.RadarChart({
                 animator: new BaseAnimator()
             }));
+            // DotPlot
+            createPlugin(plugins, powerbi.visuals.plugins.dotPlot, () => new samples.DotPlot({
+                animator: new BaseAnimator()
+            }));
         }
 
         export class MinervaVisualPluginService extends VisualPluginService {

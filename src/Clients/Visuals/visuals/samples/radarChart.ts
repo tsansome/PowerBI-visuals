@@ -265,6 +265,7 @@ module powerbi.visuals.samples {
         public update(options: VisualUpdateOptions): void {
             if (!options.dataViews || !options.dataViews[0]) return;
             let dataView = this.dataView = options.dataViews[0];
+            let categories = dataView.categorical.categories[0].values;
             let data = RadarChart.converter(dataView, this.colors);
             let dataPoints = data.dataPoints;
             let viewport = this.viewport = options.viewport;
@@ -283,10 +284,8 @@ module powerbi.visuals.samples {
             let width: number = viewport.width - this.margin.left - this.margin.right;
             let height: number = viewport.height - this.margin.top - this.margin.bottom;
 
-            this.angle = RadarChart.Radians / dataPoints[0].length;
+            this.angle = RadarChart.Radians / categories.length;
             this.radius = RadarChart.SegmentFactor * RadarChart.Scale * Math.min(width, height) / 2;
-
-            let categories = dataView.categorical.categories[0].values;
 
             this.drawCircularSegments(categories);
             this.drawAxes(categories);
@@ -295,16 +294,11 @@ module powerbi.visuals.samples {
         }
 
         private drawCircularSegments(values: string[]): void {
+            let data = [];
             const angle: number = this.angle,
                 factor: number = RadarChart.SegmentFactor,
                 levels: number = RadarChart.SegmentLevels,
                 radius: number = this.radius;
-
-            let selection: D3.Selection = this.mainGroupElement
-                .select(RadarChart.Segments.selector)
-                .selectAll(RadarChart.SegmentNode.selector);
-
-            let data = [];
 
             for (let level = 0; level < levels - 1; level++) {
                 let levelFactor: number = radius * ((level + 1) / levels);
@@ -322,17 +316,23 @@ module powerbi.visuals.samples {
                 }
             }
 
-            let segments = selection.data(data);
-            segments
+            let selection = this.mainGroupElement
+                .select(RadarChart.Segments.selector)
+                .selectAll(RadarChart.SegmentNode.selector)
+                .data(data);
+
+            selection
                 .enter()
-                .append('svg:line');
-            segments
+                .append('svg:line')
+                .classed(RadarChart.SegmentNode.class, true);
+            selection
                 .attr('x1', item => item.x1)
                 .attr('y1', item => item.y1)
                 .attr('x2', item => item.x2)
                 .attr('y2', item => item.y2)
-                .attr('transform', item => item.translate)
-                .classed(RadarChart.SegmentNode.class, true);
+                .attr('transform', item => item.translate);
+
+            selection.exit().remove();
         }
 
         private drawAxes(values: string[]): void {

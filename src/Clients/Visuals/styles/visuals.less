@@ -1792,22 +1792,6 @@ div.ql-toolbar {
     }
 }
 
-.nodeLinkText {
-    text-shadow:
-   -1px -1px 0 white,  
-    1px -1px 0 white,
-    -1px 1px 0 white,
-     1px 1px 0 white;
-}
-
-.nodeLinkLinkText {
-    text-shadow:
-   -1px -1px 0 white,  
-    1px -1px 0 white,
-    -1px 1px 0 white,
-     1px 1px 0 white;
-}
-    
 .radarChart {
     .axis {
         path, line {
@@ -1829,4 +1813,35 @@ div.ql-toolbar {
             stroke-width: 0.3px;
         }
     }
+}
+
+.dotPlot {
+    .axis{
+        path, line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }
+
+        text {
+            font-family: sans-serif;
+            font-size: 11px;
+        }
+    }
+}
+
+.nodeLinkText {
+    text-shadow:
+   -1px -1px 0 white,  
+    1px -1px 0 white,
+    -1px 1px 0 white,
+     1px 1px 0 white;
+}
+
+.nodeLinkLinkText {
+    text-shadow:
+   -1px -1px 0 white,  
+    1px -1px 0 white,
+    -1px 1px 0 white,
+     1px 1px 0 white;
 }
