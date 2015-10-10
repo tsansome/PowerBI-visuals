@@ -271,7 +271,7 @@ module powerbi.visuals {
             //    .attr("cy", 10)
             //    .attr("r", 4 * scaleHeight)
             //    .attr("fill", "black")
-            //    .attr("stroke", "black");
+            //    .attr("stroke", "black");            
 
             var linkDist = this.GetProperty(this.dataView[0], "linkproperties", "linkDistance", NodeLink.linkDistance) * scaleHeight;
             var chargeE = this.GetProperty(this.dataView[0], "nodeproperties", "force", NodeLink.nodeForce);
@@ -309,6 +309,26 @@ module powerbi.visuals {
                     return pixelVale + "px";
                 });
                 //.attr("marker-end", "url(#arrowGray)");
+
+            var tooltip = d3.select("body")
+                .append("div")
+                .style("position", "absolute")
+                .style("z-index", "10")
+                .style("visibility", "hidden")
+                .style("font-size", "13px")
+                .style("background-color", "#3D1F00")
+                .style("color", "white")
+                .style("padding","5px");
+
+            link.on("mouseover", function () {
+                return tooltip.style("visibility", "visible");
+            }).on("mousemove", function (d:Link) {
+                return tooltip.style("top", (d3.event.clientY - 10) + "px")
+                    .style("left", (d3.event.clientX + 10) + "px")
+                    .text(function () {
+                        return "From: " + d.source.name + " To: " + d.target.name + " Value: " + d.value;
+                    });
+            }).on("mouseout", function () { return tooltip.style("visibility", "hidden"); });
 
             var linkText = linkg.append("text")
                 .style("font-size", this.GetProperty(this.dataView[0], "linkdatalabels", "fontSize", NodeLink.linkDataLabelFontSize).toString() + "px")
