@@ -33,12 +33,12 @@ module powerbi.visuals {
         name: string;
         categoryIndex: number;
         //size: number;
-        constructor(name: string, categoryIndex:number) {
+        constructor(name: string, categoryIndex: number) {
             this.name = name;
             this.categoryIndex = categoryIndex;
         }
     }
-
+    
     export class Link {
         source: Node;
         target: Node;
@@ -146,67 +146,19 @@ module powerbi.visuals {
         public static converter(dataView: DataView[]): NodeLinkModel {
             //the first data view is our categorical view of the nodes to and from
             var dv1: DataViewCategorical = dataView[0].categorical;
-            
-            var ndlkmdl = new NodeLinkModel();
-            
-            //the second data view is our target groupings            
-            if (dataView[1] && dataView[1].categorical) {
-                //this will give us the categories                
-                var nodeCategories = dataView[1].categorical.categories[0].values;
-                if (nodeCategories.length > 0) {
-                    //now we need to traverse the values
-                    var categoryValueMapping = dataView[1].categorical.values;
-                    for (var jj = 0; jj < categoryValueMapping.length; jj++) {
-                        var elems = categoryValueMapping[jj];
-                        var node = elems.source.groupName;
-                        for (var kk = 0; kk < elems.values.length; kk++) {
-                            if (elems.values[kk] != null) {
-                                var cat = nodeCategories[kk];
-                                if (ndlkmdl.categories.categoryExists(cat) === false) {
-                                    ndlkmdl.categories.addCategory(cat);
-                                }
-                                var catIndex = ndlkmdl.categories.getCategoryIndexByName(cat);
-                                ndlkmdl.addNode(node, catIndex);
-                            }
-                        }
-                    }
-                }
-            }   
-            
-            //now we look at the third because this will be the source groupings
-            if (dataView[2] && dataView[2].categorical) {
-                //this will give us the categories
-                var nodeCategories = dataView[2].categorical.categories[0].values;
-                //now we need to traverse the values
-                if (nodeCategories.length > 0) {
-                    var categoryValueMapping = dataView[2].categorical.values;
-                    for (var jj = 0; jj < categoryValueMapping.length; jj++) {
-                        var elems = categoryValueMapping[jj];
-                        var node = elems.source.groupName;
-                        for (var kk = 0; kk < elems.values.length; kk++) {
-                            if (elems.values[kk] != null) {
-                                var cat = nodeCategories[kk];
-                                if (ndlkmdl.categories.categoryExists(cat) === false) {
-                                    ndlkmdl.categories.addCategory(cat);
-                                }
-                                var catIndex = ndlkmdl.categories.getCategoryIndexByName(cat);
-                                ndlkmdl.addNode(node, catIndex);
-                            }
-                        }
-                    }
-                }
-            }         
+
+            var ndlkmdl = new NodeLinkModel();        
 
             var NodeToVals = dv1.categories[0].values;
             for (var ii = 0; ii < NodeToVals.length; ii++) {
                 var ndvl: string = NodeToVals[ii];
-                ndlkmdl.addNode(ndvl,-1);
+                ndlkmdl.addNode(ndvl, -1);
             }
 
             for (var jj = 0; jj < dv1.values.length; jj++) {
                 //each Node from is a group aka Series
                 var NodeFromText = dv1.values[jj].source.groupName;
-                ndlkmdl.addNode(NodeFromText,-1);
+                ndlkmdl.addNode(NodeFromText, -1);
                 for (var kk = 0; kk < dv1.values[jj].values.length; kk++) {
                     var strength = dv1.values[jj].values[kk];
                     if (strength != null) {
@@ -308,7 +260,7 @@ module powerbi.visuals {
                     var pixelVale = (xScale(d.value) * scaleHeight).toString();
                     return pixelVale + "px";
                 });
-                //.attr("marker-end", "url(#arrowGray)");
+            //.attr("marker-end", "url(#arrowGray)");
 
             var tooltip = d3.select("body")
                 .append("div")
@@ -318,17 +270,20 @@ module powerbi.visuals {
                 .style("font-size", "13px")
                 .style("background-color", "#3D1F00")
                 .style("color", "white")
-                .style("padding","5px");
+                .style("padding", "5px")
+                .attr("stroke", "black");
 
             link.on("mouseover", function () {
                 return tooltip.style("visibility", "visible");
-            }).on("mousemove", function (d:Link) {
+            }).on("mousemove", function (d) {
                 return tooltip.style("top", (d3.event.clientY - 10) + "px")
                     .style("left", (d3.event.clientX + 10) + "px")
                     .text(function () {
                         return "From: " + d.source.name + " To: " + d.target.name + " Value: " + d.value;
                     });
-            }).on("mouseout", function () { return tooltip.style("visibility", "hidden"); });
+            }).on("mouseout", function (d) {
+                return tooltip.style("visibility", "hidden");
+            });
 
             var linkText = linkg.append("text")
                 .style("font-size", this.GetProperty(this.dataView[0], "linkdatalabels", "fontSize", NodeLink.linkDataLabelFontSize).toString() + "px")
@@ -349,12 +304,12 @@ module powerbi.visuals {
                 .data(nodes)
                 .enter()
                 .append("g");
-            
+
             var node = nodeg.append("rect")
                 .attr("height", this.GetProperty(this.dataView[0], "nodeproperties", "defaultRadius", NodeLink.nodeDefaultRadius) * scaleHeight)
-                .attr("width", this.GetProperty(this.dataView[0], "nodeproperties", "defaultRadius", NodeLink.nodeDefaultRadius) * scaleHeight)                
+                .attr("width", this.GetProperty(this.dataView[0], "nodeproperties", "defaultRadius", NodeLink.nodeDefaultRadius) * scaleHeight)
                 .attr("stroke", "black")
-                .attr("stroke-width",1);
+                .attr("stroke-width", 1);
 
             var defaultColor = this.GetPropertyColor(this.dataView[0], "nodeproperties", "defaultColor", NodeLink.nodeDefaultColor).solid.color;
             var colors = this.colors;
@@ -383,7 +338,7 @@ module powerbi.visuals {
             });
 
             node.on("mouseout", function (d) {
-                link.style('stroke',defaultLinkColor);
+                link.style('stroke', defaultLinkColor);
             });
 
             var text = nodeg.append("text");
@@ -410,7 +365,7 @@ module powerbi.visuals {
                     var str = linkArc(d);
                     return str;
                 });
-                node.attr("transform", function (d) { return "translate(" + (d.x-5) + "," + (d.y-5) + ")"; });
+                node.attr("transform", function (d) { return "translate(" + (d.x - 5) + "," + (d.y - 5) + ")"; });
                 text.attr("transform", function (d) { return "translate(" + (d.x) + "," + (d.y) + ")"; });
             });
 
@@ -467,7 +422,7 @@ module powerbi.visuals {
                     instances.push(nodelabels);
                     break;
                 case 'nodeproperties':
-                    var objectname = 'nodeproperties';                    
+                    var objectname = 'nodeproperties';
                     var nodeproperties: VisualObjectInstance = {
                         objectName: objectname,
                         displayName: 'Node General',
@@ -510,15 +465,15 @@ module powerbi.visuals {
                     }
                 }
             }
-            var colorToReturn:Fill = {
+            var colorToReturn: Fill = {
                 solid: {
                     color: defaultValue
                 }
             };
-            return colorToReturn; 
+            return colorToReturn;
         }
 
-        private GetProperty<T>(dataView: DataView, groupPropertyValue: string, propertyValue:string, defaultValue: T) {
+        private GetProperty<T>(dataView: DataView, groupPropertyValue: string, propertyValue: string, defaultValue: T) {
             if (dataView) {
                 var objects = dataView.metadata.objects;
                 if (objects) {
@@ -532,7 +487,7 @@ module powerbi.visuals {
             }
             return defaultValue;
         }
-        
+
         public destroy(): void {
             this.root = null;
         }

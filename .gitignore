@@ -45,3 +45,9 @@ VisualsTests
 
 # Obj dirs
 src/Clients/**/obj/*.*
+src/Clients/PowerBIVisualsPlayground/sampleData.ts
+src/Clients/PowerBIVisualsPlayground/sampleData.ts
+src/Clients/PowerBIVisualsPlayground/sampleDataViews/SalesByCountryData.ts
+src/Clients/PowerBIVisualsPlayground/sampleDataViews/SalesByCountryData.ts
+src/Clients/Visuals/capabilities/nodeLink.capabilities.ts
+src/Clients/Visuals/visuals/nodeLink.ts
