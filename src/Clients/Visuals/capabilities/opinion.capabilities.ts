@@ -35,27 +35,34 @@ module powerbi.visuals {
                 kind: VisualDataRoleKind.Grouping,
             },
             {
-                name: 'Values',
+                name: 'GroupAValues',
+                displayName: 'Strength of relationship',
+                kind: VisualDataRoleKind.Measure,
+            },
+            {
+                name: 'GroupBValues',
                 displayName: 'Strength of relationship',
                 kind: VisualDataRoleKind.Measure,
             }
         ],
         dataViewMappings: [
             {
-                matrix: {
-                    rows: {
-                        for: { in: 'Statement' },
-                        /* Explicitly override the server data reduction to make it appropriate for matrix. */
-                        dataReductionAlgorithm: { window: { count: 100 } }
-                    },
-                    columns: {
-                        for: { in: 'Values' },
-                        /* Explicitly override the server data reduction to make it appropriate for matrix. */
-                        dataReductionAlgorithm: { top: { count: 100 } }
+                categorical: {
+                    categories: {
+                        for: { in: 'Category' },
+                        dataReductionAlgorithm: { sample: {} }
                     },
                     values: {
-                        for: { in: 'Values' }
-                    }
+                        group: {
+                            by: 'Statement',
+                            select: [
+                                { bind: { to: 'GroupAValues' } },
+                                { bind: { to: 'GroupBValues' } },
+                            ],
+                            dataReductionAlgorithm: { top: {} }
+                        }
+                    },
+                    rowCount: { preferred: { min: 2 } }
                 }
             }
         ]
