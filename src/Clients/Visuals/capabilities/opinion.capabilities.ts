@@ -30,6 +30,11 @@ module powerbi.visuals {
     export var OpinionVisCapabilities: VisualCapabilities = {
         dataRoles: [
             {
+                name: 'Section',
+                displayName: 'Section',
+                kind: VisualDataRoleKind.Grouping,
+            },
+            {
                 name: 'Statement',
                 displayName: 'Statement',
                 kind: VisualDataRoleKind.Grouping,
@@ -49,7 +54,7 @@ module powerbi.visuals {
             {
                 categorical: {
                     categories: {
-                        for: { in: 'Category' },
+                        for: { in: 'Section' },
                         dataReductionAlgorithm: { sample: {} }
                     },
                     values: {

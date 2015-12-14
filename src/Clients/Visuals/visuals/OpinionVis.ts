@@ -81,39 +81,26 @@ module powerbi.visuals {
             //should clear the pallette first
             this.root.selectAll("*").remove();
 
-            //var h = viewport.height;
-            //var w = viewport.width;
-
-            //our target is the size of a 2x2 tile on pbi.com
-            //var targetWidth = 520.0;
-            //var targetHeight = 360.0;
-            //now we work out the percent scale
-            //var scaleWidth = viewport.width / targetWidth;
-            //var scaleHeight = viewport.height / targetHeight;
-
             this.root.attr({
                 'height': viewport.height,
                 'width': viewport.width
             });
 
-            //var visArea = this.root.attr("viewBox", "0 0 " + w + " " + h)
-            //    .attr("preserveAspectRatio", "xMidYMid");
-            
             //get our formatters for using later
             var fStrA = valueFormatter.getFormatString(dataPoints.values[0].source, OpinionVisProperties.general.formatString);
             var fStrB = valueFormatter.getFormatString(dataPoints.values[1].source, OpinionVisProperties.general.formatString);
 
-            //extract the two value field names first
-            //var valALabel = dataPoints.columns.levels[0].sources[0];
-            //var valBLabel = dataPoints.columns.levels[0].sources[1];
-
-            //some global vars
+            //figure out the max value out of all the data points
             var maxValGroupA = _.max(dataPoints.values[0].values);
             var maxValGroupB = _.max(dataPoints.values[1].values);
             var maxVal = _.max([maxValGroupA, maxValGroupB]);
             
-            //now we need to draw the largest value, find its pixel width
-            //we can then use this to make it fit in the box
+            var minValGroupA = _.min(dataPoints.values[0].values);
+            var minValGroupB = _.min(dataPoints.values[1].values);
+            var minVal = _.min([minValGroupA, minValGroupB]); 
+
+            //we are going to draw the largest value for 
+            //the maximum datapoint value
             var maxValWidth = 0;
             var maxValStr = this.root.append("text")
                 .data([maxVal])
@@ -124,13 +111,38 @@ module powerbi.visuals {
 
             maxValStr.remove();
 
+            //the minimum datapoint value
+            var minValWidth = 0;
+            var minValStr = this.root.append("text")
+                .data([maxVal])
+                .text(valueFormatter.format(minVal, fStrA))
+                .each(function (d) {
+                    minValWidth = this.getBBox().width;
+                });
+
+            minValStr.remove();
+
+            //longest group label text
+            var longestSeriesElem: string = _.max(dataPoints.categories[0].values, function (d: string) {
+                return d.length;
+            });
+            var longestSeriesElemWidth = 0;
+            var longestSeriesElemDraw = this.root.append("text")
+                .data([longestSeriesElem])
+                .style("font-size", "11px")
+                .text(longestSeriesElem)
+                .each(function (d) {
+                    longestSeriesElemWidth = this.getBBox().width;
+                });
+            longestSeriesElemDraw.remove();
+
             //some variables for drawing
             var rowIncrementPx = 30;
             var circleRadiusPx = 8;
             var startYPy = 70;
             
             var leftTextMarginPx = 10;
-            var leftMarginPx = 150;
+            var leftMarginPx = leftTextMarginPx + longestSeriesElemWidth + 10 + minValWidth;
             var maxWidthBarPx = (viewport.width - leftMarginPx)  - (maxValWidth+3);
 
             var xScale = d3.scale.linear()
@@ -186,7 +198,7 @@ module powerbi.visuals {
 
             valueBGroupLabel.attr("dy", function (d) {
                 return 10 + (d.height / 2) - 3;
-            });
+            });           
 
             var endIndex = dataPoints.values[0].values.length;    
             //now lets walk through the values
