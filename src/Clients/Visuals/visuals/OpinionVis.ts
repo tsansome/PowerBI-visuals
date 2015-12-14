@@ -40,6 +40,15 @@ module powerbi.visuals {
         }
     }
 
+    export class OpinionVisualMetaData {
+        public valAGroupLabel: string;
+        public valBGroupLabel: string;
+        public constructor(valAGroupLabelInput: string, valBGroupLabelInput) {
+            this.valAGroupLabel = valAGroupLabelInput;
+            this.valBGroupLabel = valBGroupLabelInput;
+        }
+    }
+
     export class OpinionVis implements IVisual {
 
         private root: D3.Selection;
@@ -90,13 +99,30 @@ module powerbi.visuals {
             //var visArea = this.root.attr("viewBox", "0 0 " + w + " " + h)
             //    .attr("preserveAspectRatio", "xMidYMid");
             
+            //get our formatters for using later
+            var fStrA = valueFormatter.getFormatString(dataPoints.values[0].source, OpinionVisProperties.general.formatString);
+            var fStrB = valueFormatter.getFormatString(dataPoints.values[1].source, OpinionVisProperties.general.formatString);
 
             //extract the two value field names first
             //var valALabel = dataPoints.columns.levels[0].sources[0];
             //var valBLabel = dataPoints.columns.levels[0].sources[1];
 
             //some global vars
-            var maxVal = 850000;
+            var maxValGroupA = _.max(dataPoints.values[0].values);
+            var maxValGroupB = _.max(dataPoints.values[1].values);
+            var maxVal = _.max([maxValGroupA, maxValGroupB]);
+            
+            //now we need to draw the largest value, find its pixel width
+            //we can then use this to make it fit in the box
+            var maxValWidth = 0;
+            var maxValStr = this.root.append("text")
+                .data([maxVal])
+                .text(valueFormatter.format(maxVal, fStrA))
+                .each(function (d) {
+                    maxValWidth = this.getBBox().width;
+                });  
+
+            maxValStr.remove();
 
             //some variables for drawing
             var rowIncrementPx = 30;
@@ -105,28 +131,85 @@ module powerbi.visuals {
             
             var leftTextMarginPx = 10;
             var leftMarginPx = 150;
-            var maxWidthBarPx = 500;
+            var maxWidthBarPx = (viewport.width - leftMarginPx)  - (maxValWidth+3);
 
             var xScale = d3.scale.linear()
                 .domain([0, maxVal])
                 .range([leftMarginPx, leftMarginPx + maxWidthBarPx]);
             
+            var mtdt = new OpinionVisualMetaData(dataPoints.values[0].source.displayName, dataPoints.values[1].source.displayName);
+            
+            var valueGroupColor = "#00394D";
+
+            //firstly we need to draw the header with the legend
+            this.root.append("circle")
+                .attr("cx", 15)
+                .attr("cy", 10)
+                .attr("r", circleRadiusPx)
+                .style("fill", "white")
+                .attr("stroke", valueGroupColor);  
+            
+            var width = 0;
+            var valueAGroupLabel = this.root.append("text")
+                .data([mtdt])
+                .attr("dx", 15 + circleRadiusPx + 3)
+                .attr("dy", 10 + circleRadiusPx)
+                .style("font-size", "11px")
+                .text(mtdt.valAGroupLabel)
+                .each(function (d) {
+                    d.width = this.getBBox().width;
+                    width = d.width;
+                    d.height = this.getBBox().height;
+                });  
+
+            this.root.append("circle")
+                .attr("cx", 15 + circleRadiusPx + 3 + width + circleRadiusPx + 5)
+                .attr("cy", 10)
+                .attr("r", circleRadiusPx)
+                .style("fill", valueGroupColor);  
+
+            var valueBGroupLabel = this.root.append("text")
+                .data([mtdt])
+                .attr("dx", 15 + circleRadiusPx + 3 + width + circleRadiusPx + 5 + (circleRadiusPx) + 3)
+                .attr("dy", 10 + circleRadiusPx)
+                .style("font-size", "11px")
+                .text(mtdt.valBGroupLabel)
+                .each(function (d) {
+                    d.width = this.getBBox().width;
+                    width = d.width;
+                    d.height = this.getBBox().height;
+                });  
+            
+            valueAGroupLabel.attr("dy", function (d) {
+                return 10 + (d.height / 2) - 3;
+            });
+
+            valueBGroupLabel.attr("dy", function (d) {
+                return 10 + (d.height / 2) - 3;
+            });
+
             var endIndex = dataPoints.values[0].values.length;    
             //now lets walk through the values
             for (var i = 0; i < endIndex; i++) {
                 //extract the values and strings
                 var statementStr: string = dataPoints.categories[0].values[i];
                 var valA: number = dataPoints.values[0].values[i];
-                var valB: number = dataPoints.values[1].values[i];               
-                
-                //if its greater just switch it for now
+                var valB: number = dataPoints.values[1].values[i];           
+
+                var leftFilled = false;
+                //if its greater just switch it
                 if (valA > valB) {
+                    leftFilled = true;
                     var tmp = valA;
                     valA = valB;
                     valB = tmp;
                 }
 
+                var valAStr = valueFormatter.format(valA, fStrA);
+                var valBStr = valueFormatter.format(valB, fStrB);
+
                 var gap = valB - valA;
+                var gapStr = valueFormatter.format(gap, fStrA);
 
                 //now we want to put the text on the page
                 this.root.append("text")
@@ -158,7 +241,7 @@ module powerbi.visuals {
                     .data([dd])
                     .attr("dx", midpointPx)
                     .attr("dy", startYPy)
-                    .text(gap)
+                    .text(gapStr)
                     .style("font-size", "12px")
                     .each(function (d) {
                         d.width = this.getBBox().width;
@@ -180,7 +263,7 @@ module powerbi.visuals {
                         return rectStart + rectHeight + (d.height) + 3;
                     }
                     var rectMidPointY = rectStart + (rectHeight / 2);
-                    return rectMidPointY + (d.height / 2);
+                    return rectMidPointY + (d.height / 2) - 3;
                 });
 
                 rectDLabel.style("fill", function (d) {
@@ -196,13 +279,19 @@ module powerbi.visuals {
                     .attr("cx", LeftCircleX)
                     .attr("cy", startYPy)
                     .attr("r", circleRadiusPx)
-                    .style("fill", "#00394D");
+                    .style("fill", function (d) {
+                        if (leftFilled) {
+                            return valueGroupColor;
+                        }
+                        return "white";
+                    })
+                    .style("stroke",valueGroupColor);
 
                 var LeftDLabel = this.root.append("text")
                     .data([dd])
                     .attr("dx", LeftCircleX)
                     .attr("dy", startYPy)
-                    .text(valA)
+                    .text(valAStr)
                     .style("font-size", "14px")
                     .style("fill", "grey")
                     .each(function (d) {
@@ -218,14 +307,19 @@ module powerbi.visuals {
                             .attr("cx", RightCircleX)
                             .attr("cy", startYPy)
                             .attr("r", circleRadiusPx)
-                            .style("fill", "white")
-                            .attr("stroke", "#00394D");                   
+                            .style("fill", function (d) {
+                                if (leftFilled) {
+                                    return "white";
+                                }
+                                return valueGroupColor;
+                            })
+                            .attr("stroke", valueGroupColor);                   
                 
                 var RightDLabel = this.root.append("text")
                     .data([dd])
                     .attr("dx", RightCircleX)
                     .attr("dy", startYPy)
-                    .text(valB)
+                    .text(valBStr)
                     .style("fill", "grey")
                     .style("font-size", "14px")
                     .each(function (d) {

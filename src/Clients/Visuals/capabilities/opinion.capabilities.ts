@@ -28,7 +28,7 @@
 
 module powerbi.visuals {
     export var OpinionVisCapabilities: VisualCapabilities = {
-        dataRoles: [  
+        dataRoles: [
             {
                 name: 'Statement',
                 displayName: 'Statement',
@@ -66,5 +66,11 @@ module powerbi.visuals {
                 }
             }
         ]
-    }
+    };
+
+    export const OpinionVisProperties = {
+        general: {
+            formatString: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' },
+        }
+    };
 }
