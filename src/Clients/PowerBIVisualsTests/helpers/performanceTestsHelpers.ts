@@ -447,6 +447,46 @@ module powerbitests.performanceTestsHelpers {
                     }
                 };
 
+            case "histogram":
+                let histogramValues: number[] = [
+                        36, 25, 38, 46, 55, 68, 72, 55, 36, 38,
+                        67, 45, 22, 48, 91, 46, 52, 61, 58, 55,
+                        25, 30, 34, 35, 33, 32, 8, 10, 1, 4, 3,
+                        96, 86, 35, 22, 23, 21, 20, 19, 16, 89,
+                        100, 105, 103, 101, 101, 100, 5, 6, 5,
+                        11, 19, 18, 18, 17, 14, 3, 2, 1, 6, 75,
+                        31, 31, 32, 33, 34, 30, 29, 45, 42, 43,
+                        27, 28, 29, 26, 25, 24, 23, 30, 31, 32
+                    ],
+                    histogramDataViewMetadata: powerbi.DataViewMetadata = {
+                    columns: [{
+                        displayName: "Age",
+                        queryName: "Age",
+                        type: ValueType.fromDescriptor({
+                            text: true
+                        }),
+                        objects: {
+                            dataPoint: {
+                                fill: {
+                                    solid: {
+                                        color: "rgb(1, 184, 170)"
+                                    }
+                                }
+                            }
+                        }
+                    }]
+                };
+
+                return {
+                    metadata: histogramDataViewMetadata,
+                    categorical: {
+                        categories: [{
+                            source: histogramDataViewMetadata.columns[0],
+                            values: histogramValues
+                        }]
+                    }
+                };
+
             default:
                 var fieldExpr = powerbi.data.SQExprBuilder.fieldExpr({ column: { schema: "s", entity: "table1", name: "country" } });
 

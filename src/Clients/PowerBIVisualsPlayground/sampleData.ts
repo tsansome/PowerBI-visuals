@@ -39,17 +39,21 @@ module powerbi.visuals.sampleData {
             new sampleDataViews.SalesByCountryData(),
             new sampleDataViews.SalesByDayOfWeekData(),
             new sampleDataViews.ServicesByUsers(),
+            new sampleDataViews.SimpleAreaRangeData(),
             new sampleDataViews.SimpleFunnelData(),
             new sampleDataViews.SimpleGaugeData(),
             new sampleDataViews.SimpleMatrixData(),
             new sampleDataViews.SimpleTableData(),
             new sampleDataViews.TeamScoreData(),
+            new sampleDataViews.SimpleTreeData(),
             new sampleDataViews.ProductSalesByDate(),
-            new sampleDataViews.SimpleDotPlotData(),
             new sampleDataViews.NodeLinkData4Node(),
             new sampleDataViews.NodeLinkData10Node(),
             new sampleDataViews.NodeLinkData10NodeWithCategories(),
-            new sampleDataViews.NodeLinkData10NodeWithBlankCategory()
+            new sampleDataViews.NodeLinkData10NodeWithBlankCategory(),
+            new sampleDataViews.SimpleDotPlotData(),
+            new sampleDataViews.SimpleTimelineData(),
+            new sampleDataViews.SimpleHistogramData(),
         ];
 
         /**

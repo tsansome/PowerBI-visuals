@@ -28,7 +28,8 @@
 
 module powerbi.visuals.samples {
     import SelectionManager = utility.SelectionManager;
- 
+    import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
+
     export interface DotPlotConstructorOptions {
         animator?: IGenericAnimator;
         svg?: D3.Selection;
@@ -36,7 +37,7 @@ module powerbi.visuals.samples {
         radius?: number;
         strokeWidth?: number;
     }
-    
+
     export interface DotPlotDatapoint {
         x: number;
         y: number;
@@ -46,7 +47,7 @@ module powerbi.visuals.samples {
         identity: SelectionId;
         tooltipInfo?: TooltipDataItem[];
     }
-    
+
     export interface DotPlotData {
         dataPoints: DotPlotDatapoint[];
         legendData: LegendData;
@@ -54,24 +55,29 @@ module powerbi.visuals.samples {
 
     export class DotPlot implements IVisual {
         public static capabilities: VisualCapabilities = {
-            dataRoles: [
-                {
-                    name: 'Category',
-                    kind: powerbi.VisualDataRoleKind.Grouping,
-                },
-                {
-                    name: 'Y',
-                    kind: powerbi.VisualDataRoleKind.Measure,
-                },
-            ],
+            dataRoles: [{
+                name: 'Category',
+                kind: powerbi.VisualDataRoleKind.Grouping,
+                displayName: data.createDisplayNameGetter("Role_DisplayName_Category")
+            },
+            {
+                name: 'Y',
+                kind: powerbi.VisualDataRoleKind.Measure,
+                displayName: data.createDisplayNameGetter("Role_DisplayName_Value")
+            }],
             dataViewMappings: [{
-                categories: {
-                    for: { in: 'Category' },
-                    dataReductionAlgorithm: { top: {} }
-                },
-                values: {
-                    select: [{ bind: { to: 'Y' } }]
-                },
+                conditions: [
+                    { 'Category': { max: 1 }, 'Y': { max: 1 } },
+                ],
+                categorical: {
+                    categories: {
+                        for: { in: 'Category' },
+                        dataReductionAlgorithm: { top: {} }
+                    },
+                    values: {
+                        select: [{ bind: { to: 'Y' } }]
+                    },
+                }
             }],
             objects: {
                 general: {
@@ -125,21 +131,22 @@ module powerbi.visuals.samples {
         private legend: ILegend;
 
         private static DefaultMargin: IMargin = {
-            top: 50,
-            bottom: 50,
+            top: 40,
+            bottom: 40,
             right: 50,
             left: 50
         };
 
         private radius: number;
         private strokeWidth: number;
+        private hostService: IVisualHostServices;
 
         private static DefaultRadius: number = 5;
         private static DefaultStrokeWidth: number = 1;
         private static FrequencyText: string = "Frequency";
 
         private static round10(value: number, digits: number = 2) {
-            const scale = Math.pow(10, digits);
+            var scale = Math.pow(10, digits);
             return (Math.round(scale * value) / scale);
         }
 
@@ -150,43 +157,79 @@ module powerbi.visuals.samples {
             }];
         }
 
-        public static converter(dataView: DataView, maxDots: number, colors: IDataColorPalette): DotPlotData {
-            let catDv: DataViewCategorical = dataView.categorical;
-            let values = catDv.values;
+        public static converter(dataView: DataView, maxDots: number, colors: IDataColorPalette, host: IVisualHostServices): DotPlotData {
 
-            let dataPoints: DotPlotDatapoint[] = [];
-            let legendData: LegendData = {
+            var dataPoints: DotPlotDatapoint[] = [];
+            var legendData: LegendData = {
                 dataPoints: [],
             };
 
-            for (let i = 0, iLen = values.length; i < iLen; i++) {
-                let legendText = values[i].source.displayName;
-                let color = colors.getColorByIndex(i).value;
-                let counts = {};
+            if (!dataView ||
+                !dataView.categorical ||
+                !dataView.categorical.values ||
+                dataView.categorical.values.length < 1 ||
+                !dataView.categorical ||
+                !dataView.categorical.categories ||
+                !dataView.categorical.categories[0]) {
+                return  {
+                    dataPoints: dataPoints,
+                    legendData: legendData,
+                };
+            }
 
-                for (let j = 0, jLen = values[i].values.length; j < jLen; j++) {
-                    let num = values[i].values[j];
-                    counts[num] = counts[num] ? counts[num]+1 : 1;
-                }                
-                let data = d3.entries(counts);
-                let min = d3.min(data, d => d.value);
-                let max = d3.max(data, d => d.value);
+            var catDv: DataViewCategorical = dataView.categorical;
+            var series: DataViewValueColumns = catDv.values;
+            var category: any[] = catDv.categories[0].values;
 
-                let dotsScale: D3.Scale.LinearScale = d3.scale.linear().domain([min, max]);
+            if (!series[0].source.type.integer) {
+                var visualMessage: IVisualErrorMessage = {
+                    message: 'This visual expects integer Values. Try adding a text field to create a "Count of" value.',
+                    title: 'Integer Value Expected',
+                    detail: '',
+                };
+                var warning: IVisualWarning = {
+                    code: 'UnexpectedValueType',
+                    getMessages: () => visualMessage,
+                };
+                host.setWarnings([warning]);
+                return {
+                    dataPoints: dataPoints,
+                    legendData: legendData,
+                };
+            }
+
+            for (var i = 0, iLen = series.length; i < iLen; i++) {
+                var counts = {};
+                var values = series[i].values;
+                for (var j = 0, jLen = values.length; j < jLen; j++) {
+                    var idx = category[j];
+                    var value = values[j];
+                    if (!counts[idx]) counts[idx] = 0;
+                    counts[idx] += value;
+                }
+
+                var legendText = series[i].source.displayName;
+                var color = colors.getColorByIndex(i).value;
+
+                var data = d3.entries(counts);
+                var min = d3.min(data, d => d.value);
+                var max = d3.max(data, d => d.value);
+
+                var dotsScale: D3.Scale.LinearScale = d3.scale.linear().domain([min, max]);
 
                 if (max > maxDots) {
                     dotsScale.rangeRound([0, maxDots]);
-                    let scale = DotPlot.round10(max / maxDots);
+                    var scale = DotPlot.round10(max / maxDots);
                     legendText += ` (1 dot = x${scale})`;
                 } else {
                     dotsScale.rangeRound([min, max]);
                 }
 
-                for (let k = 0, kLen = data.length; k < kLen; k++) {
-                    let y = dotsScale(data[k].value);
-                    
-                    for (let level = 0; level < y; level++) {
-                        let id = SelectionIdBuilder
+                for (var k = 0, kLen = data.length; k < kLen; k++) {
+                    var y = dotsScale(data[k].value);
+
+                    for (var level = 0; level < y; level++) {
+                        var id = SelectionIdBuilder
                             .builder()
                             .withSeries(dataView.categorical.values, dataView.categorical.values[i])
                             .createSelectionId();
@@ -230,15 +273,21 @@ module powerbi.visuals.samples {
         }
 
         public init(options: VisualInitOptions): void {
-            let element = options.element;
+            var element = options.element;
             this.selectionManager = new SelectionManager({ hostServices: options.host });
+            this.hostService = options.host;
 
             if (!this.svg) {
                 this.svg = d3.select(element.get(0)).append('svg');
             }
-
             if (!this.margin) {
                 this.margin = DotPlot.DefaultMargin;
+            }
+            if (!this.radius) {
+                this.radius = DotPlot.DefaultRadius;
+            }
+            if (!this.strokeWidth) {
+                this.strokeWidth = DotPlot.DefaultStrokeWidth;
             }
 
             this.svg.classed(DotPlot.VisualClassName, true);
@@ -256,39 +305,47 @@ module powerbi.visuals.samples {
 
         public update(options: VisualUpdateOptions): void {
             if (!options.dataViews || !options.dataViews[0]) return;
-            let dataView = this.dataView = options.dataViews[0];
-            let viewport = this.viewport = options.viewport;
+            var dataView = this.dataView = options.dataViews[0];
+            var viewport = this.viewport = options.viewport;
             this.svg
                 .attr({
                     'height': viewport.height,
                     'width': viewport.width
                 });
 
-            let radius = this.radius + this.strokeWidth;
-            let height = viewport.height - this.margin.bottom - this.margin.top;
-            let maxDots = Math.round(height / (2 * radius));
+            var radius = this.radius + this.strokeWidth;
+            var height = viewport.height - this.margin.bottom - this.margin.top;
+            var maxDots = Math.round(height / (2 * radius));
 
-            let data = DotPlot.converter(dataView, maxDots, this.colors);
-            let dataPoints = data.dataPoints;
+            var data = DotPlot.converter(dataView, maxDots, this.colors, this.hostService);
+            var dataPoints = data.dataPoints;
 
-            let values = dataView.categorical.values[0].values;
-            let xValues = d3.set(values).values();
+            var values = dataView.categorical
+                && dataView.categorical.categories 
+                && dataView.categorical.categories.length > 0 ?
+                dataView.categorical.categories[0].values
+                : [];
+            var xValues = d3.set(values).values();
 
-            let xScale: D3.Scale.OrdinalScale = d3.scale.ordinal()
+            var xScale: D3.Scale.OrdinalScale = d3.scale.ordinal()
                 .domain(xValues)
                 .rangeBands([this.margin.left, viewport.width - this.margin.right]);
 
-            let yScale: D3.Scale.LinearScale = d3.scale.linear()
+            var yScale: D3.Scale.LinearScale = d3.scale.linear()
                 .domain([0, maxDots])
                 .range([height - radius, this.margin.top]);
 
-            this.legend.drawLegend(data.legendData, viewport);
+            // temporary disabled as this raises the following error on PBI Portal
+            // Uncaught TypeError: Cannot read property 'registerDirectivesForEndPoint' of undefined
+            //if(data.legendData.dataPoints.length > 0) {
+            //    this.legend.drawLegend(data.legendData, viewport);
+            //}
             this.drawAxis(xValues, xScale, height);
             this.drawDotPlot(dataPoints, xScale, yScale);
         }
 
         private drawDotPlot(data: DotPlotDatapoint[], xScale: D3.Scale.OrdinalScale, yScale: D3.Scale.LinearScale): void {
-            let selection = this.dotPlot.selectAll(DotPlot.Dot.selector).data(data);
+            var selection = this.dotPlot.selectAll(DotPlot.Dot.selector).data(data);
             selection
                 .enter()
                 .append('circle')
@@ -317,7 +374,7 @@ module powerbi.visuals.samples {
         }
 
         private drawAxis(values: any[], xScale: D3.Scale.OrdinalScale, translateY: number) {
-            let xAxis = d3.svg.axis()
+            var xAxis = d3.svg.axis()
                 .scale(xScale)
                 .orient("bottom")
                 .tickValues(values);
