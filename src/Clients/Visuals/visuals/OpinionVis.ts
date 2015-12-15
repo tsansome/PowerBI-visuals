@@ -54,7 +54,9 @@ module powerbi.visuals {
         private root: D3.Selection;
         private dataView: DataView[];
         private selectionManager: SelectionManager;
-     
+        
+        private circleNodesCollection: any[];
+
         private colors: IDataColorPalette;
 
         public init(options: VisualInitOptions): void {
@@ -76,6 +78,7 @@ module powerbi.visuals {
             var viewport = options.viewport;
             var dataPoints = OpinionVis.converter(dataView);    
 
+            this.circleNodesCollection = [];
             //prep the visual area
 
             //should clear the pallette first
@@ -138,9 +141,9 @@ module powerbi.visuals {
 
             //some variables for drawing
             var rowIncrementPx = 30;
-            var circleRadiusPx = 8;
-            var startYPy = 70;
+            var circleRadiusPx = 8;            
             
+            var outerTopMargin = 15;
             var leftTextMarginPx = 10;
             var leftMarginPx = leftTextMarginPx + longestSeriesElemWidth + 10 + minValWidth;
             var maxWidthBarPx = (viewport.width - leftMarginPx)  - (maxValWidth+3);
@@ -162,6 +165,7 @@ module powerbi.visuals {
                 .attr("stroke", valueGroupColor);  
             
             var width = 0;
+            var valueAGroupLabelHeight = 0;
             var valueAGroupLabel = this.root.append("text")
                 .data([mtdt])
                 .attr("dx", 15 + circleRadiusPx + 3)
@@ -172,17 +176,18 @@ module powerbi.visuals {
                     d.width = this.getBBox().width;
                     width = d.width;
                     d.height = this.getBBox().height;
+                    valueAGroupLabelHeight = d.height;
                 });  
 
             this.root.append("circle")
-                .attr("cx", 15 + circleRadiusPx + 3 + width + circleRadiusPx + 5)
+                .attr("cx", outerTopMargin + circleRadiusPx + 3 + width + circleRadiusPx + 5)
                 .attr("cy", 10)
                 .attr("r", circleRadiusPx)
                 .style("fill", valueGroupColor);  
 
             var valueBGroupLabel = this.root.append("text")
                 .data([mtdt])
-                .attr("dx", 15 + circleRadiusPx + 3 + width + circleRadiusPx + 5 + (circleRadiusPx) + 3)
+                .attr("dx", outerTopMargin + circleRadiusPx + 3 + width + circleRadiusPx + 5 + (circleRadiusPx) + 3)
                 .attr("dy", 10 + circleRadiusPx)
                 .style("font-size", "11px")
                 .text(mtdt.valBGroupLabel)
@@ -199,6 +204,28 @@ module powerbi.visuals {
             valueBGroupLabel.attr("dy", function (d) {
                 return 10 + (d.height / 2) - 3;
             });           
+
+            //now we draw the line seperating the legend from the visual
+            this.root.append("line")
+                .attr("x1", leftTextMarginPx)
+                .attr("y1", outerTopMargin + valueAGroupLabelHeight + 30 + 3)
+                .attr("x2", leftTextMarginPx + leftMarginPx + maxWidthBarPx)
+                .attr("y2", outerTopMargin + valueAGroupLabelHeight + 30 + 3)
+                .attr("stroke-width", 1)
+                .attr("stroke", valueGroupColor);
+            
+            //so we should start it after our line above
+            var startYPy = outerTopMargin + valueAGroupLabelHeight + 40 + 3;
+            startYPy += (circleRadiusPx * 2.5);
+
+            var tooltip = this.root.append("line")
+                .attr("x1", 30)
+                .attr("y1", outerTopMargin + valueAGroupLabelHeight + 30 + 3)
+                .attr("x2", 30)
+                .attr("y2", 5)
+                .attr("stroke-width", 1)
+                .attr("stroke", valueGroupColor)
+                .style("visibility", "hidden");
 
             var endIndex = dataPoints.values[0].values.length;    
             //now lets walk through the values
@@ -246,8 +273,7 @@ module powerbi.visuals {
                     .attr("height", (circleRadiusPx * 2))
                     .style("fill", "#4884d9");  
 
-                var midpointPx = LeftCircleX + (rectWidth / 2);
-                               
+                var midpointPx = LeftCircleX + (rectWidth / 2);                               
 
                 var rectDLabel = this.root.append("text")
                     .data([dd])
@@ -287,8 +313,9 @@ module powerbi.visuals {
                 });
 
                 //do the circle then the text                
-                this.root.append("circle")
+                var leftCircleNode = this.root.append("circle")
                     .attr("cx", LeftCircleX)
+                    .data([LeftCircleX])
                     .attr("cy", startYPy)
                     .attr("r", circleRadiusPx)
                     .style("fill", function (d) {
@@ -298,6 +325,8 @@ module powerbi.visuals {
                         return "white";
                     })
                     .style("stroke",valueGroupColor);
+
+                this.circleNodesCollection.push(leftCircleNode[0][0]);
 
                 var LeftDLabel = this.root.append("text")
                     .data([dd])
@@ -315,17 +344,20 @@ module powerbi.visuals {
                 });
 
                 //do the circle then the text
-                this.root   .append("circle")
-                            .attr("cx", RightCircleX)
-                            .attr("cy", startYPy)
-                            .attr("r", circleRadiusPx)
-                            .style("fill", function (d) {
-                                if (leftFilled) {
-                                    return "white";
-                                }
-                                return valueGroupColor;
-                            })
-                            .attr("stroke", valueGroupColor);                   
+                var rightCircleNode = this.root.append("circle")
+                                            .data([RightCircleX])
+                                                .attr("cx", RightCircleX)
+                                                .attr("cy", startYPy)
+                                                .attr("r", circleRadiusPx)
+                                                .style("fill", function (d) {
+                                                    if (leftFilled) {
+                                                        return "white";
+                                                    }
+                                                    return valueGroupColor;
+                                                })
+                                                .attr("stroke", valueGroupColor);                   
+                
+                this.circleNodesCollection.push(rightCircleNode[0][0]);
                 
                 var RightDLabel = this.root.append("text")
                     .data([dd])
@@ -340,7 +372,7 @@ module powerbi.visuals {
 
                 RightDLabel.attr("dx", function (d) {
                     return RightCircleX + circleRadiusPx + 3;
-                });
+                });                
 
                 this.root.append("line")
                     .attr("x1", leftTextMarginPx)
@@ -353,8 +385,18 @@ module powerbi.visuals {
 
                 startYPy += rowIncrementPx;
                 startYPy += rowIncrementPx;
-            }
-            
+            }                      
+
+            tooltip.attr("y2", startYPy);
+
+            d3.selectAll(this.circleNodesCollection).on("mouseover", function () {
+                return tooltip.style("visibility", "visible");
+            }).on("mousemove", function (d) {
+                return tooltip.attr("x1", d).attr("x2", d);
+            }).on("mouseout", function (d) {
+                return tooltip.style("visibility", "hidden");
+            });
+
         }
 
         public destroy(): void {
