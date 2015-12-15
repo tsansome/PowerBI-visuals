@@ -113,7 +113,7 @@ module powerbi.visuals.sampleDataViews {
     }
 
     export class NodeLinkDataBase extends SampleDataViews {
-        public visuals: string[] = ['nodeLink', ];
+        public visuals: string[] = ['nodeLink','opinionVis2' ];
 
         public measureDisplayName_nodeCat = "NodeSize";
         public measureQueryName_nodeCat = "Sum(NodeLinksCategories.NodeSize)";
@@ -144,9 +144,9 @@ module powerbi.visuals.sampleDataViews {
             var nodesTo = ["Playstation", "WiiU", "WindowsPhone", "Xbox"];
 
             var groupings = [
-                new Group("Playstation", [null, null, null, 15]),
-                new Group("WindowsPhone", [null, 70, null, null]),
-                new Group("Xbox", [30, null, 50, null])
+                new Group("Playstation", [20, 10, 50, 15]),
+                new Group("WindowsPhone", [30, 70, 15, 40]),
+                new Group("Xbox", [30, 45, 50, null])
             ];
 
             //return the data view    

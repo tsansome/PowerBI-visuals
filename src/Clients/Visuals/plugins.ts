@@ -323,6 +323,12 @@ module powerbi.visuals.plugins {
         create: () => new OpinionVis()
     };
 
+    export var opinionVis2: IVisualPlugin = {
+        name: 'opinionVis2',
+        capabilities: OpinionVis2Capabilities,
+        create: () => new OpinionVis2()
+    };
+
     export var streamGraph: IVisualPlugin = {
         name: 'streamGraph',
         watermarkKey: 'lineChart',

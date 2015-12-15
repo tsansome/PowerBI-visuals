@@ -66,7 +66,7 @@ module powerbi.visuals {
         }
     }
 
-    export class OpinionVis implements IVisual {
+    export class OpinionVis2 implements IVisual {
 
         public static capabilities: VisualCapabilities = {
             dataRoles: [
@@ -76,42 +76,36 @@ module powerbi.visuals {
                     kind: VisualDataRoleKind.Grouping,
                 },
                 {
-                    name: 'GroupAValues',
-                    displayName: 'Group A values',
-                    kind: VisualDataRoleKind.Measure,
+                    name: 'Groups',
+                    displayName: 'Groups to compare',
+                    kind: VisualDataRoleKind.Grouping,
                 },
                 {
-                    name: 'GroupADetails',
-                    displayName: 'Group A details',
+                    name: 'Value',
+                    displayName: 'Values',
                     kind: VisualDataRoleKind.Measure,
+                    requiredTypes: [{ numeric: true }]
                 },
-                {
-                    name: 'GroupBValues',
-                    displayName: 'Group B values',
-                    kind: VisualDataRoleKind.Measure,
-                },
-                {
-                    name: 'GroupBDetails',
-                    displayName: 'Group B details',
-                    kind: VisualDataRoleKind.Measure,
-                }
             ],
             dataViewMappings: [
                 {
+                    conditions: [
+                        // NOTE: Ordering of the roles prefers to add measures to Y before Gradient.
+                        { 'Statement': { max: 1 }, 'Groups': { max: 1 }, 'Value': { max: 1 } },
+                    ],
                     categorical: {
                         categories: {
                             for: { in: 'Statement' },
-                            dataReductionAlgorithm: { sample: {} }
+                            dataReductionAlgorithm: { top: {} }
                         },
                         values: {
-                            select: [
-                                { bind: { to: 'GroupAValues' } },
-                                { bind: { to: 'GroupBValues' } },
-                                { bind: { to: 'GroupADetails' } },
-                                { bind: { to: 'GroupBDetails' } }
-                            ],
+                            group: {
+                                by: 'Groups',
+                                select: [{ for: { in: 'Value' } }],
+                                dataReductionAlgorithm: { top: { count: 2 } }
+                            }
                         },
-                        rowCount: { preferred: { min: 2 } }
+                        rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
                     }
                 }
             ]
@@ -150,7 +144,7 @@ module powerbi.visuals {
             var dataView = this.dataView = options.dataViews;
             var viewport = options.viewport;
             var dataPoints = OpinionVis.converter(dataView);    
-
+            
             //if they've only put 1 of the fields in
             //don't render the visual
             if (dataPoints.values.length > 1) {
@@ -233,13 +227,13 @@ module powerbi.visuals {
                 var outerTopMargin = 15;
                 var leftTextMarginPx = 10;
                 var leftMarginPx = leftTextMarginPx + longestSeriesElemWidth + 10 + minValWidth;
-                var maxWidthBarPx = (viewport.width - leftMarginPx) - (maxValWidth + 3);
+                var maxWidthBarPx = (viewport.width - leftMarginPx) - (maxValWidth + 15);
 
                 var xScale = d3.scale.linear()
                     .domain([0, maxVal])
                     .range([leftMarginPx, leftMarginPx + maxWidthBarPx]);
 
-                var mtdt = new OpinionVisualMetaData(dataPoints.values[0].source.displayName, dataPoints.values[1].source.displayName);
+                var mtdt = new OpinionVisualMetaData(dataPoints.values[0].source.groupName, dataPoints.values[1].source.groupName);
 
                 var valueGroupColor = "#00394D";
 
@@ -322,7 +316,8 @@ module powerbi.visuals {
                     .attr("stroke", valueGroupColor)
                     .style("visibility", "hidden");
 
-                var endIndex = dataPoints.values[0].values.length;    
+                var endIndex = dataPoints.categories[0].values.length; 
+                alert(dataPoints.categories[0].values);
                 //now lets walk through the values
                 for (var i = 0; i < endIndex; i++) {
                     //extract the values and strings

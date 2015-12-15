@@ -30,23 +30,28 @@ module powerbi.visuals {
     export var OpinionVisCapabilities: VisualCapabilities = {
         dataRoles: [
             {
-                name: 'Section',
-                displayName: 'Section',
-                kind: VisualDataRoleKind.Grouping,
-            },
-            {
                 name: 'Statement',
                 displayName: 'Statement',
                 kind: VisualDataRoleKind.Grouping,
             },
             {
                 name: 'GroupAValues',
-                displayName: 'Strength of relationship',
+                displayName: 'Group A values',
+                kind: VisualDataRoleKind.Measure,
+            },
+            {
+                name: 'GroupADetails',
+                displayName: 'Group A details',
                 kind: VisualDataRoleKind.Measure,
             },
             {
                 name: 'GroupBValues',
-                displayName: 'Strength of relationship',
+                displayName: 'Group B values',
+                kind: VisualDataRoleKind.Measure,
+            },
+            {
+                name: 'GroupBDetails',
+                displayName: 'Group B details',
                 kind: VisualDataRoleKind.Measure,
             }
         ],
@@ -54,28 +59,20 @@ module powerbi.visuals {
             {
                 categorical: {
                     categories: {
-                        for: { in: 'Section' },
+                        for: { in: 'Statement' },
                         dataReductionAlgorithm: { sample: {} }
                     },
                     values: {
-                        group: {
-                            by: 'Statement',
-                            select: [
-                                { bind: { to: 'GroupAValues' } },
-                                { bind: { to: 'GroupBValues' } },
-                            ],
-                            dataReductionAlgorithm: { top: {} }
-                        }
+                        select: [
+                            { bind: { to: 'GroupAValues' } },
+                            { bind: { to: 'GroupBValues' } },
+                            { bind: { to: 'GroupADetails' } },
+                            { bind: { to: 'GroupBDetails' } }
+                        ]
                     },
                     rowCount: { preferred: { min: 2 } }
                 }
             }
         ]
-    };
-
-    export const OpinionVisProperties = {
-        general: {
-            formatString: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' },
-        }
     };
 }
