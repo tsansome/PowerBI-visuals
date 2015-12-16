@@ -54,7 +54,7 @@ module powerbi.visuals {
                 ],
                 categorical: {
                     categories: {
-                        for: { in: 'Category' },
+                        for: { in: 'Statement' },
                         dataReductionAlgorithm: { top: {} }
                     },
                     values: {
@@ -67,6 +67,78 @@ module powerbi.visuals {
                     rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
                 }
             }
-        ]
+        ],
+        objects: {
+            statementproperties: {
+                displayName: "Statement",
+                properties: {
+                    defaultFontSize: {
+                        description: "Specify the font size for the statement text.",
+                        type: { numeric: true },
+                        displayName: "Default Font Size"
+                    },
+                    defaultFontColor: {
+                        description: "Specify the font color for the statement text.",
+                        type: { numeric: true },
+                        displayName: "Default Font Color"
+                    }
+                }
+            },
+            groupnodeproperties: {
+                displayName: "Group Circle",
+                properties: {
+                    defaultColor: {
+                        description: "Specify the font size for the statement text.",
+                        type: { fill: { solid: { color: true } } },
+                        displayName: "Default Color"
+                    }
+                }
+            },
+            groupnodedatalabelproperties: {
+                displayName: "Group Circle Data Label",
+                properties: {
+                    defaultColor: {
+                        description: "Specify the default color for the nodes.",
+                        type: { fill: { solid: { color: true } } },
+                        displayName: "Default Color"
+                    }, 
+                    defaultFontSize: {
+                        description: "Specify the font size for the data label on a node.",
+                        type: { numeric: true },
+                        displayName: "Default Font Size"
+                    }
+                }
+            },
+            gapbarproperties: {
+                displayName: "Gap Bar",
+                properties: {
+                    defaultColor: {
+                        description: "Specify the default color for the gap bar.",
+                        type: { fill: { solid: { color: true } } },
+                        displayName: "Default Color"
+                    }
+                }
+            },
+            gaplabelproperties: {
+                displayName: "Gap Label",
+                properties: {
+                    defaultColorOnBar: {
+                        description: "Specify the default color for the text label on the gap bar.",
+                        type: { fill: { solid: { color: true } } },
+                        displayName: "Default Color On Bar"
+                    },
+                    defaultColorBelowBar: {
+                        description: "Specify the default color for the text label below the gap bar.",
+                        type: { fill: { solid: { color: true } } },
+                        displayName: "Default Color Below Bar"
+                    },
+                    defaultFontSize: {
+                        description: "Specify the font size for the gap label.",
+                        type: { numeric: true },
+                        displayName: "Default Font Size"
+                    }
+                }
+            }
+        }
     };
 }
