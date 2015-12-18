@@ -30,10 +30,12 @@ module powerbi.visuals {
     import SelectionManager = utility.SelectionManager;
     
     export class StatementResponseV2 {
+        public identity: any;
         public statement: string;
         public GroupA: OpinionNodeV2;
         public GroupB: OpinionNodeV2;        
-        public constructor(statement: string, GroupA: OpinionNodeV2, GroupB: OpinionNodeV2) {
+        public constructor(identity: any, statement: string, GroupA: OpinionNodeV2, GroupB: OpinionNodeV2) {
+            this.identity = identity;
             this.statement = statement;
             this.GroupA = GroupA;
             this.GroupB = GroupB;            
@@ -91,7 +93,7 @@ module powerbi.visuals {
                 {
                     conditions: [
                         // NOTE: Ordering of the roles prefers to add measures to Y before Gradient.
-                        { 'Statement': { max: 1 }, 'Groups': { max: 1 }, 'Value': { max: 1 } },
+                        { 'Statement': { max: 3 }, 'Groups': { max: 1 }, 'Value': { max: 1 } },
                     ],
                     categorical: {
                         categories: {
@@ -179,7 +181,10 @@ module powerbi.visuals {
                             displayName: "Default Font Size"
                         }
                     }
-                }
+                }                
+            },
+            drilldown: {
+                roles: ['Statement']
             }
         };
 
@@ -192,9 +197,12 @@ module powerbi.visuals {
         private root: D3.Selection;
         private dataView: DataView[];
         private selectionManager: SelectionManager;
+        private selectedId: any;
         
         private circleNodesCollectionD3: any[];
         private circleNodesCollectionClasses: OpinionNodeV2[];
+        private rectNodesCollectionD3: any[];
+        private rectNodesCollectionClasses: StatementResponseV2[];
 
         private colors: IDataColorPalette;
         
@@ -222,6 +230,8 @@ module powerbi.visuals {
             if (dataPoints.values.length > 1) {
                 this.circleNodesCollectionD3 = [];
                 this.circleNodesCollectionClasses = [];
+                this.rectNodesCollectionD3 = [];
+                this.rectNodesCollectionClasses = [];
                 //prep the visual area
 
                 //should clear the pallette first
@@ -471,8 +481,12 @@ module powerbi.visuals {
                         label = mtdt.valAGroupLabel;
                     }
                     var RightNode = new OpinionNodeV2(label, valB, valBStr, valBDetailsStr, valBDetailsLabel, RightCircleX);
-
-                    var dd = new StatementResponseV2(statementStr, LeftNode, RightNode);
+                    
+                    var id = SelectionIdBuilder
+                        .builder()
+                        .withCategory(dataPoints.categories[0], i)
+                        .createSelectionId();
+                    var dd = new StatementResponseV2(id,statementStr, LeftNode, RightNode);
                                 
                     //determine the two x start positions, then just calculate the width
                     //do the rectangle between the circles and add the text underneath or on top of
@@ -482,13 +496,16 @@ module powerbi.visuals {
                     var gapBFontOnBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorOnBar", OpinionVis2.gapLabelDefaultColorOnBar).solid.color;
                     var gapBFontBelowBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorBelowBar", OpinionVis2.gapLabelDefaultColorBelowBar).solid.color;
 
-                    this.root.append("rect")
-                        .attr("y", startYPy - circleRadiusPx)
-                        .attr("x", LeftCircleX)
-                        .attr("width", rectWidth)
-                        .attr("height", (circleRadiusPx * 2))
+                    var rect = this.root.append("rect")
+                                        .data([dd])
+                                        .attr("y", startYPy - circleRadiusPx)
+                                        .attr("x", LeftCircleX)
+                                        .attr("width", rectWidth)
+                                        .attr("height", (circleRadiusPx * 2))
                         .style("fill", gapBColor);
 
+                    this.rectNodesCollectionD3.push(rect[0][0]);
+                    
                     var midpointPx = LeftCircleX + (rectWidth / 2);
 
                     var rectDLabel = this.root.append("text")
@@ -635,6 +652,20 @@ module powerbi.visuals {
                     valueBGroupLabel.style("font-weight", "");
                     selectedText.text(defaultHeaderMoreDetailsLabel);
                     return tooltip.style("visibility", "hidden");
+                });
+
+                var self = this;
+                d3.selectAll(this.rectNodesCollectionD3).on("click", function (d: StatementResponseV2) {
+                    self.selectionManager.select(d.identity).then(ids => {                        
+                        //now we should do highlighting here
+                        if (self.selectedId === d.identity) {
+                            d3.selectAll(self.rectNodesCollectionD3).style("opacity", 1);
+                        } else {
+                            d3.selectAll(self.rectNodesCollectionD3).style("opacity", 0.5);
+                            d3.select(this).style("opacity", 1);
+                        }
+                        self.selectedId = d.identity;
+                    });
                 });
             }            
         }
