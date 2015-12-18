@@ -92,8 +92,7 @@ module powerbi.visuals {
             dataViewMappings: [
                 {
                     conditions: [
-                        // NOTE: Ordering of the roles prefers to add measures to Y before Gradient.
-                        { 'Statement': { max: 3 }, 'Groups': { max: 1 }, 'Value': { max: 1 } },
+                        { 'Statement': { max: 5 }, 'Groups': { max: 1 }, 'Value': { max: 1 } },
                     ],
                     categorical: {
                         categories: {
