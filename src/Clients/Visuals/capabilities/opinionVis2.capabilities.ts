@@ -45,12 +45,23 @@ module powerbi.visuals {
                 kind: VisualDataRoleKind.Measure,
                 requiredTypes: [{ numeric: true }]
             },
+            {
+                name: 'ExtraDetails',
+                displayName: 'Extra Details',
+                kind: VisualDataRoleKind.Measure,
+                requiredTypes: [{ numeric: true }]
+            },
+            {
+                name: 'SortBy',
+                displayName: 'Sort By',
+                kind: VisualDataRoleKind.Measure,
+                requiredTypes: [{ numeric: true }]
+            }
         ],
         dataViewMappings: [
             {
                 conditions: [
-                    // NOTE: Ordering of the roles prefers to add measures to Y before Gradient.
-                    { 'Statement': { max: 5 }, 'Groups': { max: 1 }, 'Value': { max: 1 } },
+                    { 'Statement': { max: 5 }, 'Groups': { max: 1 }, 'Value': { max: 1 }, 'SortBy': { max: 1 }, 'ExtraDetails': { max: 1 } },
                 ],
                 categorical: {
                     categories: {
@@ -66,6 +77,24 @@ module powerbi.visuals {
                             ],
                             dataReductionAlgorithm: { top: { count: 2 } }
                         }
+                    },
+                    rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+                }
+            },
+            {
+                conditions: [
+                    // NOTE: Ordering of the roles prefers to add measures to Y before Gradient.
+                    { 'Statement': { max: 5 }, 'Groups': { max: 1 }, 'Value': { max: 1 }, 'SortBy': { max: 1 }, 'ExtraDetails': { max: 1 } }
+                ],
+                categorical: {
+                    categories: {
+                        for: { in: 'Statement' },
+                        dataReductionAlgorithm: { top: {} }
+                    },
+                    values: {
+                        select: [
+                            { bind: { to: 'SortBy' } }
+                        ]
                     },
                     rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
                 }
@@ -104,7 +133,7 @@ module powerbi.visuals {
                         description: "Specify the default color for the nodes.",
                         type: { fill: { solid: { color: true } } },
                         displayName: "Default Color"
-                    }, 
+                    },
                     defaultFontSize: {
                         description: "Specify the font size for the data label on a node.",
                         type: { numeric: true },

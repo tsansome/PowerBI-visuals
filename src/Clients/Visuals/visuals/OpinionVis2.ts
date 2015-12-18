@@ -93,12 +93,18 @@ module powerbi.visuals {
                     displayName: 'Extra Details',
                     kind: VisualDataRoleKind.Measure,
                     requiredTypes: [{ numeric: true }]
+                },
+                {
+                    name: 'SortBy',
+                    displayName: 'Sort By',
+                    kind: VisualDataRoleKind.Measure,
+                    requiredTypes: [{ numeric: true }]
                 }
             ],
             dataViewMappings: [
                 {
                     conditions: [
-                        { 'Statement': { max: 5 }, 'Groups': { max: 1 }, 'Value': { max: 1 } },
+                        { 'Statement': { max: 5 }, 'Groups': { max: 1 }, 'Value': { max: 1 }, 'SortBy': { max: 1 }, 'ExtraDetails': { max: 1 } },
                     ],
                     categorical: {
                         categories: {
@@ -109,11 +115,29 @@ module powerbi.visuals {
                             group: {
                                 by: 'Groups',
                                 select: [
-                                { bind: { to: 'Value' } },
-                                { bind: { to: 'ExtraDetails' } },
+                                    { bind: { to: 'Value' } },
+                                    { bind: { to: 'ExtraDetails' } },
                                 ],
                                 dataReductionAlgorithm: { top: { count: 2 } }
                             }
+                        },
+                        rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+                    }
+                },
+                {
+                    conditions: [
+                        // NOTE: Ordering of the roles prefers to add measures to Y before Gradient.
+                        { 'Statement': { max: 5 }, 'Groups': { max: 1 }, 'Value': { max: 1 }, 'SortBy': { max: 1 }, 'ExtraDetails': { max: 1 }}
+                    ],
+                    categorical: {
+                        categories: {
+                            for: { in: 'Statement' },
+                            dataReductionAlgorithm: { top: {} }
+                        },
+                        values: {
+                            select: [
+                                { bind: { to: 'SortBy' } }
+                            ]
                         },
                         rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
                     }
@@ -189,7 +213,7 @@ module powerbi.visuals {
                             displayName: "Default Font Size"
                         }
                     }
-                }                
+                }
             },
             drilldown: {
                 roles: ['Statement']
@@ -225,6 +249,46 @@ module powerbi.visuals {
         }
 
         public static converter(dataView: DataView[]): DataViewCategorical {
+            if (dataView.length > 1 && dataView[1].categorical.values.length !== 0) {                
+                var cate = dataView[1].categorical;
+                var oldVals = _.map(cate.values[0].values, (dV,idx) => {
+                    return {
+                        vv: dV,
+                        oldIndex: idx
+                    };
+                });
+                oldVals = _.sortBy(oldVals, (d) => {
+                    return d.vv;
+                });        
+                
+                var dV = dataView[0].categorical;
+                //now reorder the default values not the extra details
+                var categories: any[] = [];
+                var valuesA: any[] = [];
+                var valuesB: any[] = [];
+                for (var i = 0; i < oldVals.length; i++) {
+                    var cc = oldVals[i];
+                    categories.push(dV.categories[0].values[cc.oldIndex]);
+                    valuesA.push(dV.values[0].values[cc.oldIndex]);
+                    valuesB.push(dV.values[1].values[cc.oldIndex]);
+                }
+                dataView[0].categorical.categories[0].values = categories;
+                dataView[0].categorical.values[0].values = valuesA;
+                dataView[0].categorical.values[1].values = valuesB;
+                //just check if the extra details has been brought in
+                if (dataView[0].categorical.values.length > 2) {
+                    var valuesADetails: any[] = [];
+                    var valuesBDetails: any[] = [];
+                    for (var i = 0; i < oldVals.length; i++) {
+                        var cc = oldVals[i];
+                        valuesADetails.push(dV.values[2].values[cc.oldIndex]);
+                        valuesBDetails.push(dV.values[3].values[cc.oldIndex]);
+                    }
+                    dataView[0].categorical.values[2].values = valuesADetails;
+                    dataView[0].categorical.values[3].values = valuesBDetails;
+                }
+                
+            }
             return dataView[0].categorical;
         }
 
@@ -250,27 +314,33 @@ module powerbi.visuals {
                     'width': viewport.width
                 });
 
+                //now we need to declare the indexes
+                var valAIndex = 0;
+                var valBIndex = 1;
+                //extract the values and strings
+                if (dataPoints.values.length > 2) {
+                    valBIndex = 2;
+                }
+
                 //get our formatters for using later
-                var fStrA = valueFormatter.getFormatString(dataPoints.values[0].source, this.OpinionVisProperties.general.formatString);
-                var fStrB = valueFormatter.getFormatString(dataPoints.values[1].source, this.OpinionVisProperties.general.formatString);
+                var fStrA = valueFormatter.getFormatString(dataPoints.values[valAIndex].source, this.OpinionVisProperties.general.formatString);
+                var fStrB = valueFormatter.getFormatString(dataPoints.values[valBIndex].source, this.OpinionVisProperties.general.formatString);
 
                 var fStrC = null;
                 var fStrD = null;
                 //set the formatter if they put in the details
-                if (2 in dataPoints.values) {
-                    fStrC = valueFormatter.getFormatString(dataPoints.values[2].source, this.OpinionVisProperties.general.formatString);
-                }
-                if (3 in dataPoints.values) {
+                if (dataPoints.values.length > 2) {
+                    fStrC = valueFormatter.getFormatString(dataPoints.values[1].source, this.OpinionVisProperties.general.formatString);
                     fStrD = valueFormatter.getFormatString(dataPoints.values[3].source, this.OpinionVisProperties.general.formatString);
                 }
 
                 //figure out the max value out of all the data points
-                var maxValGroupA = _.max(dataPoints.values[0].values);
-                var maxValGroupB = _.max(dataPoints.values[1].values);
+                var maxValGroupA = _.max(dataPoints.values[valAIndex].values);
+                var maxValGroupB = _.max(dataPoints.values[valBIndex].values);
                 var maxVal = _.max([maxValGroupA, maxValGroupB]);
 
-                var minValGroupA = _.min(dataPoints.values[0].values);
-                var minValGroupB = _.min(dataPoints.values[1].values);
+                var minValGroupA = _.min(dataPoints.values[valAIndex].values);
+                var minValGroupB = _.min(dataPoints.values[valBIndex].values);
                 var minVal = _.min([minValGroupA, minValGroupB]); 
 
                 //we are going to draw the largest value for 
@@ -326,7 +396,7 @@ module powerbi.visuals {
                     .domain([0, maxVal])
                     .range([leftMarginPx, leftMarginPx + maxWidthBarPx]);
 
-                var mtdt = new OpinionVisualMetaDataV2(dataPoints.values[0].source.groupName, dataPoints.values[1].source.groupName);
+                var mtdt = new OpinionVisualMetaDataV2(dataPoints.values[valAIndex].source.groupName, dataPoints.values[valBIndex].source.groupName);
                 
                 var valueGroupColor = this.GetPropertyColor(this.dataView[0], "groupnodeproperties", "defaultColor", OpinionVis2.groupNodeDefaultColor).solid.color;
 
@@ -423,12 +493,9 @@ module powerbi.visuals {
                     var valADetailsLabel = null;
                     var valBDetailsLabel = null;
 
-                    var valAIndex = 0;
-                    var valBIndex = 1;
                     //extract the values and strings
                     if (dataPoints.values.length > 2) {
                         //in this case we know that the value b index will actually be 3 not 1
-                        valBIndex = 2;
                         valADetails = dataPoints.values[1].values[i];
                         valADetailsLabel = dataPoints.values[1].source.displayName;
                         valBDetails = dataPoints.values[3].values[i];
@@ -466,7 +533,7 @@ module powerbi.visuals {
                         valADetailsStr = valueFormatter.format(valADetails, fStrC);
                     }
                     if (valBDetails !== null) {
-                        valADetailsStr = valueFormatter.format(valBDetails, fStrD);
+                        valBDetailsStr = valueFormatter.format(valBDetails, fStrD);
                     }
 
                     var gap = valB - valA;
