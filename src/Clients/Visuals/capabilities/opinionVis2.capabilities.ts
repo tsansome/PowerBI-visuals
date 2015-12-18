@@ -60,7 +60,10 @@ module powerbi.visuals {
                     values: {
                         group: {
                             by: 'Groups',
-                            select: [{ for: { in: 'Value' } }],
+                            select: [
+                                { bind: { to: 'Value' } },
+                                { bind: { to: 'ExtraDetails' } },
+                            ],
                             dataReductionAlgorithm: { top: { count: 2 } }
                         }
                     },
@@ -79,7 +82,7 @@ module powerbi.visuals {
                     },
                     defaultFontColor: {
                         description: "Specify the font color for the statement text.",
-                        type: { numeric: true },
+                        type: { fill: { solid: { color: true } } },
                         displayName: "Default Font Color"
                     }
                 }

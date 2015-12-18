@@ -88,6 +88,12 @@ module powerbi.visuals {
                     kind: VisualDataRoleKind.Measure,
                     requiredTypes: [{ numeric: true }]
                 },
+                {
+                    name: 'ExtraDetails',
+                    displayName: 'Extra Details',
+                    kind: VisualDataRoleKind.Measure,
+                    requiredTypes: [{ numeric: true }]
+                }
             ],
             dataViewMappings: [
                 {
@@ -102,7 +108,10 @@ module powerbi.visuals {
                         values: {
                             group: {
                                 by: 'Groups',
-                                select: [{ for: { in: 'Value' } }],
+                                select: [
+                                { bind: { to: 'Value' } },
+                                { bind: { to: 'ExtraDetails' } },
+                                ],
                                 dataReductionAlgorithm: { top: { count: 2 } }
                             }
                         },
@@ -121,7 +130,7 @@ module powerbi.visuals {
                         },
                         defaultFontColor: {
                             description: "Specify the font color for the statement text.",
-                            type: { numeric: true },
+                            type: { fill: { solid: { color: true } } },
                             displayName: "Default Font Color"
                         }
                     }
@@ -406,23 +415,29 @@ module powerbi.visuals {
                 var endIndex = dataPoints.categories[0].values.length;
                 //now lets walk through the values
                 for (var i = 0; i < endIndex; i++) {
-                    //extract the values and strings
-                    var statementStr: string = dataPoints.categories[0].values[i];
-                    var valA: number = dataPoints.values[0].values[i];
-                    var valB: number = dataPoints.values[1].values[i];                    
-
-                    var valADetails = null;
-                    var valBDetails = null;
+                    var statementStr: string = "";
+                    var valA: number = 0;
+                    var valB: number = 0;
+                    var valADetails = 0;
+                    var valBDetails = 0;
                     var valADetailsLabel = null;
                     var valBDetailsLabel = null;
-                    if (2 in dataPoints.values) {
-                        valADetails = dataPoints.values[2].values[i];
-                        valADetailsLabel = dataPoints.values[2].source.displayName;
-                    }
-                    if (3 in dataPoints.values) {
+
+                    var valAIndex = 0;
+                    var valBIndex = 1;
+                    //extract the values and strings
+                    if (dataPoints.values.length > 2) {
+                        //in this case we know that the value b index will actually be 3 not 1
+                        valBIndex = 2;
+                        valADetails = dataPoints.values[1].values[i];
+                        valADetailsLabel = dataPoints.values[1].source.displayName;
                         valBDetails = dataPoints.values[3].values[i];
                         valBDetailsLabel = dataPoints.values[3].source.displayName;
                     }
+
+                    var statementStr: string = dataPoints.categories[0].values[i];
+                    var valA: number = dataPoints.values[valAIndex].values[i];
+                    var valB: number = dataPoints.values[valBIndex].values[i];     
 
                     var leftFilled = false;
                     //if its greater just switch it
