@@ -96,7 +96,7 @@ module powerbi.visuals {
                 },
                 {
                     name: 'SortBy',
-                    displayName: 'Sort By',
+                    displayName: 'Sort Statements By',
                     kind: VisualDataRoleKind.Measure,
                     requiredTypes: [{ numeric: true }]
                 }
@@ -121,7 +121,7 @@ module powerbi.visuals {
                                 dataReductionAlgorithm: { top: { count: 2 } }
                             }
                         },
-                        rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+                        rowCount: { preferred: { min: 2 }, supported: { max: 20 } }
                     }
                 },
                 {
@@ -139,11 +139,11 @@ module powerbi.visuals {
                                 { bind: { to: 'SortBy' } }
                             ]
                         },
-                        rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+                        rowCount: { preferred: { min: 2 }, supported: { max: 20 } }
                     }
                 }
             ],
-            objects: {
+            objects: { 
                 statementproperties: {
                     displayName: "Statement",
                     properties: {
@@ -156,6 +156,16 @@ module powerbi.visuals {
                             description: "Specify the font color for the statement text.",
                             type: { fill: { solid: { color: true } } },
                             displayName: "Default Font Color"
+                        }
+                    }
+                },
+                statementsortproperties: {
+                    displayName: "Statement Sort",
+                    properties: {
+                        statementSortOrderDefault: {
+                            description: "Specify the default sort order for the statements.",
+                            type: { text: true },
+                            displayName: "Default Font Size"
                         }
                     }
                 },
@@ -172,6 +182,11 @@ module powerbi.visuals {
                 groupnodedatalabelproperties: {
                     displayName: "Group Circle Data Label",
                     properties: {
+                        showLabels: {
+                            description: "Specify true/false on whether to show labels on the nodes.",
+                            type: { bool: true },
+                            displayName: "Show labels"
+                        },
                         defaultColor: {
                             description: "Specify the default color for the nodes.",
                             type: { fill: { solid: { color: true } } },
@@ -237,6 +252,8 @@ module powerbi.visuals {
         private rectNodesCollectionClasses: StatementResponseV2[];
 
         private colors: IDataColorPalette;
+
+        private interactivityService: InteractivityOptions;
         
         public init(options: VisualInitOptions): void {
             this.selectionManager = new SelectionManager({ hostServices: options.host });
@@ -246,10 +263,11 @@ module powerbi.visuals {
 
             this.colors = options.style.colorPalette.dataColors;
 
+            this.interactivityService = options.interactivity;
         }
 
         public static converter(dataView: DataView[]): DataViewCategorical {
-            if (dataView.length > 1 && dataView[1].categorical.values.length !== 0) {                
+            if (dataView.length > 1 && dataView[1].categorical !== null && dataView[1].categorical.values.length !== 0) {                
                 var cate = dataView[1].categorical;
                 var oldVals = _.map(cate.values[0].values, (dV,idx) => {
                     return {
@@ -257,8 +275,25 @@ module powerbi.visuals {
                         oldIndex: idx
                     };
                 });
+                var multiplier = 1;
+                //we need to look at the sort property to see whether we should do ascending or descending
+                var sortOrder = OpinionVis2.statementSortOrderDefault;
+                if (dataView) {
+                    var objects = dataView[0].metadata.objects;
+                    if (objects) {
+                        var groupProperty = objects["statementsortproperties"];
+                        if (groupProperty) {
+                            var object = <string>groupProperty["statementSortOrderDefault"];
+                            if (object !== undefined)
+                                sortOrder = object;
+                        }
+                    }
+                }
+                if (sortOrder === "desc") {
+                    multiplier = -1;
+                }
                 oldVals = _.sortBy(oldVals, (d) => {
-                    return d.vv;
+                    return d.vv * multiplier;
                 });        
                 
                 var dV = dataView[0].categorical;
@@ -290,6 +325,12 @@ module powerbi.visuals {
                 
             }
             return dataView[0].categorical;
+        }
+
+        public onClearSelection(): void {
+            if (this.interactivityService) {
+                d3.selectAll(this.rectNodesCollectionD3).style("opacity", 1);
+            }
         }
 
         public update(options: VisualUpdateOptions) {
@@ -646,21 +687,23 @@ module powerbi.visuals {
                     var nodeLabelFontColor = this.GetPropertyColor(this.dataView[0], "groupnodedatalabelproperties", "defaultColor", OpinionVis2.groupNodeDataLabelDefaultColor).solid.color;
                     var nodeLabelDefaultFontSize = this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px";
 
-                    var LeftDLabel = this.root.append("text")
-                        .data([dd])
-                        .attr("dx", LeftCircleX)
-                        .attr("dy", startYPy)
-                        .text(valAStr)
-                        .style("font-size", nodeLabelDefaultFontSize)
-                        .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
-                        .style("fill", nodeLabelFontColor)
-                        .each(function (d) {
-                            d.width = this.getBBox().width;
-                        });
+                    if (this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "showLabels", OpinionVis2.groupNodeDataLabelShow)) {
+                        var LeftDLabel = this.root.append("text")
+                            .data([dd])
+                            .attr("dx", LeftCircleX)
+                            .attr("dy", startYPy)
+                            .text(valAStr)
+                            .style("font-size", nodeLabelDefaultFontSize)
+                            .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
+                            .style("fill", nodeLabelFontColor)
+                            .each(function (d) {
+                                d.width = this.getBBox().width;
+                            });
 
-                    LeftDLabel.attr("dx", function (d) {
-                        return LeftCircleX - d.width - circleRadiusPx - 3;
-                    });
+                        LeftDLabel.attr("dx", function (d) {
+                            return LeftCircleX - d.width - circleRadiusPx - 3;
+                        });
+                    }
 
                     //do the circle then the text
                     var rightCircleNode = this.root.append("circle")
@@ -678,21 +721,23 @@ module powerbi.visuals {
 
                     this.circleNodesCollectionD3.push(rightCircleNode[0][0]);
 
-                    var RightDLabel = this.root.append("text")
-                        .data([dd])
-                        .attr("dx", RightCircleX)
-                        .attr("dy", startYPy)
-                        .text(valBStr)
-                        .style("fill", nodeLabelFontColor)
-                        .style("font-size", nodeLabelDefaultFontSize)
-                        .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
-                        .each(function (d) {
-                            d.width = this.getBBox().width;
-                        });
+                    if (this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "showLabels", OpinionVis2.groupNodeDataLabelShow)) {
+                        var RightDLabel = this.root.append("text")
+                            .data([dd])
+                            .attr("dx", RightCircleX)
+                            .attr("dy", startYPy)
+                            .text(valBStr)
+                            .style("fill", nodeLabelFontColor)
+                            .style("font-size", nodeLabelDefaultFontSize)
+                            .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
+                            .each(function (d) {
+                                d.width = this.getBBox().width;
+                            });
 
-                    RightDLabel.attr("dx", function (d) {
-                        return RightCircleX + circleRadiusPx + 3;
-                    });
+                        RightDLabel.attr("dx", function (d) {
+                            return RightCircleX + circleRadiusPx + 3;
+                        });
+                    }
 
                     this.root.append("line")
                         .attr("x1", leftTextMarginPx)
@@ -737,12 +782,15 @@ module powerbi.visuals {
 
                 var self = this;
                 d3.selectAll(this.rectNodesCollectionD3).on("click", function (d: StatementResponseV2) {
-                    self.selectionManager.select(d.identity).then(ids => {                        
+                    self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {                        
                         //now we should do highlighting here
                         if (self.selectedId === d.identity) {
                             d3.selectAll(self.rectNodesCollectionD3).style("opacity", 1);
                         } else {
-                            d3.selectAll(self.rectNodesCollectionD3).style("opacity", 0.5);
+                            //if control key is pressed we just want to highlight another
+                            if (!d3.event.ctrlKey) {
+                                d3.selectAll(self.rectNodesCollectionD3).style("opacity", 0.5);
+                            }                            
                             d3.select(this).style("opacity", 1);
                         }
                         self.selectedId = d.identity;
@@ -761,8 +809,11 @@ module powerbi.visuals {
 
         static groupNodeDefaultColor = "#00394D";
 
+        static groupNodeDataLabelShow = true;
         static groupNodeDataLabelDefaultColor = "rgb(119, 119, 119)";
         static groupNodeDataLabelDefaultFontSize = 12;
+
+        static statementSortOrderDefault = "asc";
        
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] {
             var instances: VisualObjectInstance[] = [];
@@ -777,6 +828,18 @@ module powerbi.visuals {
                         properties: {
                             defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.statementDefaultFontSize),
                             defaultFontColor: this.GetPropertyColor(dV, objectname, "defaultFontColor", OpinionVis2.statementDefaultFontColor)
+                        }
+                    };
+                    instances.push(statementproperties);
+                    break;
+                case 'statementsortproperties':
+                    var objectname = 'statementsortproperties';
+                    var statementproperties: VisualObjectInstance = {
+                        objectName: objectname,
+                        displayName: 'Statement sort',
+                        selector: null,
+                        properties: {
+                            statementSortOrderDefault: this.GetProperty(dV, objectname, "statementSortOrderDefault", OpinionVis2.statementSortOrderDefault)
                         }
                     };
                     instances.push(statementproperties);
@@ -800,6 +863,7 @@ module powerbi.visuals {
                         displayName: 'Group Node Data Label',
                         selector: null,
                         properties: {
+                            showLabels: this.GetProperty(dV, objectname, "showLabels", OpinionVis2.groupNodeDataLabelShow),
                             defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.groupNodeDataLabelDefaultColor),
                             defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize)
                         }

@@ -78,7 +78,7 @@ module powerbi.visuals {
                             dataReductionAlgorithm: { top: { count: 2 } }
                         }
                     },
-                    rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+                    rowCount: { preferred: { min: 2 }, supported: { max: 20 } }
                 }
             },
             {
@@ -96,7 +96,7 @@ module powerbi.visuals {
                             { bind: { to: 'SortBy' } }
                         ]
                     },
-                    rowCount: { preferred: { min: 2 }, supported: { min: 0 } }
+                    rowCount: { preferred: { min: 2 }, supported: { max: 20 } }
                 }
             }
         ],
@@ -129,6 +129,11 @@ module powerbi.visuals {
             groupnodedatalabelproperties: {
                 displayName: "Group Circle Data Label",
                 properties: {
+                    showLabels: {
+                        description: "Specify true/false on whether to show labels on the nodes.",
+                        type: { bool: true },
+                        displayName: "Show labels"
+                    },
                     defaultColor: {
                         description: "Specify the default color for the nodes.",
                         type: { fill: { solid: { color: true } } },
