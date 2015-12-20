@@ -264,6 +264,7 @@ module powerbi.visuals {
             this.colors = options.style.colorPalette.dataColors;
 
             this.interactivityService = options.interactivity;
+            
         }
 
         public static converter(dataView: DataView[]): DataViewCategorical {
@@ -275,7 +276,7 @@ module powerbi.visuals {
                         oldIndex: idx
                     };
                 });
-                var multiplier = 1;
+                var multiplier = -1;
                 //we need to look at the sort property to see whether we should do ascending or descending
                 var sortOrder = OpinionVis2.statementSortOrderDefault;
                 if (dataView) {
@@ -285,12 +286,12 @@ module powerbi.visuals {
                         if (groupProperty) {
                             var object = <string>groupProperty["statementSortOrderDefault"];
                             if (object !== undefined)
-                                sortOrder = object;
+                                sortOrder = object.toLowerCase();
                         }
                     }
                 }
-                if (sortOrder === "desc") {
-                    multiplier = -1;
+                if (sortOrder === OpinionVis2.statementSortOrderDefault || sortOrder === "ascending") {
+                    multiplier = 1;
                 }
                 oldVals = _.sortBy(oldVals, (d) => {
                     return d.vv * multiplier;
