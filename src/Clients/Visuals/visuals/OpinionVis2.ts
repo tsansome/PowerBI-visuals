@@ -212,6 +212,11 @@ module powerbi.visuals {
                 gaplabelproperties: {
                     displayName: "Gap Label",
                     properties: {
+                        defaultPosition: {
+                            description: "Specify the default positioning for the labels on the bars. (Auto / Below)",
+                            type: { text: true },
+                            displayName: "Default Position (Auto / Below)"
+                        },
                         defaultColorOnBar: {
                             description: "Specify the default color for the text label on the gap bar.",
                             type: { fill: { solid: { color: true } } },
@@ -663,10 +668,12 @@ module powerbi.visuals {
                     //we need to push it underneath the rectangle
                     var rectWidthWithRadius = rectWidth - (circleRadiusPx * 2);
 
+                    var defaultPosChosen = this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultPosition", OpinionVis2.gapLabelDefaultPosition);
+
                     rectDLabel.attr("dy", function (d) {
                         var rectStart = (startYPy - circleRadiusPx);
                         var rectHeight = (circleRadiusPx * 2);
-                        if (rectWidthWithRadius < d.width) {
+                        if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
                             return rectStart + rectHeight + (d.height) + 3;
                         }
                         var rectMidPointY = rectStart + (rectHeight / 2);
@@ -674,7 +681,7 @@ module powerbi.visuals {
                     });
 
                     rectDLabel.style("fill", function (d) {
-                        if (rectWidthWithRadius < d.width) {
+                        if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
                             return gapBFontBelowBar;
                         } else {
                             return gapBFontOnBar;
@@ -831,6 +838,7 @@ module powerbi.visuals {
         static gapLabelDefaultColorOnBar = "white";
         static gapLabelDefaultColorBelowBar = "#4884d9";
         static gapLabelDefaultFontSize = 12;
+        static gapLabelDefaultPosition = "Auto";
 
         static groupNodeDefaultColor = "#00394D";
 
@@ -914,6 +922,7 @@ module powerbi.visuals {
                         displayName: 'Gap Label',
                         selector: null,
                         properties: {
+                            defaultPosition: this.GetProperty(dV, objectname, "defaultPosition", OpinionVis2.gapLabelDefaultPosition),
                             defaultColorOnBar: this.GetPropertyColor(dV, objectname, "defaultColorOnBar", OpinionVis2.gapLabelDefaultColorOnBar),
                             defaultColorBelowBar: this.GetPropertyColor(dV, objectname, "defaultColorBelowBar", OpinionVis2.gapLabelDefaultColorBelowBar),
                             defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize)
