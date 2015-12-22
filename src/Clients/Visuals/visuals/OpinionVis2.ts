@@ -259,6 +259,8 @@ module powerbi.visuals {
             this.selectionManager = new SelectionManager({ hostServices: options.host });
 
             this.root = d3.select(options.element.get(0))
+                .append("div")
+                .attr("id", "OpinionNodeContainer")
                 .append('svg');
 
             this.colors = options.style.colorPalette.dataColors;
@@ -356,6 +358,9 @@ module powerbi.visuals {
                     'width': viewport.width
                 });
 
+                //setup the container with the height
+                $("#OpinionNodeContainer").css("height", viewport.height).css("width", viewport.width).css("overflow","hidden");
+
                 //now we need to declare the indexes
                 var valAIndex = 0;
                 var valBIndex = 1;
@@ -429,10 +434,17 @@ module powerbi.visuals {
                 var rowIncrementPx = 30;
                 var circleRadiusPx = 8;
 
+                //our right margin will change dependant on whether we have scroll bars in place
+                var outerRightMargin = 15;
                 var outerTopMargin = 15;
+                var maxY = outerTopMargin + 30 + rowIncrementPx + ((rowIncrementPx * 2) * dataPoints.categories[0].values.length);
+                if (maxY > viewport.height) {
+                    outerRightMargin = 45;
+                }                
+                
                 var leftTextMarginPx = 10;
                 var leftMarginPx = leftTextMarginPx + longestSeriesElemWidth + 10 + minValWidth;
-                var maxWidthBarPx = (viewport.width - leftMarginPx) - (maxValWidth + 15);
+                var maxWidthBarPx = (viewport.width - leftMarginPx) - (maxValWidth + outerRightMargin);
 
                 var xScale = d3.scale.linear()
                     .domain([0, maxVal])
@@ -506,7 +518,7 @@ module powerbi.visuals {
                     .attr("x2", leftTextMarginPx + leftMarginPx + maxWidthBarPx)
                     .attr("y2", outerTopMargin + valueAGroupLabelHeight + 30 + 3)
                     .attr("stroke-width", 1)
-                    .attr("stroke", valueGroupColor);            
+                    .attr("stroke", valueGroupColor);          
             
 
                 //now we put the vertical tooltip
@@ -754,6 +766,14 @@ module powerbi.visuals {
                 }
 
                 tooltip.attr("y2", startYPy);
+
+                //we need to append scroll bars if it went past
+                if (startYPy > viewport.height) {
+                    $("#OpinionNodeContainer").css("overflow-y", "scroll");
+                    this.root.attr("height", startYPy + rowIncrementPx); //just add an extra rowIncrement as a buffer
+                } else {
+                    $("#OpinionNodeContainer").css("overflow-y", "hidden");
+                }
 
                 //our tool tip content and animations triggered
                 d3.selectAll(this.circleNodesCollectionD3).on("mouseover", function () {
