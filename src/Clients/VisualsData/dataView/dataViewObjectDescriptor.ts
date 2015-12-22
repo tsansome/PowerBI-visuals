@@ -52,6 +52,9 @@ module powerbi.data {
         placeHolderText?: DisplayNameGetter;
         type: DataViewObjectPropertyTypeDescriptor;
         rule?: DataViewObjectPropertyRuleDescriptor;        
+
+        /** Indicates whether the Format Painter should ignore this property. */
+        suppressFormatPainterCopy?: boolean;   
     }
 
     export type DataViewObjectPropertyTypeDescriptor = ValueTypeDescriptor | StructuralTypeDescriptor;

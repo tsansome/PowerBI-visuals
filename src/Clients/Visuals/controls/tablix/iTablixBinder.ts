@@ -31,7 +31,6 @@ module powerbi.visuals.controls {
     export interface ITablixBinder {
         onStartRenderingSession(): void;
         onEndRenderingSession(): void;
-
         /**  Binds the row hierarchy member to the DOM element. */
         bindRowHeader(item: any, cell: ITablixCell): void;
         unbindRowHeader(item: any, cell: ITablixCell): void;
@@ -54,6 +53,10 @@ module powerbi.visuals.controls {
         bindEmptySpaceFooterCell(cell: ITablixCell): void;
         unbindEmptySpaceFooterCell(cell: ITablixCell): void;
 
+        /**  changes The formatting properties */
+        setTablixColumnSeparator(cell: controls.ITablixCell): void;
+        setTablixRegionStyle(cell: controls.ITablixCell, fontColor: string, backgroundColor, outline: string, outlineWeight: number, outlineColor: string): void;
+        
         /**  Measurement Helper */
         getHeaderLabel(item: any): string;
         getCellContent(item: any): string;

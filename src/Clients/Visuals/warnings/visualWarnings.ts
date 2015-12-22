@@ -196,4 +196,23 @@ module powerbi.visuals {
             return visualMessage;
         }
     }
+
+    export class ScriptVisualRefreshWarning implements IVisualWarning {
+        public get code(): string {
+            return "ScriptVisualNotRefreshed";
+        }
+
+        public getMessages(resourceProvider: IStringResourceProvider): IVisualErrorMessage {
+            let messageKey: string = 'ScriptVisualRefreshWarningMessage';
+            let detailKey: string = 'ScriptVisualRefreshWarningValue';
+
+            let visualMessage: IVisualErrorMessage = {
+                message: resourceProvider.get(messageKey),
+                title: resourceProvider.get(messageKey),
+                detail: resourceProvider.get(detailKey),
+            };
+
+            return visualMessage;
+        }
+    }
 }

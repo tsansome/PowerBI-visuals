@@ -31,9 +31,10 @@ module powerbi.visuals {
     import StringExtensions = jsCommon.StringExtensions;
 
     export interface TreemapConstructorOptions {
-        animator: ITreemapAnimator;
+        animator?: ITreemapAnimator;
         isScrollable: boolean;
         behavior?: TreemapWebBehavior;
+        tooltipsEnabled?: boolean;
     }
 
     export interface TreemapData {
@@ -151,6 +152,7 @@ module powerbi.visuals {
         private options: VisualInitOptions;
         private isScrollable: boolean;
         private hostService: IVisualHostServices;
+        private tooltipsEnabled: boolean;
 
         /**
          * Note: Public for testing.
@@ -192,6 +194,7 @@ module powerbi.visuals {
         }
 
         constructor(options?: TreemapConstructorOptions) {
+            this.tooltipsEnabled = options && options.tooltipsEnabled;
             if (options && options.animator) {
                 this.animator = options.animator;
                 this.isScrollable = options.isScrollable ? options.isScrollable : false;
@@ -497,7 +500,7 @@ module powerbi.visuals {
             return {
                 root: rootNode,
                 hasHighlights: hasHighlights,
-                legendData: { title: legendTitle, dataPoints: legendDataPoints },
+                legendData: { title: legendTitle, dataPoints: legendDataPoints, fontSize: SVGLegend.DefaultFontSizeInPt },
                 dataLabelsSettings: labelSettings,
                 legendObjectProperties: legendObjectProperties,
                 dataWasCulled: dataWasCulled,
@@ -703,7 +706,7 @@ module powerbi.visuals {
             let showTitle = DataViewObjects.getValue(legendObjectProperties, treemapProps.legend.showTitle, true);
             let titleText = DataViewObjects.getValue(legendObjectProperties, treemapProps.legend.titleText, this.data.legendData.title);
             let labelColor = DataViewObject.getValue(legendObjectProperties, legendProps.labelColor, this.data.legendData ? this.data.legendData.labelColor : LegendData.DefaultLegendLabelFillColor);
-            let labelFontSize = DataViewObject.getValue(legendObjectProperties, legendProps.labelColor, this.data.legendData && this.data.legendData.fontSize ? this.data.legendData.fontSize : SVGLegend.DefaultFontSizeInPt);
+            let labelFontSize = DataViewObject.getValue(legendObjectProperties, legendProps.fontSize, this.data.legendData && this.data.legendData.fontSize ? this.data.legendData.fontSize : SVGLegend.DefaultFontSizeInPt);
 
             return [{
                 selector: null,
@@ -976,8 +979,10 @@ module powerbi.visuals {
                 this.interactivityService.bind(<TreemapNode[]>nodes, this.behavior, behaviorOptions);
             }
 
-            TooltipManager.addTooltip(shapes, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
-            TooltipManager.addTooltip(highlightShapes, (tooltipEvent: TooltipEvent) => tooltipEvent.data.highlightedTooltipInfo);
+            if (this.tooltipsEnabled) {
+                TooltipManager.addTooltip(shapes, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
+                TooltipManager.addTooltip(highlightShapes, (tooltipEvent: TooltipEvent) => tooltipEvent.data.highlightedTooltipInfo);
+            }
 
             SVGUtil.flushAllD3TransitionsIfNeeded(this.options);
         }

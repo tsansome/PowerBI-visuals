@@ -33,6 +33,11 @@ module powerbi.visuals {
 
     export module NewDataLabelUtils {
         export const DefaultLabelFontSizeInPt = 9;
+        export const MapPolylineOpacity = 0.5;
+        export const LabelDensityBufferFactor = 3;
+        export const LabelDensityPadding = 6;
+        export const LabelDensityMin = 0;
+        export const LabelDensityMax = 6;
         export let startingLabelOffset = 8;
         export let maxLabelOffset = 8;
         export let maxLabelWidth: number = 50;
@@ -44,8 +49,8 @@ module powerbi.visuals {
         };
         export let defaultLabelColor = "#777777";
         export let defaultInsideLabelColor = "#ffffff"; //white
-        let horizontalLabelBackgroundMargin = 4;
-        let verticalLabelBackgroundMargin = 2;
+        export const horizontalLabelBackgroundMargin = 4;
+        export const verticalLabelBackgroundMargin = 2;
         let labelBackgroundRounding = 4;
         let defaultLabelPrecision: number = undefined;
         let defaultCountLabelPrecision: number = 0;
@@ -53,23 +58,25 @@ module powerbi.visuals {
         export let labelGraphicsContextClass: ClassAndSelector = createClassAndSelector('labelGraphicsContext');
         export let labelBackgroundGraphicsContextClass: ClassAndSelector = createClassAndSelector('labelBackgroundGraphicsContext');
         let labelsClass: ClassAndSelector = createClassAndSelector('label');
+        let catagorylabelsClass: ClassAndSelector = createClassAndSelector('catagorylabel');
 
-        export function drawDefaultLabels(context: D3.Selection, dataLabels: Label[], numeric: boolean = false): D3.UpdateSelection {
+        const linesGraphicsContextClass: ClassAndSelector = createClassAndSelector('leader-lines');
+        const lineClass: ClassAndSelector = createClassAndSelector('line-label');
+
+        export function drawDefaultLabels(context: D3.Selection, dataLabels: Label[], numeric: boolean = false, twoRows: boolean = false): D3.UpdateSelection {
             let labels = context.selectAll(labelsClass.selector)
                 .data(_.filter(dataLabels, (d: Label) => d.isVisible), (d: Label, index: number) => { return d.identity ? d.identity.getKeyWithoutHighlight() : index; });
-
             labels.enter()
                 .append("text")
                 .classed(labelsClass.class, true);
-
             let labelAttr = {
-                    x: (d: Label) => {
-                        return (d.boundingBox.left + (d.boundingBox.width / 2));
-                    },
-                    y: (d: Label) => {
-                        return d.boundingBox.top + d.boundingBox.height;
-                    },
-                    dy: "-0.15em",
+                x: (d: Label) => {
+                    return (d.boundingBox.left + (d.boundingBox.width / 2));
+                },
+                y: (d: Label) => {
+                    return d.boundingBox.top + d.boundingBox.height;
+                },
+                dy: "-0.15em",
             };
             if (numeric) { // For numeric labels, we use a tighter bounding box, so remove the dy because it doesn't need to be centered
                 labelAttr.dy = undefined;
@@ -80,10 +87,41 @@ module powerbi.visuals {
                 .attr(labelAttr)
                 .style({
                     'fill': (d: Label) => d.fill,
+                    'font-size': (d: Label) => PixelConverter.fromPoint(d.fontSize || DefaultLabelFontSizeInPt),
+                    'text-anchor': (d: Label) => d.textAnchor,//For donut chart labels, left label get end and right labels get start
+                });
+            labels.exit()
+                .remove();
+
+           let catagoryLabels = context.selectAll(catagorylabelsClass.selector)
+                .data(_.filter(twoRows ? dataLabels : [], (d: Label) => d.isVisible), (d: Label, index: number) => { return d.identity ? d.identity.getKeyWithoutHighlight() : index; });
+            catagoryLabels.enter()
+                .append("text")
+                .classed(catagorylabelsClass.class, true);
+
+            labelAttr = {
+                x: (d: Label) => {
+                    return (d.boundingBox.left + (d.boundingBox.width / 2));
+                },
+                y: (d: Label) => {
+
+                    let boundingBoxHeight = (d.text !== undefined) ? d.boundingBox.height / 2 : d.boundingBox.height;
+                    return d.boundingBox.top + boundingBoxHeight;
+                },
+                dy: "-0.15em",
+            };
+            if (numeric) { // For numeric catagoryLables, we use a tighter bounding box, so remove the dy because it doesn't need to be centered
+                labelAttr.dy = undefined;
+            }
+            catagoryLabels
+                .text((d: Label) => d.secondRowText)
+                .attr(labelAttr)
+                .style({
+                    'fill': (d: Label) => d.fill,
                     'font-size': (d: Label) => PixelConverter.fromPoint(d.fontSize || DefaultLabelFontSizeInPt)
                 });
 
-            labels.exit()
+            catagoryLabels.exit()
                 .remove();
 
             return labels;
@@ -110,8 +148,7 @@ module powerbi.visuals {
                 labelAttr.dy = undefined;
             }
 
-            labels
-                .text((d: Label) => d.text)
+            labels.text((d: Label) => d.text)
                 .style({
                     'fill': (d: Label) => d.fill,
                     'font-size': (d: Label) => PixelConverter.fromPoint(d.fontSize || DefaultLabelFontSizeInPt),
@@ -149,6 +186,9 @@ module powerbi.visuals {
                         return d.boundingBox.width + 2 * horizontalLabelBackgroundMargin;
                     },
                     height: (d: Label) => {
+                        if (d.text === undefined && d.secondRowText === undefined) {
+                                return 0;
+                        }
                         return d.boundingBox.height + 2 * verticalLabelBackgroundMargin;
                     },
                 })
@@ -161,10 +201,78 @@ module powerbi.visuals {
             return labelRects;
         }
 
+        export function setLabelTextDonutChart(d: DonutArcDescriptor, labelX: number, viewport: IViewport, dataLabelsSettings: VisualDataLabelsSettings, alternativeScale: number): string {
+            let spaceAvailableForLabels = viewport.width / 2 - Math.abs(labelX) - NewDataLabelUtils.maxLabelOffset;
+            let measureFormattersCache = dataLabelUtils.createColumnFormatterCacheManager();
+            if (dataLabelsSettings.show) {
+                // Giving 50/50 space when both category and measure are on
+                let maxDataLabelWidth = spaceAvailableForLabels / 2;
+                let measureFormatter = measureFormattersCache.getOrCreate(d.data.labelFormatString, dataLabelsSettings, alternativeScale);
+                let labelText: string;
+                if (dataLabelsSettings.showCategory) {
+                    labelText = dataLabelUtils.getLabelFormattedText({
+                        label: d.data.label,
+                        maxWidth: maxDataLabelWidth,
+                        fontSize: dataLabelsSettings.fontSize
+                    }) +
+                    dataLabelUtils.getLabelFormattedText({
+                        label: " (" + measureFormatter.format(d.data.measure) + ")",
+                        maxWidth: maxDataLabelWidth,
+                        fontSize: dataLabelsSettings.fontSize
+                    });
+                }
+                else {
+                    labelText = dataLabelUtils.getLabelFormattedText({
+                        label: d.data.measure,
+                        maxWidth: spaceAvailableForLabels,
+                        formatter: measureFormatter,
+                        fontSize: dataLabelsSettings.fontSize
+                    });
+                }
+                return labelText;
+            }
+            else
+                // show only category label
+                return dataLabelUtils.getLabelFormattedText({
+                    label: d.data.label,
+                    maxWidth: spaceAvailableForLabels,
+                    fontSize: dataLabelsSettings.fontSize
+                });
+        }
+        
+        export function getXPositionForDonutLabel(textPointX: number): number {
+            let margin = textPointX < 0 ? -maxLabelOffset : maxLabelOffset;
+            return textPointX += margin;
+        }
+
+        export function drawLabelLeaderLines(context: D3.Selection, filteredDataLabels: Label[], key?: (data: any, index?: number) => any, leaderLineColor?: string) {
+            if (context.select(linesGraphicsContextClass.selector).empty())
+                context.append('g').classed(linesGraphicsContextClass.class, true);
+
+            let lines = context.select(linesGraphicsContextClass.selector).selectAll('polyline')
+                .data(filteredDataLabels, key);
+
+            lines.enter()
+                .append('polyline')
+                .classed(lineClass.class, true);
+
+            lines
+                .attr('points', (d: Label) => {
+                    return d.leaderLinePoints;
+                }).
+                style({
+                    'stroke': (d: Label) => leaderLineColor ? leaderLineColor : d.fill,
+                });
+
+            lines
+                .exit()
+                .remove();
+        }
+
         export function getLabelFormattedText(label: string | number, format?: string, formatter?: IValueFormatter): string {
             return formatter ? formatter.format(label) : formattingService.formatValue(label, format);
         }
-        
+
         export function getDisplayUnitValueFromAxisFormatter(axisFormatter: IValueFormatter, labelSettings: VisualDataLabelsSettings): number {
             if (axisFormatter && axisFormatter.displayUnit && labelSettings.displayUnits === 0)
                 return axisFormatter.displayUnit.value;
@@ -225,7 +333,7 @@ module powerbi.visuals {
             };
         }
 
-        export function removeDuplicates(labelDataPoints: LabelDataPoint[]): LabelDataPoint[]{
+        export function removeDuplicates(labelDataPoints: LabelDataPoint[]): LabelDataPoint[] {
             let uniqueLabelDataPoints: LabelDataPoint[] = [];
             let labelDataPointMap = {};
             let sameParentIsInArray = (newValue: any, array: any[], parentIsRect: boolean) => {
@@ -239,7 +347,7 @@ module powerbi.visuals {
                 });
             };
             for (let dataPoint of labelDataPoints) {
-                let parentIsRect = dataPoint.isParentRect;
+                let parentIsRect = dataPoint.parentType === LabelDataPointParentType.Rectangle;
                 let resultsFromMap = labelDataPointMap[dataPoint.text];
                 if (!resultsFromMap) {
                     uniqueLabelDataPoints.push(dataPoint);
@@ -253,6 +361,23 @@ module powerbi.visuals {
                 }
             }
             return uniqueLabelDataPoints;
+        }
+           
+        export function getDataLabelLayoutOptions(type: CartesianChartType): DataLabelLayoutOptions {
+            switch (type) {
+                case CartesianChartType.Scatter:
+                    return {
+                        maximumOffset: ScatterChart.dataLabelLayoutMaximumOffset,
+                        startingOffset: ScatterChart.dataLabelLayoutStartingOffset,
+                        offsetIterationDelta: ScatterChart.dataLabelLayoutOffsetIterationDelta,
+                        allowLeaderLines: true
+                    };
+                default:
+                    return {
+                        maximumOffset: NewDataLabelUtils.maxLabelOffset,
+                        startingOffset: NewDataLabelUtils.startingLabelOffset
+                    };
+            }
         }
     }
 }

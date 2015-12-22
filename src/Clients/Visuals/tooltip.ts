@@ -70,7 +70,7 @@ module powerbi.visuals {
         index: number;
         coordinates: number[];
         elementCoordinates: number[];
-        context: any;
+        context: HTMLElement;
         isTouchEvent: boolean;
     }
 

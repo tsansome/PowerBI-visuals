@@ -87,7 +87,8 @@ module powerbi.data {
     export module QueryProjectionsByRole {
         /** Clones the QueryProjectionsByRole. */
         export function clone(roles: QueryProjectionsByRole): QueryProjectionsByRole {
-            debug.assertValue(roles, 'roles');
+            if (!roles)
+                return roles;
 
             let clonedRoles: QueryProjectionsByRole = {};
 

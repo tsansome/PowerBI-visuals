@@ -51,7 +51,7 @@ module powerbi.visuals {
                         if (!d.selected)
                             return LabelsBehavior.DimmedLabelOpacity;
                         else
-                            return LabelsBehavior.DefaultLabelOpacity;;
+                            return LabelsBehavior.DefaultLabelOpacity;
                     }
                 });
             }

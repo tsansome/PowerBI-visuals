@@ -98,7 +98,7 @@ module powerbi.visuals {
         public bindEvents(options: ScatterBehaviorOptions, selectionHandler: ISelectionHandler): void {
             this.setOptions(options);
 
-            if (!options.visualInitOptions.interactivity.isInteractiveLegend) {
+            if (!options.visualInitOptions || !options.visualInitOptions.interactivity.isInteractiveLegend) {
                 // Don't bind events if we are not in interactiveLegend mode
                 // This case happend when on mobile we show the whole dashboard in still not on focus
                 return;

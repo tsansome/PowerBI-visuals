@@ -62,6 +62,7 @@ module powerbitests {
             });
 
             it("format 52 pct - 4 decimals beautified", () => {
+                
                 // we only beautify the default format strings for percent
                 expect(valueFormatter.format(0.52, "0.0000 %;-0.0000 %;0.0000 %", true)).toBe("52.0000 %");
             });
@@ -188,7 +189,39 @@ module powerbitests {
                 expect(scale.format(-3130000000000.567)).toBe("-3.13T");
                 expect(scale.format(100000000000)).toBe("0.1T");
                 expect(scale.format(1000000000000)).toBe("1T");
+                expect(scale.format(100000000000000)).toBe("100T");
                 expect(scale.format(1000000000000000)).toBe("1000T");
+                expect(scale.format(1000000000000001)).toBe("1E+15");
+                expect(scale.format(1000000000000000000)).toBe("1E+18");
+                expect(scale.format(null)).toBe("(Blank)");
+            });
+
+            it("create Trillion ($)", () => {
+                let scale = valueFormatter.create({ value: 1e12, format: '$#,0.00' });
+
+                expect(scale.format(4.56e13)).toBe("$45.6T");
+                expect(scale.format(4.56789123e13)).toBe("$45.68T");
+                expect(scale.format(-3130000000000.567)).toBe("-$3.13T");
+                expect(scale.format(100000000000)).toBe("$0.1T");
+                expect(scale.format(1000000000000)).toBe("$1T");
+                expect(scale.format(100000000000000)).toBe("$100T");
+                expect(scale.format(1000000000000000)).toBe("$1000T");
+                expect(scale.format(1000000000000001)).toBe("$1000T");
+                expect(scale.format(1000000000000000000)).toBe("$1000000T");
+                expect(scale.format(null)).toBe("(Blank)");
+            });
+
+            it("create Trillion ($ and precision(1))", () => {
+                let scale = valueFormatter.create({ value: 1e12, format: '$#,0.00', precision: 1 });
+
+                expect(scale.format(4.56e13)).toBe("$45.6T");
+                expect(scale.format(4.56789123e13)).toBe("$45.7T");
+                expect(scale.format(-3130000000000.567)).toBe("-$3.1T");
+                expect(scale.format(160000000000)).toBe("$0.2T");
+                expect(scale.format(1600000000000)).toBe("$1.6T");
+                expect(scale.format(160000000000000)).toBe("$160.0T");
+                expect(scale.format(1600000000000000)).toBe("$1,600.0T");
+                expect(scale.format(1600000000000000000)).toBe("$1,600,000.0T");
                 expect(scale.format(null)).toBe("(Blank)");
             });
 
@@ -202,6 +235,13 @@ module powerbitests {
                 let scale = valueFormatter.create({ value: 1e15 });
 
                 expect(scale.format(719200000000001920000000000)).toBe("7.192E+26");
+            });
+
+            it("create Exponent format with precision(1)", () => {
+                let scale = valueFormatter.create({ value: 1e15, precision: 1 });
+
+                // #6400065: 7.1E+26 returned because fuseNumberWithCustomFormatRight did not consider rounding
+                expect(scale.format(719200000000001920000000000)).toBe("7.1E+26");
             });
 
             it("create Percentage", () => {
@@ -254,9 +294,16 @@ module powerbitests {
 
             it("create Trillion", () => {
                 let format: string;
-                let scale = valueFormatter.create({ format: format, value: 900000000000000, displayUnitSystemType: powerbi.DisplayUnitSystemType.Default });
+                let scale = valueFormatter.create({ format: format, value: 9e14, displayUnitSystemType: powerbi.DisplayUnitSystemType.Default });
 
-                expect(scale.format(900000000000000)).toBe("9E+14");
+                expect(scale.format(9e14)).toBe("900T");
+            });
+
+            it("create Exponent", () => {
+                let format: string;
+                let scale = valueFormatter.create({ format: format, value: 9e15, displayUnitSystemType: powerbi.DisplayUnitSystemType.Default });
+
+                expect(scale.format(9e15)).toBe("9E+15");
             });
 
             it("create HundredThousand Whole Units", () => {
@@ -366,6 +413,7 @@ module powerbitests {
             });
 
             it("Verify single value integer formatting for numeric values less than 10K should show display units", () => {
+                
                 // NOTE: In this case the column type is Integer, but the value is actually numeric.
                 let format: string = "g";
                 let input: number = 9999.12345;

@@ -124,6 +124,10 @@ module powerbi.visuals {
         public static DefaultBubbleOpacity = 0.85;
         public static DimmedBubbleOpacity = 0.4;
         public static StrokeDarkenColorValue = 255 * 0.25;
+        //label layout settings
+        public static dataLabelLayoutStartingOffset: number = 2;
+        public static dataLabelLayoutOffsetIterationDelta: number = 6;
+        public static dataLabelLayoutMaximumOffset: number = ScatterChart.dataLabelLayoutStartingOffset + (2 * ScatterChart.dataLabelLayoutOffsetIterationDelta);
         // Chart Area and size range values as defined by PV charts
         private static AreaOf300By300Chart = 90000;
         private static MinSizeRange = 200;
@@ -138,6 +142,7 @@ module powerbi.visuals {
         private element: JQuery;
         private mainGraphicsContext: D3.Selection;
         private mainGraphicsG: D3.Selection;
+        private mainGraphicsBackgroundRect: D3.Selection;
         private labelGraphicsContext: D3.Selection;
         private currentViewport: IViewport;
         private style: IVisualStyle;
@@ -157,9 +162,11 @@ module powerbi.visuals {
         private categoryAxisProperties: DataViewObject;
         private valueAxisProperties: DataViewObject;
         private animator: IGenericAnimator;
+        private tooltipsEnabled: boolean;
 
         constructor(options: ScatterChartConstructorOptions) {
             if (options) {
+                this.tooltipsEnabled = options.tooltipsEnabled;
                 this.interactivityService = options.interactivityService;
                 this.animator = options.animator;
             }
@@ -182,13 +189,21 @@ module powerbi.visuals {
             this.mainGraphicsG = svg.append('g')
                 .classed(ScatterChart.MainGraphicsContextClassName, true);
 
+            if (this.isInteractiveChart) {
+                // The backgroundRect catch user interactions when clicking/dragging on the background of the chart.
+                this.mainGraphicsBackgroundRect = this.mainGraphicsG
+                    .append("rect")
+                    .classed("backgroundRect", true)
+                    .attr({ width: "100%", height: "100%" });
+            }
+
             this.mainGraphicsContext = this.mainGraphicsG.append('svg');
             this.labelGraphicsContext = options.labelsContext;
         }
 
         private static getObjectProperties(dataViewMetadata: DataViewMetadata, dataLabelsSettings?: PointDataLabelsSettings): ScatterObjectProperties {
             let objectProperties: ScatterObjectProperties = {};
-            if(dataViewMetadata && dataViewMetadata.objects) {
+            if (dataViewMetadata && dataViewMetadata.objects) {
                 let objects = dataViewMetadata.objects;
 
                 objectProperties.defaultDataPointColor = DataViewObjects.getFillColor(objects, columnChartProps.dataPoint.defaultColor);
@@ -197,7 +212,7 @@ module powerbi.visuals {
                 let labelsObj = <DataLabelObject>objects['categoryLabels'];
                 if (labelsObj && dataLabelsSettings)
                     dataLabelUtils.updateLabelSettingsFromLabelsObject(labelsObj, dataLabelsSettings);
-                
+
                 objectProperties.fillPoint = DataViewObjects.getValue(objects, scatterChartProps.fillPoint.show, false);
                 objectProperties.colorBorder = DataViewObjects.getValue(objects, scatterChartProps.colorBorder.show, false);
                 objectProperties.colorByCategory = DataViewObjects.getValue(objects, scatterChartProps.colorByCategory.show, false);
@@ -251,7 +266,7 @@ module powerbi.visuals {
                 categories,
                 categoryValues,
                 categoryFormatter,
-                categoryIdentities, 
+                categoryIdentities,
                 categoryObjects,
                 colorPalette,
                 currentViewport,
@@ -336,7 +351,7 @@ module powerbi.visuals {
             labelSettings: PointDataLabelsSettings,
             defaultDataPointColor?: string,
             categoryQueryName?: string,
-            colorByCategory?: boolean): ScatterChartDataPoint[]{
+            colorByCategory?: boolean): ScatterChartDataPoint[] {
 
             let dataPoints: ScatterChartDataPoint[] = [],
                 indicies = metadata.idx,
@@ -568,12 +583,23 @@ module powerbi.visuals {
                 this.data = <ScatterChartData>this.playData.allViewModels[frameIndex];
                 let renderResult = this.render(false);
 
+                let labelLayoutOptions = NewDataLabelUtils.getDataLabelLayoutOptions(CartesianChartType.Scatter);
                 let labelLayout = new LabelLayout({
                     maximumOffset: NewDataLabelUtils.maxLabelOffset,
                     startingOffset: NewDataLabelUtils.startingLabelOffset
                 });
-                let dataLabels = labelLayout.layout(renderResult.labelDataPoints, this.currentViewport);
+                let resultsLabelDataPoints = renderResult.labelDataPoints;
+                let labelDataPointsGroup: LabelDataPointsGroup = {
+                    labelDataPoints: resultsLabelDataPoints,
+                    maxNumberOfLabels: resultsLabelDataPoints.length
+                };
+                let dataLabels = labelLayout.layout([labelDataPointsGroup], this.currentViewport);
                 NewDataLabelUtils.animateDefaultLabels(this.labelGraphicsContext, dataLabels, PlayChart.FrameAnimationDuration, false, 'linear');
+
+                if (labelLayoutOptions.allowLeaderLines) {
+                    let filteredLabels = _.filter(dataLabels, (d: Label) => d.leaderLinePoints != null && !_.isEmpty(d.leaderLinePoints) && d.identity != null);
+                    NewDataLabelUtils.drawLabelLeaderLines(this.labelGraphicsContext, filteredLabels, (d: Label) => d.identity.getKey());
+                }
 
                 if (this.interactivityService) {
                     let playBehavior = new PlayChartWebBehavior();
@@ -941,11 +967,13 @@ module powerbi.visuals {
                 }
             }
 
-            TooltipManager.addTooltip(scatterMarkers, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
+            if (this.tooltipsEnabled)
+                TooltipManager.addTooltip(scatterMarkers, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
 
             let playRenderResult;
-            if (this.playData)
-                playRenderResult = PlayChart.render(this.playData, playBehaviorOptions, this.interactivityService, suppressAnimations);
+            if (this.playData) {
+                playRenderResult = PlayChart.render(this.playData, playBehaviorOptions, this.options.interactivity, this.interactivityService, suppressAnimations);
+            }
 
             SVGUtil.flushAllD3TransitionsIfNeeded(this.options);
 
@@ -953,9 +981,9 @@ module powerbi.visuals {
                 dataPoints: playRenderResult ?
                     playRenderResult.dataPoints :
                     data.dataPoints,
-                behaviorOptions: playBehaviorOptions || behaviorOptions,
+                behaviorOptions: playBehaviorOptions && !this.options.interactivity.isInteractiveLegend ? playBehaviorOptions : behaviorOptions,
                 labelDataPoints: labelDataPoints,
-                labelsAreNumeric: !data.dataLabelsSettings.showCategory,
+                labelsAreNumeric: false,
             };
         }
 
@@ -964,7 +992,7 @@ module powerbi.visuals {
             let yScale = this.yAxisProperties.scale;
             let shouldEnableFill = (!sizeRange || !sizeRange.min) && this.data.fillPoint;
             let colorBorder = this.data.colorBorder;
-            
+
             let markers = this.mainGraphicsContext.selectAll(ScatterChart.DotClasses.selector).data(scatterData, (d: ScatterChartDataPoint) => d.identity.getKey());
 
             markers.enter().append(ScatterChart.ScatterChartCircleTagName)
@@ -974,7 +1002,7 @@ module powerbi.visuals {
 
             markers
                 .style({
-                'stroke-opacity': (d: ScatterChartDataPoint) => (d.size != null && colorBorder) ? 1 : ScatterChart.getBubbleOpacity(d, hasSelection),
+                    'stroke-opacity': (d: ScatterChartDataPoint) => (d.size != null && colorBorder) ? 1 : ScatterChart.getBubbleOpacity(d, hasSelection),
                     'stroke-width': '1px',
                     'stroke': (d: ScatterChartDataPoint) => ScatterChart.getStrokeFill(d, colorBorder),
                     'fill': (d: ScatterChartDataPoint) => d.fill,
@@ -1071,7 +1099,7 @@ module powerbi.visuals {
             return axisType.scalar;
         }
 
-        private createLabelDataPoints(): LabelDataPoint[]{
+        private createLabelDataPoints(): LabelDataPoint[] {
             let xScale = this.xAxisProperties.scale;
             let yScale = this.yAxisProperties.scale;
             let sizeRange = this.data.sizeRange;
@@ -1091,7 +1119,7 @@ module powerbi.visuals {
                 };
                 let textWidth = TextMeasurementService.measureSvgTextWidth(properties);
                 let textHeight = TextMeasurementService.estimateSvgTextHeight(properties);
-                
+
                 labelDataPoints.push({
                     isPreferred: preferredLabelsKeys ? this.isLabelPreferred(dataPoint.identity.getKey(), preferredLabelsKeys) : false,
                     text: text,
@@ -1101,7 +1129,7 @@ module powerbi.visuals {
                     },
                     outsideFill: labelSettings.labelColor ? labelSettings.labelColor : NewDataLabelUtils.defaultLabelColor,
                     insideFill: NewDataLabelUtils.defaultInsideLabelColor,
-                    isParentRect: false,
+                    parentType: LabelDataPointParentType.Point,
                     parentShape: {
                         point: {
                             x: xScale(dataPoint.x),
@@ -1136,7 +1164,7 @@ module powerbi.visuals {
             return this.getCandidateLabels(visualCenter, quadrantsCenters, dataPoints);
         }
 
-        private getQuadrantsCenters(visualWidth:number, visualHeight:number): Point[] {
+        private getQuadrantsCenters(visualWidth: number, visualHeight: number): Point[] {
             let quadrantsCenters: Point[] = [];
             let quarterWidth = visualWidth / 4;
             let quarterHeight = visualHeight / 4;
@@ -1157,7 +1185,7 @@ module powerbi.visuals {
             let yScale = this.yAxisProperties.scale;
             let distance: number;
 
-            for (let dp of datapoints){
+            for (let dp of datapoints) {
                 let x = xScale(dp.x);
                 let y = yScale(dp.y);
                 let quadrantNumber = this.getPointQuadrantNumber(x, y, visualCenter);
@@ -1173,7 +1201,7 @@ module powerbi.visuals {
                         minDistances[quadrantNumber] = distance;
                     }
                 }
-                
+
             }
             let preferredLabelsKeys: string[] = [];
             for (let id of ids) {

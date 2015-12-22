@@ -113,24 +113,24 @@ module powerbi.visuals.services {
         public query: string;
         public category: string;
         public key: string;
-        private _cacheHits: number;
+        private cacheHits: number;
 
-        constructor(query: string = "", category: string = "") {
-            this.query = query;
-            this.category = category;
+        constructor(query: string, category: string) {
+            this.query = query != null ? query : "";
+            this.category = category != null ? category : "";
             this.key = (this.query + "/" + this.category).toLowerCase();
-            this._cacheHits = 0;
+            this.cacheHits = 0;
             if (!geocodingCache) {
                 geocodingCache = createGeocodingCache(Settings.MaxCacheSize, Settings.MaxCacheSizeOverflow);
             }
         }
 
         public incrementCacheHit(): void {
-            this._cacheHits++;
+            this.cacheHits++;
         }
 
         public getCacheHits(): number {
-            return this._cacheHits;
+            return this.cacheHits;
         }
 
         public getBingEntity(): string {
@@ -178,11 +178,18 @@ module powerbi.visuals.services {
             }
 
             let cultureName = navigator.userLanguage || navigator["language"];
+            cultureName = mapLocalesForBing(cultureName);
             if (cultureName) {
                 url += "&c=" + cultureName;
             }
 
             url += "&maxRes=20";
+
+            // If the query is of length 2, request the ISO 2-letter country code to be returned with the result to be compared against the query so that such results can be preferred.
+            if (this.query.length === 2 && this.category === CategoryTypes.CountryRegion) {
+                url += "&include=ciso2";
+            }
+
             return url;
         }
     }
@@ -222,12 +229,25 @@ module powerbi.visuals.services {
             }
 
             let cultureName = navigator.userLanguage || navigator["language"];
+            cultureName = mapLocalesForBing(cultureName);
             let cultures = cultureName.split("-");
             let data = [this.latitude, this.longitude, this.levelOfDetail, "'" + entityType + "'", 1, 0, "'" + cultureName + "'"];
             if (cultures.length > 1) {
                 data.push("'" + cultures[1] + "'");
             }
             return url + "&SpatialFilter=GetBoundary(" + data.join(", ") + ")";
+        }
+    }
+
+    /**
+     * Map locales that cause failures to similar locales that work
+     */
+    function mapLocalesForBing(locale: string): string {
+        switch (locale.toLowerCase()) {
+            case 'fr': // Bing gives a 404 error when this language code is used (fr is only obtained from Chrome).  Use fr-FR for a near-identical version that works. Defect # 255717 opened with Bing.
+                return 'fr-FR';
+            default:
+                return locale;
         }
     }
 
@@ -375,6 +395,17 @@ module powerbi.visuals.services {
     }
 
     function getBestResultIndex(resources: any[], query: GeocodeQuery) {
+        let queryString = query.query.toLowerCase();
+        // If string is of length 2 and is a country, check against the ISO country code of results, prefering exact matches
+        if (queryString.length === 2 && query.category === CategoryTypes.CountryRegion) {
+            for (let index = 0; index < resources.length; index++) {
+                let iso2: string = resources[index].address && resources[index].address.countryRegionIso2;
+                if (iso2 && queryString === iso2.toLowerCase()) {
+                    return index;
+                }
+            }
+        }
+        // Prefer results that match the targetEntity (geotagged category) on the query
         let targetEntity = query.getBingEntity().toLowerCase();
         for (let index = 0; index < resources.length; index++) {
             let resultEntity = (resources[index].entityType || "").toLowerCase();

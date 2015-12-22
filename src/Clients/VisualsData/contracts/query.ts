@@ -257,12 +257,25 @@ module powerbi.data {
         ScriptVisualCommand?: ScriptVisualCommand;
     }
 
+    export interface ScriptInputColumn {
+        /** The queryName of the corresponding Select from the associated SemanticQuery providing the data for this column. */ 
+        QueryName: string; 
+        /** The name of this column expected by the script. */
+        Name: string;
+    }
+
+    export interface ScriptInput {
+        VariableName?: string;
+        Columns?: ScriptInputColumn[];
+    }
+
     export interface ScriptVisualCommand {
         Script?: string;
         RenderingEngine?: string;
         ViewportWidthPx?: number;
         ViewportHeightPx?: number;
         Version?: number;
+        ScriptInput?: ScriptInput;
     }
 
     /** Defines semantic data types. */

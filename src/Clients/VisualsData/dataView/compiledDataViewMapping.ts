@@ -41,6 +41,7 @@ module powerbi.data {
         source: DataViewObjectPropertyIdentifier;
         provider: DataViewObjectPropertyIdentifier;
         imageFormat: string;
+        scriptInput?: ScriptInput;
     }
 
     export interface CompiledDataViewScriptResultMapping {

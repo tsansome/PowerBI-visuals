@@ -29,43 +29,22 @@
 module powerbi.visuals {
     import createClassAndSelector = jsCommon.CssConstants.createClassAndSelector;
 
-    export interface TextRunStyle {
-        fontFamily?: string;
-        fontSize?: string;
-        fontStyle?: string;
-        fontWeight?: string;
-        textDecoration?: string;
-    }
-
-    export interface TextRunContext {
-        textStyle?: TextRunStyle;
-        url?: string;
-        value: string;
-    }
-
-    export interface ParagraphContext {
-        horizontalTextAlignment?: string;
-        textRuns: TextRunContext[];
-    }
-
     export interface TextboxDataViewObjects extends DataViewObjects {
         general: TextboxDataViewObject;
     }
 
     export interface TextboxDataViewObject extends DataViewObject {
-        paragraphs: ParagraphContext[];
+        paragraphs: Paragraphs;
     }
     
-    /**
-     * Represents a rich text box that supports view & edit mode. 
-     */
-    export class RichTextbox implements IVisual {
+    /** Represents a rich text box that supports view & edit mode. */
+    export class Textbox implements IVisual {
         private editor: RichText.QuillWrapper;
         private element: JQuery;
         private host: IVisualHostServices;
         private viewport: IViewport;
         private readOnly: boolean;
-        private paragraphs: ParagraphContext[];
+        private paragraphs: Paragraphs;
 
         public init(options: VisualInitOptions) {
             this.element = options.element;
@@ -137,7 +116,7 @@ module powerbi.visuals {
                 }
 
                 this.element.empty();
-                this.element.append(RichTextbox.convertParagraphsToHtml(this.paragraphs));
+                this.element.append(Textbox.convertParagraphsToHtml(this.paragraphs));
             }
             else {
                 // Showing the Quill editor.
@@ -150,7 +129,7 @@ module powerbi.visuals {
                     this.element.append(this.editor.getElement());
                 }
 
-                this.editor.setContents(RichTextbox.convertParagraphsToOps(this.paragraphs));
+                this.editor.setContents(Textbox.convertParagraphsToOps(this.paragraphs));
             }
 
             this.updateSize();
@@ -163,7 +142,7 @@ module powerbi.visuals {
                 return;
 
             let contents: quill.Delta = this.editor.getContents();
-            this.paragraphs = RichTextbox.convertDeltaToParagraphs(contents);
+            this.paragraphs = Textbox.convertDeltaToParagraphs(contents);
 
             let changes: VisualObjectInstance[] = [{
                 objectName: 'general',
@@ -181,9 +160,9 @@ module powerbi.visuals {
                 this.editor.resize(this.viewport);
         }
 
-        private static convertDeltaToParagraphs(contents: quill.Delta): ParagraphContext[] {
-            let paragraphs: ParagraphContext[] = [];
-            let paragraph: ParagraphContext = { textRuns: [] };
+        private static convertDeltaToParagraphs(contents: quill.Delta): Paragraphs {
+            let paragraphs: Paragraphs = [];
+            let paragraph: Paragraph = { textRuns: [] };
 
             for (let i = 0, len = contents.ops.length; i < len; i++) {
                 let insertOp = <quill.InsertOp>contents.ops[i];
@@ -219,12 +198,12 @@ module powerbi.visuals {
 
                         if (end - start > 0) {
                             let span = text.substring(start, end);
-                            let textRun: TextRunContext = { value: span };
+                            let textRun: TextRun = { value: span };
                             if (attributes) {
                                 if (attributes.link !== undefined)
                                     textRun.url = attributes.link;
 
-                                let textStyle = RichTextbox.convertFormatAttributesToTextStyle(attributes);
+                                let textStyle = Textbox.convertFormatAttributesToTextStyle(attributes);
                                 if (textStyle)
                                     textRun.textStyle = textStyle;
                             }
@@ -259,7 +238,7 @@ module powerbi.visuals {
             return paragraphs;
         }
 
-        private static convertParagraphsToHtml(paragraphs: ParagraphContext[]): JQuery {
+        private static convertParagraphsToHtml(paragraphs: Paragraphs): JQuery {
             let $paragraphs: JQuery = $();
 
             for (let paragraphIndex = 0, len = paragraphs.length; paragraphIndex < len; ++paragraphIndex) {
@@ -331,7 +310,7 @@ module powerbi.visuals {
             return $paragraphs;
         }
 
-        private static convertParagraphsToOps(paragraphs: ParagraphContext[]): quill.Op[] {
+        private static convertParagraphsToOps(paragraphs: Paragraphs): quill.Op[] {
             let ops: quill.InsertOp[] = [];
 
             for (let paragraphIndex = 0, len = paragraphs.length; paragraphIndex < len; ++paragraphIndex) {

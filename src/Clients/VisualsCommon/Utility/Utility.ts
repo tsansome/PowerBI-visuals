@@ -193,6 +193,39 @@ module jsCommon {
             return text.replace(new RegExp(pattern, 'gi'), textToReplace);
         }
 
+        export function ensureUniqueNames(names: string[]): string[] {
+            debug.assertValue(names, 'names');
+
+            let usedNames: { [name: string]: boolean } = {};
+
+            // Make sure we are giving fair chance for all columns to stay with their original name
+            // First we fill the used names map to contain all the original unique names from the list.
+            for (let name of names) {
+                usedNames[name] = false;
+            }
+
+            let uniqueNames: string[] = [];
+
+            // Now we go over all names and find a unique name for each
+            for (let name of names) {
+                let uniqueName = name;
+
+                // If the (original) column name is already taken lets try to find another name
+                if (usedNames[uniqueName]) {
+                    let counter = 0;
+                    // Find a name that is not already in the map
+                    while (usedNames[uniqueName] !== undefined) {
+                        uniqueName = name + "." + (++counter);
+                    }
+                }
+
+                uniqueNames.push(uniqueName);
+                usedNames[uniqueName] = true;
+            }
+
+            return uniqueNames;
+        }
+
         /**
          * Returns a name that is not specified in the values.
          */

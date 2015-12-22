@@ -31,9 +31,9 @@ module powerbi {
         private static MIN_COUNT: number = 1;
         private static MAX_COUNT: number = 1000;
 
-        private _maxAllowedMargin: number;
-        private _canExtendMin: boolean;
-        private _canExtendMax: boolean;
+        private maxAllowedMargin: number;
+        private canExtendMin: boolean;
+        private canExtendMax: boolean;
 
         public interval: number;
         public intervalOffset: number;
@@ -157,9 +157,9 @@ module powerbi {
             result.max = max;
             result.interval = interval;
             result.intervalOffset = min - range.min;
-            result._maxAllowedMargin = maxAllowedMargin;
-            result._canExtendMin = canExtendMin;
-            result._canExtendMax = canExtendMax;
+            result.maxAllowedMargin = maxAllowedMargin;
+            result.canExtendMin = canExtendMin;
+            result.canExtendMax = canExtendMax;
 
             // Fill in the Sequence
             let precision = Double.getPrecision(interval, 0);
@@ -235,11 +235,11 @@ module powerbi {
             let maxMargin = (this.max - max) / this.interval;
             let marginPrecision = 0.001;
 
-            if (!this._canExtendMin || (minMargin > this._maxAllowedMargin && minMargin > marginPrecision)) {
+            if (!this.canExtendMin || (minMargin > this.maxAllowedMargin && minMargin > marginPrecision)) {
                 this.min = min;
             }
 
-            if (!this._canExtendMax || (maxMargin > this._maxAllowedMargin && maxMargin > marginPrecision)) {
+            if (!this.canExtendMax || (maxMargin > this.maxAllowedMargin && maxMargin > marginPrecision)) {
                 this.max = max;
             }
         }

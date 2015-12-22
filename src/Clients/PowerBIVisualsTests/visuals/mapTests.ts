@@ -40,7 +40,7 @@ module powerbitests {
 
     powerbitests.mocks.setLocale();
 
-    describe("Map",() => {
+    describe("Map", () => {
         let element: JQuery;
         let mockGeotaggingAnalyzerService;
 
@@ -73,7 +73,8 @@ module powerbitests {
         });
 
             it('Capabilities DataRole preferredTypes', () => {
-            //Map's Category, X and Y fieldWells have preferences for geographic locations, longitude and latitude respectively
+            
+                //Map's Category, X and Y fieldWells have preferences for geographic locations, longitude and latitude respectively
             expect(powerbi.visuals.mapCapabilities.dataRoles.map(r => !!r.preferredTypes)).toEqual([
                 true,
                 false,
@@ -148,7 +149,7 @@ module powerbitests {
             expect(groupSizeTotals[2]).toBe(null);
         });
 
-        it('createMapDataPoint',() => {
+        it('createMapDataPoint', () => {
             let colors = powerbi.visuals.visualStyles.create().colorPalette.dataColors;
             let group = "Arizona";
             let value = 100;
@@ -390,7 +391,7 @@ module powerbitests {
         });
         });
 
-        it('calculateRadius',() => {
+        it('calculateRadius', () => {
             var range: powerbi.visuals.SimpleRange = { min: -100, max: 100 };
 
             // Null should be the minimum size
@@ -808,6 +809,7 @@ module powerbitests {
             let enumeratedDataPoints = enumerationBuilder.complete();
 
             expect(enumeratedDataPoints.instances.length).toBe(legendDataPoints.length);
+            
             // ensure first object is 'fill' and not 'defaultColor'
             expect(enumeratedDataPoints.instances[0]['properties']['fill']).toBeDefined();
         });
@@ -948,6 +950,22 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
+        it("Should draw category labels when enabled, plus stems", function (done) {
+            var dataView = new MapDataBuilder().withCategoryLabels().withShortCategoryNames().build(false, false);
+            v.onDataChanged({ dataViews: [dataView] });
+            setTimeout(function () {
+
+                expect($(".labelGraphicsContext")).toBeInDOM();
+                expect($(".labelGraphicsContext .label").length).toBe(3);
+                expect($(".labelGraphicsContext .label").first().css('font-size')).toBe(PixelConverter.fromPoint(dataLabelUtils.DefaultFontSizeInPt));
+
+                expect($(".leader-lines")).toBeInDOM();
+                expect($(".leader-lines .line-label").length).toBe(3);
+                
+                done();
+            }, powerbitests.DefaultWaitForRender);
+        });
+
         it("should have path for each category", (done) => {
             let dataBuilder = new MapDataBuilder();
             let dataView = dataBuilder.build(false, false);
@@ -1025,6 +1043,51 @@ module powerbitests {
 
         it("Label data points have correct fill", () => {
             let labelColor = "#007700";
+            let dataView = new MapDataBuilder().withCategoryLabels(labelColor).build(false, false);
+            v.onDataChanged({ dataViews: [dataView] });
+
+            let labelDataPoints = callCreateLabelDataPoints(v);
+            helpers.assertColorsMatch(labelDataPoints[0].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[0].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+        });
+    });
+
+    describe("Filled Map label data point creation", () => {
+        let v: powerbi.IVisual;
+
+        beforeEach(() => {
+            v = new MapVisualBuilder().build(true);
+        });
+
+        it("Label data points have correct text", () => {
+            let dataView = new MapDataBuilder().withCategoryLabels().build(false, false);
+            v.onDataChanged({ dataViews: [dataView] });
+
+            let labelDataPoints = callCreateLabelDataPoints(v);
+            expect(labelDataPoints[0].text).toEqual("Montana");
+            expect(labelDataPoints[1].text).toEqual("California");
+            expect(labelDataPoints[2].text).toEqual("Arizona");
+        });
+
+        it("Label data points have correct default fill", () => {
+            let dataView = new MapDataBuilder().withCategoryLabels().build(false, false);
+            v.onDataChanged({ dataViews: [dataView] });
+
+            let labelDataPoints = callCreateLabelDataPoints(v);
+            helpers.assertColorsMatch(labelDataPoints[0].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[0].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+        });
+
+        it("Label data points have correct fill", () => {
+            let labelColor = "#ffffff";
             let dataView = new MapDataBuilder().withCategoryLabels(labelColor).build(false, false);
             v.onDataChanged({ dataViews: [dataView] });
 
@@ -1280,6 +1343,11 @@ module powerbitests {
             return this;
         }
 
+        public withNullCategory(): MapDataBuilder {
+            this.categoryValues[1] = null;
+            return this;
+        }
+
         public withNullValue(): MapDataBuilder {
             this.sizeValues[0].values[1] = null;
             return this;
@@ -1370,7 +1438,7 @@ module powerbitests {
                 createMapControl: (element, options) => {
                     return <any>(new mocks.MockMapControl(this._element[0], 500, 500));
                 },
-                ensureMap: (action: () => void) => {
+                ensureMap: (locale: string, action: () => void) => {
                     Microsoft.Maps = <any>mocks.MockMaps; // Hook the mock up to Microsoft.Maps for use in Map code
                     action();
                 },
@@ -1378,7 +1446,7 @@ module powerbitests {
         }
 
         public build(filledMap: boolean, minerva: boolean = false): powerbi.IVisual {
-            this._visual = new Map({ filledMap: filledMap, geocoder: this._testGeocoder, mapControlFactory: this._testMapControlFactory });
+            this._visual = new Map({ filledMap: filledMap, geocoder: this._testGeocoder, mapControlFactory: this._testMapControlFactory, filledMapDataLabelsEnabled: true });
             this._visual.init(this.buildInitOptions());
 
             return this._visual;

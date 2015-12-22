@@ -55,8 +55,11 @@ module powerbi.data {
             if (!field)
                 return;
 
-            if (field.column || field.columnAggr || field.measure || field.hierarchyLevel)
+            if (field.column || field.columnAggr || field.measure)
                 return this.getMetadataForProperty(field, federatedSchema);
+
+            if (field.hierarchyLevel)
+                return this.getMetadataForHierarchyLevel(field, federatedSchema);
 
             if (field.columnHierarchyLevelVariation)
                 return this.getMetadataForVariation(field, federatedSchema);
@@ -130,7 +133,7 @@ module powerbi.data {
         }
 
         private getPropertyKeys(schema: FederatedConceptualSchema): jsCommon.ArrayNamedItems<ConceptualProperty> {
-            let property = this.getConceptualProperty(schema);
+            let property = this.getConceptualProperty(schema) || this.getHierarchyLevelConceptualProperty(schema);
             if (!property)
                 return;
 
@@ -143,9 +146,12 @@ module powerbi.data {
                 return;
 
             let fieldExprItem = FieldExprPattern.toFieldExprEntityItemPattern(field);
-            return federatedSchema
-                .schema(fieldExprItem.schema)
-                .findProperty(fieldExprItem.entity, FieldExprPattern.getPropertyName(field));
+            let propertyName = FieldExprPattern.getPropertyName(field);
+
+            if (propertyName)
+                return federatedSchema
+                    .schema(fieldExprItem.schema)
+                    .findProperty(fieldExprItem.entity, propertyName);
         }
 
         public getTargetEntityForVariation(federatedSchema: FederatedConceptualSchema, variationName: string): string {
@@ -155,6 +161,24 @@ module powerbi.data {
                 for (let variation of variations)
                     if (variation.name === variationName)
                         return variation.navigationProperty.targetEntity.name;
+            }
+        }
+
+        private getHierarchyLevelConceptualProperty(federatedSchema: FederatedConceptualSchema): ConceptualProperty {
+            let field = SQExprConverter.asFieldPattern(this);
+            if (!field)
+                return;
+
+            if (field.hierarchyLevel) {
+                let fieldExprItem = FieldExprPattern.toFieldExprEntityItemPattern(field);
+                let hierarchy = federatedSchema
+                    .schema(fieldExprItem.schema)
+                    .findHierarchy(fieldExprItem.entity, field.hierarchyLevel.name);
+
+                if (hierarchy) {
+                    let hierarchyLevel = hierarchy.levels.withName(field.hierarchyLevel.level);
+                    return hierarchyLevel.column;
+                }
             }
         }
 
@@ -187,15 +211,18 @@ module powerbi.data {
                 }
             }
         }
-
-        private getMetadataForProperty(field: FieldExprPattern, federatedSchema: FederatedConceptualSchema): SQExprMetadata {
+        private getMetadataForHierarchyLevel(field: FieldExprPattern, federatedSchema: FederatedConceptualSchema): SQExprMetadata {
             debug.assertValue(field, 'field');
             debug.assertValue(federatedSchema, 'federatedSchema');
 
-            let property = this.getConceptualProperty(federatedSchema);
+            let property = this.getHierarchyLevelConceptualProperty(federatedSchema);
             if (!property)
                 return;
 
+            return this.getPropertyMetadata(field, property);
+        }
+
+        private getPropertyMetadata(field: FieldExprPattern, property: ConceptualProperty): SQExprMetadata {
             let format = property.format;
             let type = property.type;
             let columnAggregate = field.columnAggr;
@@ -222,6 +249,17 @@ module powerbi.data {
                 aggregate: columnAggregate ? columnAggregate.aggregate : undefined,
                 defaultAggregate: property.column ? property.column.defaultAggregate : null
             };
+        }
+
+        private getMetadataForProperty(field: FieldExprPattern, federatedSchema: FederatedConceptualSchema): SQExprMetadata {
+            debug.assertValue(field, 'field');
+            debug.assertValue(federatedSchema, 'federatedSchema');
+
+            let property = this.getConceptualProperty(federatedSchema);
+            if (!property)
+                return;
+
+            return this.getPropertyMetadata(field, property);
         }
 
         private static getMetadataForEntity(field: FieldExprPattern, federatedSchema: FederatedConceptualSchema): SQExprMetadata {
@@ -1261,6 +1299,11 @@ module powerbi.data {
 
         private isQueryable(fieldExpr: FieldExprPattern): boolean {
             let fieldExprItem = FieldExprPattern.toFieldExprEntityItemPattern(fieldExpr);
+            if (fieldExpr.hierarchyLevel) {
+                let hierarchyLevelConceptualProperty = SQHierarchyExprUtils.getConceptualHierarchyLevelFromExpr(this.schema, fieldExpr);
+                return hierarchyLevelConceptualProperty && hierarchyLevelConceptualProperty.column.queryable !== ConceptualQueryableState.Error;
+            }
+
             return this.schema.schema(fieldExprItem.schema).findProperty(fieldExprItem.entity, FieldExprPattern.getPropertyName(fieldExpr)).queryable !== ConceptualQueryableState.Error;
         }
     }
@@ -1278,6 +1321,35 @@ module powerbi.data {
         public static getAggregate(expr: SQExpr): QueryAggregateFunction {
             let visitor = new SQExprAggregateInfoVisitor();
             return expr.accept(visitor);
+        }
+    }
+
+    module SQHierarchyExprUtils {
+        export function getConceptualHierarchyLevelFromExpr(
+            conceptualSchema: FederatedConceptualSchema,
+            fieldExpr: FieldExprPattern): ConceptualHierarchyLevel {
+            let fieldExprItem = FieldExprPattern.toFieldExprEntityItemPattern(fieldExpr);
+            if (fieldExpr.hierarchyLevel)
+                return SQHierarchyExprUtils.getConceptualHierarchyLevel(
+                    conceptualSchema,
+                    fieldExprItem.schema,
+                    fieldExprItem.entity,
+                    fieldExpr.hierarchyLevel.name,
+                    fieldExpr.hierarchyLevel.level);
+        }
+
+        export function getConceptualHierarchyLevel(
+            conceptualSchema: FederatedConceptualSchema,
+            schemaName: string,
+            entity: string,
+            hierarchy: string,
+            hierarchyLevel: string): ConceptualHierarchyLevel {
+
+            let schema = conceptualSchema.schema(schemaName);
+            let hierarchyLevelColumn = schema.findHierarchy(entity, hierarchy);
+            if (hierarchyLevelColumn) {
+                return hierarchyLevelColumn.levels.withName(hierarchyLevel);
+            }
         }
     }
 
@@ -1308,10 +1380,23 @@ module powerbi.data {
                     let targetEntityExpr = SQExprBuilder.entity(schemaName, targetEntity);
                     let schemaHierarchy = this.schema.schema(schemaName).findHierarchy(targetEntity, hierarchy.hierarchy);
 
-                    for (let level of schemaHierarchy.levels)
-                        if (level.name === ref)
-                            return new SQColumnRefExpr(targetEntityExpr, level.column.name);
+                    if (schemaHierarchy) {
+                        for (let level of schemaHierarchy.levels)
+                            if (level.name === ref)
+                                return new SQColumnRefExpr(targetEntityExpr, level.column.name);
+                    }
                 }
+            }
+            else {
+                let entityExpr = <SQEntityExpr>(hierarchy.arg);
+                let hierarchyLevelRef = SQHierarchyExprUtils.getConceptualHierarchyLevel(this.schema,
+                    entityExpr.schema,
+                    entityExpr.entity,
+                    hierarchy.hierarchy,
+                    expr.level);
+
+                if (hierarchyLevelRef)
+                    return new SQColumnRefExpr(hierarchy.arg, hierarchyLevelRef.column.name);
             }
         }
 

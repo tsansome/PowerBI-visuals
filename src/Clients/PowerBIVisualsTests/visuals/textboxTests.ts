@@ -27,12 +27,12 @@
 /// <reference path="../_references.ts"/>
 
 module powerbitests {
-    import RichTextbox = powerbi.visuals.RichTextbox;
-    import richTextboxCapabilities = powerbi.visuals.richTextboxCapabilities;
+    import Textbox = powerbi.visuals.Textbox;
+    import richTextboxCapabilities = powerbi.visuals.textboxCapabilities;
     import IVisualHostServices = powerbi.IVisualHostServices;
-    import ParagraphContext = powerbi.visuals.ParagraphContext;
+    import Paragraph = powerbi.Paragraph;
 
-    describe("Rich Textbox", () => {
+    describe("Textbox", () => {
         const viewport: powerbi.IViewport = {
             height: 500,
             width: 500
@@ -57,7 +57,7 @@ module powerbitests {
 
         // ---- Sample data ----
         // 2 paragraphs, no formatting.
-        let paragraphs1: ParagraphContext[] = [
+        let paragraphs1: Paragraph[] = [
             {
                 textRuns: [
                     { value: "foo" },
@@ -72,7 +72,7 @@ module powerbitests {
         ];
 
         // 2 paragraphs, with formatting
-        let paragraphs2: ParagraphContext[] = [
+        let paragraphs2: Paragraph[] = [
             {
                 textRuns: [
                     { value: "foo", textStyle: { fontWeight: "bold" } },
@@ -89,7 +89,7 @@ module powerbitests {
         ];
 
         // 1 paragraph with an unformatted url.
-        let paragraphs3: ParagraphContext[] = [
+        let paragraphs3: Paragraph[] = [
             {
                 textRuns: [
                     { value: "http://www.powerbi.com" }
@@ -98,7 +98,7 @@ module powerbitests {
         ];
 
         // 2 paragraphs, with spacing for testing cursor inside text
-        let paragraphs4: ParagraphContext[] = [
+        let paragraphs4: Paragraph[] = [
             {
                 textRuns: [
                     { value: "foo" },
@@ -109,7 +109,7 @@ module powerbitests {
         ];
 
         // text with space surroudned by space for testing special empty word break
-        let paragraphs5: ParagraphContext[] = [
+        let paragraphs5: Paragraph[] = [
             {
                 textRuns: [
                     { value: "foo    bar" }
@@ -123,7 +123,7 @@ module powerbitests {
             let $toolbar: JQuery;
             let initOptions: powerbi.VisualInitOptions;
 
-            let textbox: RichTextbox;
+            let textbox: Textbox;
             let getViewModeSpy: jasmine.Spy;
             let setToolbarSpy: jasmine.Spy;
 
@@ -147,7 +147,7 @@ module powerbitests {
                 beforeEach(() => {
                     getViewModeSpy.and.returnValue(powerbi.ViewMode.View);
 
-                    textbox = new RichTextbox();
+                    textbox = new Textbox();
                     textbox.init(initOptions);
                 });
 
@@ -213,7 +213,7 @@ module powerbitests {
 
                     describe("theme font", () => {
                         it("\"Heading\" should render correctly", () => {
-                            let paragraphsWithHeading: ParagraphContext[] = [
+                            let paragraphsWithHeading: Paragraph[] = [
                                 {
                                     textRuns: [
                                         { value: "Some text", textStyle: { fontFamily: "Heading" } }
@@ -230,7 +230,7 @@ module powerbitests {
                         });
 
                         it("\"Body\" should render correctly", () => {
-                            let paragraphsWithBody: ParagraphContext[] = [
+                            let paragraphsWithBody: Paragraph[] = [
                                 {
                                     textRuns: [
                                         { value: "Some text", textStyle: { fontFamily: "Body" } }
@@ -253,7 +253,7 @@ module powerbitests {
                 beforeEach(() => {
                     getViewModeSpy.and.returnValue(powerbi.ViewMode.Edit);
 
-                    textbox = new RichTextbox();
+                    textbox = new Textbox();
                     textbox.init(initOptions);
                 });
 
@@ -307,7 +307,7 @@ module powerbitests {
                     let change = changes[0];
                     expect(change.objectName).toEqual("general");
 
-                    let paragraphs: ParagraphContext[] = (<any>change.properties).paragraphs;
+                    let paragraphs: Paragraph[] = (<any>change.properties).paragraphs;
                     expect(paragraphs.length).toBe(2);
                     expect(paragraphs[0].horizontalTextAlignment).toBeFalsy();
                     expect(paragraphs[0].textRuns.length).toBe(3);
@@ -331,7 +331,7 @@ module powerbitests {
                 });
 
                 it("change to view-mode should preserve empty lines", () => {
-                    let paragraphs: ParagraphContext[] = [
+                    let paragraphs: Paragraph[] = [
                         {
                             textRuns: [
                                 { value: "line 1" }
@@ -440,7 +440,7 @@ module powerbitests {
                 beforeEach(() => {
                     getViewModeSpy.and.returnValue(powerbi.ViewMode.Edit);
 
-                    textbox = new RichTextbox();
+                    textbox = new Textbox();
                     textbox.init(initOptions);
                 });
 
@@ -493,6 +493,7 @@ module powerbitests {
 
                     describe('with focus outside editor', () => {
                         beforeEach(() => {
+                            
                             // Set focus to document body
                             (<HTMLElement>document.activeElement).blur();
                             expect(document.activeElement).toBe(document.body);
@@ -605,7 +606,7 @@ module powerbitests {
                             let content = getEditModeParagraphDivs($element).eq(0);
                             let anchors = content.find("a");
 
-                            expect(content.get(0).innerText).toEqual("foo http://another-url.com bar");
+                            expect(content.get(0).innerText).toEqual("foo http://another-url.com   bar");
                             expect(anchors.length).toBe(1);
                             expect(anchors.eq(0).text()).toBe("http://another-url.com");
                             expect(anchors.eq(0).attr("href")).toBe("http://another-url.com");
@@ -1005,6 +1006,7 @@ module powerbitests {
                 }
 
                 function setSelectValue($select: JQuery, value: any): void {
+                    
                     // See powerbi.visuals.RichText.Toolbar.setSelectValue() for description.
                     // NOTE: For unit tests case we have to use document.createEvent() because PhantomJS does
                     // not appear to support new UIEvent (https://github.com/ariya/phantomjs/issues/11289).
@@ -1084,7 +1086,7 @@ module powerbitests {
             return $element.css("text-align");
         }
 
-        function buildParagraphsDataView(paragraphs: powerbi.visuals.ParagraphContext[]): powerbi.DataView[] {
+        function buildParagraphsDataView(paragraphs: Paragraph[]): powerbi.DataView[] {
             return [{ metadata: { columns: [], objects: { general: { paragraphs: paragraphs } } } }];
         }
 

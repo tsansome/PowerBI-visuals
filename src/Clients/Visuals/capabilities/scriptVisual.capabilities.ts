@@ -40,9 +40,7 @@ module powerbi.visuals {
                                 in: 'Values'
                             },
                             dataReductionAlgorithm: {
-                                top: {
-                                    count: 10000
-                                }
+                                top: {}
                             }
                         },
                     },

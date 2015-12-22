@@ -48,6 +48,7 @@ module powerbitests {
 
             element = powerbitests.helpers.testDom('500', '500');
             hostServices = powerbitests.mocks.createVisualHostServices();
+            
             // Allow multiselect
             hostServices.canSelect = () => true;
             interactivityService = powerbi.visuals.createInteractivityService(hostServices);
@@ -145,6 +146,7 @@ module powerbitests {
         });
 
         it('legend dom validation incremental build', (done) => {
+            
             // Draw the legend once with the 3 states
             legend.drawLegend({ dataPoints: legendData }, viewport);
             setTimeout(() => {
@@ -284,6 +286,7 @@ module powerbitests {
             legend.changeOrientation(LegendPosition.Right);
             legend.drawLegend({ dataPoints: legendData, title: 'This is a super long title and should be truncated by now' }, viewport);
             powerbi.visuals.SVGUtil.flushAllD3Transitions();
+            
             // 2 different possible values
             // 'This is a super long ti… in Windows
             // 'This is a super long ti … in Mac OS
@@ -603,6 +606,7 @@ module powerbitests {
                 legend.drawLegend({ dataPoints: legendData }, viewport);
                 setTimeout(() => {
                     expect($('.interactive-legend .title').text()).toBe(legendData[0].category);
+                    
                     // last item is actually the second item since values should be placed in a two-row table.
                     expect($('.interactive-legend .item').last().find('.itemName').text().trim()).toBe('California');
                     expect($('.interactive-legend .item').last().find('.itemMeasure').text().trim()).toBe('5');
@@ -646,6 +650,7 @@ module powerbitests {
             });
 
             it('legend dom validation incremental build', (done) => {
+                
                 // Draw the legend once with the 3 states
                 let initialData: powerbi.visuals.LegendDataPoint[] = legendData;
 

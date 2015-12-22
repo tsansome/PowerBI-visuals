@@ -263,8 +263,11 @@ module jsCommon {
          * Deletes all items from the array.
          */
         export function clear(array: any[]): void {
-            // Not using splice due to the array creation involved in it. 
-            array.length = 0;
+            if (!array)
+                return;
+
+            while (array.length > 0)
+                array.pop();
         }
 
         export function isUndefinedOrEmpty(array: any[]): boolean {

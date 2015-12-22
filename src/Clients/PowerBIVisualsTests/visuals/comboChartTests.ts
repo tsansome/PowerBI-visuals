@@ -75,6 +75,7 @@ module powerbitests {
     describe("ComboChart DOM validation", () => {
         let visualBuilder: VisualBuilder;
         let element: JQuery;
+        let labelDensityMax = powerbi.visuals.NewDataLabelUtils.LabelDensityMax;
 
         beforeEach((done) => {
             element = powerbitests.helpers.testDom('500', '500');
@@ -157,7 +158,7 @@ module powerbitests {
                 let legend = $(".legend").length;
                 let rectCount = $(".columnChart .column").length;
                 let y2tickCount = $($(".y.axis")[1]).find(".tick").length;
-                
+
                 expect(lineCharts).toBe(1);
                 expect(columnCharts).toBe(1);
                 expect(yAxisCount).toBe(2);
@@ -196,6 +197,7 @@ module powerbitests {
                         let catCountFinal = $(".lineChart").find(".cat").length;
                         expect(catCountFinal).toBe(3);
                         let y2tickCountFinal = $($(".y.axis")[1]).find(".tick").length;
+                        
                         // y2 axis (line value axis) should be shifted to y1 in this case
                         expect(y2tickCountFinal).toEqual(0);
 
@@ -420,7 +422,7 @@ module powerbitests {
             });
 
             setTimeout(() => {
-                let yAxis = $(".y.axis").length;               
+                let yAxis = $(".y.axis").length;
                 expect(yAxis).toBe(2);
 
                 let y1 = $(".svgScrollable").attr("width");
@@ -442,15 +444,15 @@ module powerbitests {
 
             dataView1.metadata.objects = {
                 dataPoint: {
-                    defaultColor: { solid: { color: "#FF0000" } }                    
+                    defaultColor: { solid: { color: "#FF0000" } }
                 }
-            };  
+            };
 
             dataView2.metadata.objects = {
                 dataPoint: {
                     defaultColor: { solid: { color: "#FF0000" } }
                 }
-            };  
+            };
 
             visualBuilder.onDataChanged({ dataViews: [dataView1, dataView2] });
 
@@ -464,7 +466,7 @@ module powerbitests {
                 expect(columnCharts).toBe(1);
                 expect(yAxis).toBe(2);
                 expect(legend).toBe(1);
-                
+
                 helpers.assertColorsMatch($(".legendIcon").eq(0).css("fill"), "#ff0000");
                 helpers.assertColorsMatch($(".legendIcon").eq(2).css("fill"), "#ff0000");
 
@@ -491,7 +493,7 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it("Values that have NaN show a warning.", (done) => {
             visualBuilder.onDataChanged({
                 dataViews: [
@@ -564,7 +566,7 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it("Validate enumerate labels", (done) => {
             let dataView1 = dataViewFactory.buildDataForLabelsFirstType();
 
@@ -577,13 +579,13 @@ module powerbitests {
                 expect(points.instances.length).toBeGreaterThan(0);
                 done();
             }, DefaultWaitForRender);
-        });        
+        });
 
         it('validate shoulShowLegendCard with single value on column and no line values', (done) => {
             let dataView1 = dataViewFactory.buildDataViewSingleMeasure();
 
             let lineDataView = null;
-           
+
             visualBuilder.onDataChanged({ dataViews: [dataView1, lineDataView] });
 
             let points = <VisualObjectInstanceEnumerationObject>visualBuilder.visual.enumerateObjectInstances({ objectName: 'legend' });
@@ -598,7 +600,7 @@ module powerbitests {
             let dynamicSeriesDataView = dataViewFactory.buildDataViewDynamicSeries();
 
             let lineDataView = null;
-            
+
             visualBuilder.onDataChanged({ dataViews: [dynamicSeriesDataView, lineDataView] });
 
             let points = <VisualObjectInstanceEnumerationObject>visualBuilder.visual.enumerateObjectInstances({ objectName: 'legend' });
@@ -607,12 +609,12 @@ module powerbitests {
                 expect(points.instances.length).toBeGreaterThan(0);
                 done();
             }, DefaultWaitForRender);
-            });
+        });
 
         it('validate shoulShowLegendCard with static series for column and line', (done) => {
             let dynamicSeriesDataView = dataViewFactory.buildDataViewDefault();
             let staticSeriesDataView = dataViewFactory.buildDataViewDefault();
-            
+
             visualBuilder.onDataChanged({ dataViews: [dynamicSeriesDataView, staticSeriesDataView] });
 
             let points = <VisualObjectInstanceEnumerationObject>visualBuilder.visual.enumerateObjectInstances({ objectName: 'legend' });
@@ -662,7 +664,7 @@ module powerbitests {
                     start: 0,
                     end: 100000,
                     axisType: AxisType.scalar,
-                    showAxisTitle: true,                    
+                    showAxisTitle: true,
                     labelDisplayUnits: 1000,
                     labelPrecision: 5
                 },
@@ -716,13 +718,13 @@ module powerbitests {
             };
 
             let dataView = dataViewFactory.buildDataViewCustomSingleColumn(objects, [[4000, 6000, 10000]]);
-            
+
             let dataViewAnotherDomain = dataViewFactory.buildDataViewCustom(objects, [[1], [10], [20]]);
-            
+
             visualBuilder.onDataChanged({ dataViews: [dataViewAnotherDomain, dataView] });
             setTimeout(() => {
                 let axisLabels = $(".axisGraphicsContext .y.axis").first().find(".tick");
-                
+
                 expect(axisLabels[0].textContent).toBe("0K");
                 expect(axisLabels[axisLabels.length - 1].textContent).toBe("10K");
 
@@ -745,12 +747,12 @@ module powerbitests {
             visualBuilder.onDataChanged({ dataViews: [dataViewAnotherDomain, dataView] });
             setTimeout(() => {
                 let axisLabels = $(".axisGraphicsContext .y.axis").first().find(".tick");
-                
+
                 expect(axisLabels[0].textContent).toBe("0");
                 expect(axisLabels[axisLabels.length - 1].textContent).toBe("30");
 
                 axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick");
-                
+
                 expect(axisLabels[0].textContent).toBe("5");
                 expect(axisLabels[axisLabels.length - 1].textContent).toBe("25");
 
@@ -767,6 +769,7 @@ module powerbitests {
 
             setTimeout(() => {
                 let axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick");
+                
                 //Verify begin&end labels
                 expect(axisLabels[0].textContent).toBe("0K");
                 expect(axisLabels[axisLabels.length - 1].textContent).toBe("7K");
@@ -784,6 +787,7 @@ module powerbitests {
 
             setTimeout(() => {
                 let axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick");
+                
                 //Verify begin&end axis labels
                 expect(axisLabels[0].textContent).toBe("-7K");
                 expect(axisLabels[axisLabels.length - 1].textContent).toBe("-2K");
@@ -822,7 +826,7 @@ module powerbitests {
             visualBuilder.initVisual();
 
             let dataView1 = dataViewFactory.buildDataForLabelsFirstType();
-            let dataView2 = dataViewFactory.buildDataForLabelsSecondType();
+            let dataView2 = dataViewFactory.buildDataForLabelsSecondType(undefined, undefined, undefined, undefined, labelDensityMax);
 
             visualBuilder.onDataChanged({ dataViews: [dataView1, dataView2] });
             setTimeout(() => {
@@ -839,7 +843,7 @@ module powerbitests {
             visualBuilder.initVisual();
 
             let dataView1 = dataViewFactory.buildDataForLabelsFirstType(undefined, undefined, undefined, 12);
-            let dataView2 = dataViewFactory.buildDataForLabelsSecondType(undefined, undefined, undefined, 12);
+            let dataView2 = dataViewFactory.buildDataForLabelsSecondType(undefined, undefined, undefined, 12, labelDensityMax);
 
             visualBuilder.onDataChanged({ dataViews: [dataView1, dataView2] });
             setTimeout(() => {
@@ -966,13 +970,13 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it("should draw data labels when enabled", (done) => {
             visualBuilder.initVisual();
 
             let dataView1 = dataViewFactory.buildDataForLabelsFirstType();
 
-            let dataView2 = dataViewFactory.buildDataForLabelsSecondType();
+            let dataView2 = dataViewFactory.buildDataForLabelsSecondType(undefined, undefined, undefined, undefined, labelDensityMax);
 
             visualBuilder.onDataChanged({ dataViews: [dataView1, dataView2] });
 
@@ -1188,7 +1192,7 @@ module powerbitests {
 
     class VisualBuilder {
         public element: JQuery;
-        
+
         private _warningSpy: jasmine.Spy;
 
         public get warningSpy(): jasmine.Spy {
@@ -1222,7 +1226,7 @@ module powerbitests {
         public get height(): string {
             return this._height;
         }
-        
+
         private _width: string;
 
         public get width(): string {
@@ -1254,7 +1258,7 @@ module powerbitests {
 
         public buildVisualMinerva(pluginName: string) {
             this._visual =
-                powerbi.visuals.visualPluginFactory.createMinerva({}).getPlugin(pluginName).create();
+            powerbi.visuals.visualPluginFactory.createMinerva({}).getPlugin(pluginName).create();
 
             this.init();
         }
@@ -1376,7 +1380,7 @@ module powerbitests {
         private buildCategoryIdentities() {
             if (this.isBuildCategoryIdentities) {
                 this.categoryIdentities =
-                    this.categoriesValues.map((value) => mocks.dataViewScopeIdentity(value));
+                this.categoriesValues.map((value) => mocks.dataViewScopeIdentity(value));
             }
         }
 
@@ -1423,19 +1427,19 @@ module powerbitests {
         };
 
         let columns = [
-            {displayName: "col1", queryName: "col1", index: 0, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Text)},
-            {displayName: "col2", queryName: "col2", isMeasure: true, index: 1, groupName: "a", type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)},
-            {displayName: "col3", queryName: "col3", isMeasure: true, index: 2, groupName: "b", type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)},
-            {displayName: "col4", queryName: "col4", isMeasure: true, index: 3, groupName: "c", type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)}
+            { displayName: "col1", queryName: "col1", index: 0, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Text) },
+            { displayName: "col2", queryName: "col2", isMeasure: true, index: 1, groupName: "a", type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) },
+            { displayName: "col3", queryName: "col3", isMeasure: true, index: 2, groupName: "b", type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) },
+            { displayName: "col4", queryName: "col4", isMeasure: true, index: 3, groupName: "c", type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) }
         ];
 
         let columnsNumber = [
-            {displayName: "col1", queryName: "col1", type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)},
-            {displayName: "col2", queryName: "col2", isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)},
-            {displayName: "col3", queryName: "col3", isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)},
-            {displayName: "col4", queryName: "col4", isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)}
+            { displayName: "col1", queryName: "col1", type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) },
+            { displayName: "col2", queryName: "col2", isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) },
+            { displayName: "col3", queryName: "col3", isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) },
+            { displayName: "col4", queryName: "col4", isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) }
         ];
-       
+
         let categoriesValues = ["John Domo", "Delta Force", "Jean Tablau"];
 
         function setGeneral(dataViewBuilder: DataViewBuilder, isGeneral: boolean = false) {
@@ -1469,7 +1473,7 @@ module powerbitests {
 
             return build(dataViewBuilder);
         }
-        
+
         export function buildDataViewCustom(objects, values: any[], identities: any[] = undefined): powerbi.DataView {
             let dataViewBuilder: DataViewBuilder = new DataViewBuilder();
 
@@ -1560,6 +1564,7 @@ module powerbitests {
         }
 
         export function buildDataViewSuperLongLabels(isGeneral = false): powerbi.DataView {
+            
             // must share the same values as the general dataView, only category labels should change.
             let dataView: powerbi.DataView = buildDataViewDefault(isGeneral);
 
@@ -1590,7 +1595,7 @@ module powerbitests {
 
             return build(dataViewBuilder);
         }
-        
+
         export function buildDataViewNegative(isGeneral = false) {
             let dataViewBuilder: DataViewBuilder = new DataViewBuilder();
 
@@ -1607,33 +1612,37 @@ module powerbitests {
             return build(dataViewBuilder);
         }
 
-        function setLabels(dataViewBuilder: DataViewBuilder, color:any, labelDisplayUnits?: number, labelPrecision?: number, labelFontSize?: number) {
-            let ojects: any = {};
+        function setLabels(dataViewBuilder: DataViewBuilder, color: any, labelDisplayUnits?: number, labelPrecision?: number, labelFontSize?: number, labelDensity?: number) {
+            let objects: any = {};
 
-            ojects.labels = {
+            objects.labels = {
                 show: true
             };
 
             if (color !== undefined) {
-                ojects.labels.color = color;
+                objects.labels.color = color;
             }
 
             if (labelDisplayUnits !== undefined) {
-                ojects.labels.labelDisplayUnits = labelDisplayUnits;
+                objects.labels.labelDisplayUnits = labelDisplayUnits;
             }
 
             if (labelPrecision !== undefined) {
-                ojects.labels.labelPrecision = labelPrecision;
+                objects.labels.labelPrecision = labelPrecision;
             }
 
             if (labelFontSize !== undefined) {
-                ojects.labels.fontSize = labelFontSize;
+                objects.labels.fontSize = labelFontSize;
             }
 
-            dataViewBuilder.objects = ojects;
+            if (labelDensity !== undefined) {
+                objects.labels.labelDensity = labelDensity;
+            }
+
+            dataViewBuilder.objects = objects;
         }
 
-        export function buildDataForLabelsFirstType(color?:any, labelDisplayUnits?: number, labelPrecision?: number, fontSize?: number) {
+        export function buildDataForLabelsFirstType(color?: any, labelDisplayUnits?: number, labelPrecision?: number, fontSize?: number) {
             let dataViewBuilder: DataViewBuilder = new DataViewBuilder();
 
             setLabels(dataViewBuilder, color, labelDisplayUnits, labelPrecision, fontSize);
@@ -1641,14 +1650,14 @@ module powerbitests {
             dataViewBuilder.columns = columns;
             dataViewBuilder.categoriesValues = ["a", "b", "c", "d", "e"];
             dataViewBuilder.values = [[50, 40, 150, 200, 500]];
-            
+
             return build(dataViewBuilder);
         }
 
-        export function buildDataForLabelsSecondType(color?:any, labelDisplayUnits?: number, labelPrecision?: number, fontSize?: number) {
+        export function buildDataForLabelsSecondType(color?: any, labelDisplayUnits?: number, labelPrecision?: number, fontSize?: number, labelDensity?: number) {
             let dataViewBuilder: DataViewBuilder = new DataViewBuilder();
 
-            setLabels(dataViewBuilder, color, labelDisplayUnits, labelPrecision, fontSize);
+            setLabels(dataViewBuilder, color, labelDisplayUnits, labelPrecision, fontSize, labelDensity);
 
             dataViewBuilder.columns = columns;
             dataViewBuilder.categoriesValues = ["a", "b", "c", "d", "e"];
@@ -1659,7 +1668,7 @@ module powerbitests {
 
         export function buildDataViewInvalid(invalidValue) {
             let dataViewBuilder: DataViewBuilder = new DataViewBuilder();
-           
+
             dataViewBuilder.columns = columns;
             dataViewBuilder.categoriesValues = [["John Domo"]];
             dataViewBuilder.values = [[invalidValue]];
@@ -1691,7 +1700,7 @@ module powerbitests {
                 schema: "s",
                 entity: "e",
                 column: "series"
-    });
+            });
 
             dataViewBuilder.columns = columns;
             dataViewBuilder.categoriesColumns = [columns[0], columns[2], columns[3]];

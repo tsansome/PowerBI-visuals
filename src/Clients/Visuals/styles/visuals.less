@@ -39,9 +39,9 @@
 
 @defaultShapeRendering: crispEdges;
 
-    .slicerHeader {
-        margin: 0 0 0 8px;
-        box-sizing: border-box;
+.slicerHeader {
+    margin: 0 0 0 8px;
+    box-sizing: border-box;
 
     .headerText {
         color: @neutralPrimaryColor;
@@ -82,20 +82,20 @@
 
         * {
             display: table-cell;
-	        vertical-align: bottom;
+            vertical-align: bottom;
         }
 
         img {
-            max-width:100px;
-            width:100%;
+            max-width: 100px;
+            width: 100%;
         }
 
         &:hover {
             .slicerText {
                 color: @neutralDarkColor !important;
-    }
+            }
 
-    .slicerCheckbox {
+            .slicerCheckbox {
                 span.checkbox {
                     border-color: @neutralSecondaryColor;
                 }
@@ -132,20 +132,20 @@
 
             & + .slicerText {
                 color: @neutralDarkColor !important;
-        }
+            }
 
             span.checkbox {
                 border-color: @neutralDarkColor;
                 background-color: @neutralDarkColor;
                 box-shadow: none;
-        }
+            }
         }
 
         &.partiallySelected {
             span.checkbox {
                 background-color: transparent;
                 border-color: @neutralTertiaryAltColor;
-        }
+            }
 
             span.checkbox::before {
                 content: '';
@@ -157,7 +157,7 @@
                 background-color: @neutralTertiaryAltColor;
                 box-shadow: 0px 0px 2px @neutralTertiaryAltColor;
                 border: none;
-    }
+            }
         }
     }
 
@@ -257,7 +257,7 @@
             text-align: center;
         }
     }
-    }
+}
 
 .overflowingText {
     overflow: hidden;
@@ -659,7 +659,7 @@
             stroke: @neutralSecondaryAltColor;
             shape-rendering: @defaultShapeRendering;
         }
-        }
+    }
 
     .play-axis-container {
         position: absolute;
@@ -838,13 +838,28 @@
             padding: 0px 5px 0px 10px;
         }
 
-        .bi-table-column-header i {
-            visibility:hidden;
+        .bi-sort-icon-container {
+            float: right;
         }
 
-        .bi-table-column-header.sorted i,
-        .bi-table-column-header:hover i {
-            visibility:visible;
+        .bi-table-column-header{
+             div.future {
+              display: none;
+             }
+
+             div.sorted {
+              display: inline-block;
+             }
+
+             &>div:hover {
+                div.sorted {
+                    display: none;
+        }
+
+                div.future {
+                    display: inline-block;
+                }
+            }
         }
 
         .bi-table-cell-numeric {
@@ -993,6 +1008,20 @@
             border-bottom-style: solid;
             border-bottom-color: #CCCCCC;
             padding: 0px 5px 0px 10px;
+        }
+
+        .bi-sort-icon-container {
+            float: right;
+        }
+
+        .bi-table-column-header{
+             div.future {
+              display: none;
+             }
+
+             div.sorted {
+              display: inline-block;
+             }
         }
 
         .bi-table-cell-numeric {
@@ -1181,7 +1210,7 @@
                 font-size: 10px;
             }
         }
-        }
+    }
 
     .powervisuals-glyph {
         font-size: inherit;
@@ -1189,8 +1218,46 @@
         &.big-kpi {
             font-size: 48px;
         }
-        }
     }
+    /* Adding custom styles to the listView jQuery Scrollbar. */
+    .scroll-wrapper {
+        width: 100%;
+        height: 100%;
+        display: block;
+
+        .scroll-content {
+            height: inherit;
+        }
+
+        .scroll-element {
+            &.scroll-x {
+                height: 8px !important;
+            }
+
+            &.scroll-y {
+                width: 8px !important;
+            }
+
+            .scroll-element_track {
+                background-color: transparent !important;
+            }
+
+            .scroll-element_outer, .scroll-bar {
+                .no-border-radius;
+            }
+
+            .scroll-bar {
+                background-color: @neutralTertiaryAltColor !important;
+                opacity: 0;
+    }
+}
+    }
+    /* Only show the scrollbars on hover or when being dragged. */
+    .scroll-wrapper:hover .scroll-element .scroll-bar,
+    .scroll-wrapper .scroll-element.scroll-draggable .scroll-bar {
+        opacity: 1;
+    }
+}
 
 .interactive-legend {
     white-space: nowrap;
@@ -1308,6 +1375,18 @@
         text-anchor: middle;
         font-family: @regularSecondaryFontFamily;
     }
+
+    .catagorylabel {
+        font-size: 12px;
+        text-anchor: middle;
+        font-family: @regularSecondaryFontFamily;
+}
+}
+
+    .leader-lines {
+    .line-label{
+        opacity: 0.5;
+    }
 }
 
 /* Kept around for funnel labels; can be removed once it's moved to the new system */
@@ -1322,6 +1401,7 @@
 .richtextbox {
     color: @neutralPrimaryColor;
     pointer-events: all;
+    white-space: pre-wrap;
 
     a {
         color: @defaultLinkColor;
@@ -1603,7 +1683,7 @@ div.ql-toolbar {
     }
 }
 
-.clearCatcher {
+.clearCatcher, .backgroundRect {
     fill-opacity: 0;
 }
 
@@ -1614,7 +1694,7 @@ div.ql-toolbar {
         .owlGaugeBg {
             .st0 {
                 fill: #EF4137;
-        }
+            }
 
             .st1 {
                 fill: #FAAF42;
@@ -1638,7 +1718,7 @@ div.ql-toolbar {
         .owlGaugeBg {
             .st0 {
                 fill: #F18D05;
-        }
+            }
 
             .st1 {
                 fill: #FAAF42;
@@ -1662,7 +1742,7 @@ div.ql-toolbar {
         .owlGaugeBg {
             .st0 {
                 fill: #32742C;
-        }
+            }
 
             .st1 {
                 fill: #D0D102;
@@ -1726,20 +1806,14 @@ div.ql-toolbar {
             transform: rotate(2deg);
         }
     }
-    }
-
-
-.visual-sandbox {
-    border: none;
-    overflow: hidden;
 }
-    
+
 .streamGraph {
-    .axis{
+    .axis {
         path, line {
             fill: none;
             stroke: black;
-            shape-rendering: crispEdges;
+            shape-rendering: @defaultShapeRendering;
         }
 
         text {
@@ -1747,6 +1821,21 @@ div.ql-toolbar {
             font-size: 11px;
         }
     }
+}
+
+.visual-sandbox {
+    border: none;
+    overflow: hidden;
+}
+
+.x-ref-line {
+    stroke-width: 3px;
+    stroke-opacity: 0.5;
+    }
+
+.y1-ref-line {
+    stroke-width: 3px;
+    stroke-opacity: 0.5;
 }
 
 .radarChart {
@@ -1811,6 +1900,7 @@ div.ql-toolbar {
     opacity:0;
 }
 
+
 .histogram {
     @histogramAxesColor: @neutralSecondaryAltColor;
     @histogramLegendTextColor: @blackColor;
@@ -1864,15 +1954,29 @@ div.ql-toolbar {
         }
     }
 }
+.tornado-chart {
+    @tornadoChartAxisColor: @neutralSecondaryAltColor;
+
+    font-family: @regularFontFamily;
+    font-size: 11px;
+
+    .axes {
+        .axis {
+            fill: none;
+            stroke: @tornadoChartAxisColor;
+            stroke-width: 1px;
+        }
+    }
+}
+
+
 .nodeLinkText {
     text-shadow:
    -1px -1px 0 white,  
     1px -1px 0 white,
     -1px 1px 0 white,
      1px 1px 0 white;
-}
-
-.nodeLinkLinkText {
+}.nodeLinkLinkText {
     text-shadow:
    -1px -1px 0 white,  
     1px -1px 0 white,

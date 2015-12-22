@@ -89,6 +89,7 @@ module powerbi {
         alignment?: boolean;
         labelDisplayUnits?: boolean;
         fontSize?: boolean;
+        labelDensity?: boolean;
     }
 
     /** Describes a data value type, including a primitive type and extended type if any (derived from data category). */
@@ -181,6 +182,7 @@ module powerbi {
                 if (descriptor.formatting.alignment) return ValueType.fromExtendedType(ExtendedType.Alignment);
                 if (descriptor.formatting.labelDisplayUnits) return ValueType.fromExtendedType(ExtendedType.LabelDisplayUnits);
                 if (descriptor.formatting.fontSize) return ValueType.fromExtendedType(ExtendedType.FontSize);
+                if (descriptor.formatting.labelDensity) return ValueType.fromExtendedType(ExtendedType.LabelDensity);
             }
             if (descriptor.extendedType) {
                 return ValueType.fromExtendedType(descriptor.extendedType);
@@ -223,7 +225,7 @@ module powerbi {
         /** Determines if the instance ValueType is convertable from the 'other' ValueType. */
         public isCompatibleFrom(other: ValueType): boolean {
             debug.assertValue(other, 'other');
-            
+
             let otherPrimitiveType = other.primitiveType;
             if (this === other ||
                 this.primitiveType === otherPrimitiveType ||
@@ -430,6 +432,10 @@ module powerbi {
         public get fontSize(): boolean {
             return matchesExtendedTypeWithAnyPrimitive(this.underlyingType, ExtendedType.FontSize);
         }
+
+        public get labelDensity(): boolean {
+            return matchesExtendedTypeWithAnyPrimitive(this.underlyingType, ExtendedType.LabelDensity);
+        }
     }
 
     /** Defines primitive value types. Must be consistent with types defined by server conceptual schema. */
@@ -516,6 +522,7 @@ module powerbi {
         Alignment = Text | Formatting | (306 << 16),
         LabelDisplayUnits = Text | Formatting | (307 << 16),
         FontSize = Double | Formatting | (308 << 16),
+        LabelDensity = Double | Formatting | (309 << 16),
         // Enumeration
         Enumeration = Text | 400 << 16,
         // Scripting
@@ -524,9 +531,9 @@ module powerbi {
         // (e.g. Year_Integer or Latitude_Double above)
     }
 
-    const PrimitiveTypeMask = 0xFF; 
-    const PrimitiveTypeWithFlagsMask = 0xFFFF; 
-    const PrimitiveTypeFlagsExcludedMask = 0xFFFF0000; 
+    const PrimitiveTypeMask = 0xFF;
+    const PrimitiveTypeWithFlagsMask = 0xFFFF;
+    const PrimitiveTypeFlagsExcludedMask = 0xFFFF0000;
 
     function getPrimitiveType(extendedType: ExtendedType): PrimitiveType {
         return extendedType & PrimitiveTypeMask;

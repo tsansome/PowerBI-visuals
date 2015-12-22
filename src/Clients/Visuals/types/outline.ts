@@ -31,6 +31,8 @@ module powerbi.visuals {
         export const none: string = 'None';
         export const bottomOnly: string = 'BottomOnly';
         export const topOnly: string = 'TopOnly';
+        export const leftOnly: string = 'LeftOnly';
+        export const rightOnly: string = 'RightOnly';
         export const topBottom: string = 'TopBottom';
         export const leftRight: string = 'LeftRight';
         export const frame: string = 'Frame';
@@ -39,6 +41,8 @@ module powerbi.visuals {
             { value: none, displayName: resources => resources.get('Visual_Outline_none') },
             { value: bottomOnly, displayName: resources => resources.get('Visual_Outline_bottom_only') },
             { value: topOnly, displayName: resources => resources.get('Visual_Outline_top_only') },
+            { value: leftOnly, displayName: resources => resources.get('Visual_Outline_LeftOnly') },
+            { value: rightOnly, displayName: resources => resources.get('Visual_Outline_RightOnly') },
             { value: topBottom, displayName: resources => resources.get('Visual_Outline_top_Bottom') },
             { value: leftRight, displayName: resources => resources.get('Visual_Outline_leftRight') },
             { value: frame, displayName: resources => resources.get('Visual_Outline_frame') }

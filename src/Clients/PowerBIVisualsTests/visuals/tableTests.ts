@@ -35,7 +35,7 @@ module powerbitests {
     import DataViewMetadataColumn = powerbi.DataViewMetadataColumn;
     import Table = powerbi.visuals.Table;
     import tableCapabilities = powerbi.visuals.tableCapabilities;
-    import TableDataViewObjects = powerbi.visuals.TableDataViewObjects;
+    import TablixUtils = powerbi.visuals.controls.internal.TablixUtils;
     import TableHierarchyNavigator = powerbi.visuals.TableHierarchyNavigator;
     import valueFormatter = powerbi.visuals.valueFormatter;
     import ValueType = powerbi.ValueType;
@@ -79,7 +79,7 @@ module powerbitests {
     let webPluginService = new powerbi.visuals.visualPluginFactory.MinervaVisualPluginService({});
     let dashboardPluginService = new powerbi.visuals.visualPluginFactory.DashboardPluginService({});
 
-    let tableTotals: TableDataViewObjects = {
+    let tableTotals:  powerbi.DataViewObjects = {
         general: {
             totals: true,
             autoSizeColumnWidth: true,
@@ -87,7 +87,7 @@ module powerbitests {
         }
     };
 
-    let tableTotalsIncreasedFontSize: TableDataViewObjects = {
+    let tableTotalsIncreasedFontSize:  powerbi.DataViewObjects = {
         general: {
             totals: true,
             autoSizeColumnWidth: true,
@@ -95,7 +95,7 @@ module powerbitests {
         }
     };
 
-    let tableNoTotals: TableDataViewObjects = {
+    let tableNoTotals: powerbi.DataViewObjects = {
         general: {
             totals: false,
             autoSizeColumnWidth: true,
@@ -103,7 +103,7 @@ module powerbitests {
         }
     };
 
-    let tableColumnWidthFalse: TableDataViewObjects = {
+    let tableColumnWidthFalse: powerbi.DataViewObjects = {
         general: {
             totals: true,
             autoSizeColumnWidth: false,
@@ -111,7 +111,7 @@ module powerbitests {
         }
     };
 
-    let tableColumnWidthTrue: TableDataViewObjects = {
+    let tableColumnWidthTrue: powerbi.DataViewObjects = {
         general: {
             totals: true,
             autoSizeColumnWidth: true,
@@ -391,7 +391,7 @@ module powerbitests {
         });
 
         it("FormatString property should match calculated", () => {
-            expect(powerbi.data.DataViewObjectDescriptors.findFormatString(tableCapabilities.objects)).toEqual(Table.formatStringProp);
+            expect(powerbi.data.DataViewObjectDescriptors.findFormatString(tableCapabilities.objects)).toEqual(TablixUtils.TablixFormatStringProp);
         });
 
         it("CustomizeQuery picks up enabled total", () => {
@@ -429,7 +429,7 @@ module powerbitests {
         });
 
         it("CustomizeQuery handles missing subtotal settings", () => {
-            let objects: TableDataViewObjects = {
+            let objects: powerbi.DataViewObjects = {
                 general: {
                     totals: undefined,
                     autoSizeColumnWidth: true,
@@ -447,7 +447,7 @@ module powerbitests {
             expect(rows.for.in.subtotalType).toEqual(CompiledSubtotalType.Before);
         });
 
-        function createCompiledDataViewMapping(objects?: TableDataViewObjects): CompiledDataViewMapping {
+        function createCompiledDataViewMapping(objects?: powerbi.DataViewObjects): CompiledDataViewMapping {
             return {
                 metadata: {
                     objects: objects
@@ -710,7 +710,7 @@ module powerbitests {
         describe("getIntersection", () => {
             it("returns values in the intersection", () => {
                 let dataView = tableThreeGroupsThreeMeasuresInterleaved;
-                let visualTable = powerbi.visuals.Table.converter(dataView.table);
+                let visualTable = powerbi.visuals.Table.converter(dataView, false);
                 let rows = visualTable.visualRows;
                 let columns = dataView.table.columns;
                 let navigator = new TableHierarchyNavigator(visualTable, valueFormatter.formatValueColumn);
@@ -730,7 +730,7 @@ module powerbitests {
 
             it("returns weburl values", () => {
                 let dataView = tableWebUrl;
-                let visualTable = powerbi.visuals.Table.converter(dataView.table);
+                let visualTable = powerbi.visuals.Table.converter(dataView, false);
                 let rows = visualTable.visualRows;
                 let columns = dataView.table.columns;
                 let navigator = new TableHierarchyNavigator(visualTable, valueFormatter.formatValueColumn);
@@ -746,7 +746,7 @@ module powerbitests {
 
             it("returns Kpi Markup", () => {
                 let dataView = tableKpi;
-                let visualTable = powerbi.visuals.Table.converter(dataView.table);
+                let visualTable = powerbi.visuals.Table.converter(dataView, false);
                 let rows = visualTable.visualRows;
                 let columns = dataView.table.columns;
                 let navigator = new TableHierarchyNavigator(visualTable, valueFormatter.formatValueColumn);
@@ -986,35 +986,45 @@ module powerbitests {
             v.onDataChanged({ dataViews: [] });
 
             // Note: this must not throw an exception
-            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual([]);
+            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual(undefined);
         });
 
         it("enumerateObjectInstances general totals on", () => {
             v.onDataChanged({ dataViews: [tableOneMeasureOneGroupSubtotals] });
 
-            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    totals: true,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        totals: true,
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("enumerateObjectInstances general totals off", () => {
             v.onDataChanged({ dataViews: [tableOneMeasureOneGroup] });
 
-            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    totals: false,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        totals: false,
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("enumerateObjectInstances general no objects", () => {
@@ -1034,50 +1044,65 @@ module powerbitests {
             };
             v.onDataChanged({ dataViews: [dataView] });
 
-            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    totals: true,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        totals: true,
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("enumerateObjectInstances some other object", () => {
             v.onDataChanged({ dataViews: [tableOneMeasureOneGroup] });
 
             let objects = v.enumerateObjectInstances({ objectName: "some other object" });
-            expect(objects).toEqual([]);
+            expect(objects).toEqual(undefined);
         });
 
         it("enumerateObjectInstances general autoSizeColumnWidth off", () => {
             v.onDataChanged({ dataViews: [tableOneMeasureOneGroupColumnWidthDefault] });
 
-            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    totals: true,
-                    autoSizeColumnWidth: false,
-                    textSize: 8,
-                }
-            }]);
+            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        totals: true,
+                        autoSizeColumnWidth: false,
+                        textSize: 8,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("enumerateObjectInstances general autoSizeColumnWidth on", () => {
             v.onDataChanged({ dataViews: [tableOneMeasureOneGroupColumnWidthTrue] });
 
-            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    totals: true,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        totals: true,
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("RefreshControl invisible parent", () => {
@@ -1131,8 +1156,8 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        it("ColumnWidthChangedCallback AutoSizeProperty on", (done) => {
-            let dataViewObjects: TableDataViewObjects = {
+        it("ColumnWidthChangedCallback ColumnAutoSizeProperty on", (done) => {
+            let dataViewObjects: powerbi.DataViewObjects = {
                 general: {
                     totals: true,
                     autoSizeColumnWidth: true,
@@ -1159,8 +1184,8 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        xit("ColumnWidthChangedCallback AutoSizeProperty off", (done) => {
-            let dataViewObjects: TableDataViewObjects = {
+        xit("ColumnWidthChangedCallback ColumnAutoSizeProperty off", (done) => {
+            let dataViewObjects: powerbi.DataViewObjects = {
                 general: {
                     totals: true,
                     autoSizeColumnWidth: false,
@@ -1193,8 +1218,8 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        xit("ColumnWidthChangedCallback AutoSizeProperty off then resize", (done) => {
-            let dataViewObjects: TableDataViewObjects = {
+        xit("ColumnWidthChangedCallback ColumnAutoSizeProperty off then resize", (done) => {
+            let dataViewObjects: powerbi.DataViewObjects = {
                 general: {
                     totals: true,
                     autoSizeColumnWidth: false,
@@ -1215,6 +1240,7 @@ module powerbitests {
                     let tableVisual = <Table>v;
                     let colWidthManager = tableVisual.getColumnWidthManager();
                     expect(colWidthManager.suppressOnDataChangedNotification).toBe(true);
+                    
                     // Resize
                     tableVisual.columnWidthChanged(2, 45);
                     expect(colWidthManager.suppressOnDataChangedNotification).toBe(true);
@@ -1231,8 +1257,8 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        xit("ColumnWidthManager AutoSizeProperty off malformed selector", (done) => {
-            let dataViewObjects: TableDataViewObjects = {
+        xit("ColumnWidthManager ColumnAutoSizeProperty off malformed selector", (done) => {
+            let dataViewObjects: powerbi.DataViewObjects = {
                 general: {
                     totals: true,
                     autoSizeColumnWidth: false,
@@ -1331,7 +1357,7 @@ module powerbitests {
 
         xit("resize with autoSizeColumnwidth on", (done) => {
             let selector = ".bi-tablix tr";
-            let dataViewObjects: TableDataViewObjects = {
+            let dataViewObjects: powerbi.DataViewObjects = {
                 general: {
                     totals: true,
                     autoSizeColumnWidth: true,
@@ -1352,6 +1378,7 @@ module powerbitests {
                 expect(rowCells.eq(1).width()).toEqual(48);
                 expect(rowCells.eq(2).width()).toEqual(56);
                 expect(rowCells.eq(3).width()).toEqual(50);
+                
                 // Mock Resize
                 let newMeasureSource2: DataViewMetadataColumn = { displayName: "measure2", queryName: "measure2", type: dataTypeNumber, isMeasure: true, index: 4, objects: { general: { formatString: "#.00", columnWidth: 45 } } };
                 let dataView2: DataView = {
@@ -1401,6 +1428,7 @@ module powerbitests {
                 };
                 let tableVisual = <Table>v;
                 let colwidthManager = tableVisual.getColumnWidthManager();
+                
                 // Overriding suppress notification. For test purposes the call needs to go through
                 colwidthManager.suppressOnDataChangedNotification = false;
                 colwidthManager.updateDataView(dataView2);
@@ -1418,7 +1446,7 @@ module powerbitests {
 
         xit("autoSizeColumnwidth off to on", (done) => {
             let selector = ".bi-tablix tr";
-            let dataViewObjects: TableDataViewObjects = {
+            let dataViewObjects: powerbi.DataViewObjects = {
                 general: {
                     totals: true,
                     autoSizeColumnWidth: false,
@@ -1433,6 +1461,7 @@ module powerbitests {
                 },
                 table: dataViewTableThreeMeasures
             };
+            
             // AutoSize property off
             v.onDataChanged({ dataViews: [dataView0] });
             setTimeout(() => {
@@ -1441,8 +1470,9 @@ module powerbitests {
                 expect(rowCells.eq(1).width()).toEqual(48);
                 expect(rowCells.eq(2).width()).toEqual(46);
                 expect(rowCells.eq(3).width()).toEqual(50);
+                
                 // AutoSize property on
-                let dataViewObjects1: TableDataViewObjects = {
+                let dataViewObjects1: powerbi.DataViewObjects = {
                     general: {
                         totals: true,
                         autoSizeColumnWidth: true,
@@ -1458,6 +1488,7 @@ module powerbitests {
                 };
                 let tableVisual = <Table>v;
                 let colwidthManager = tableVisual.getColumnWidthManager();
+                
                 // Overriding suppress notification. For test purposes the call needs to go through
                 colwidthManager.suppressOnDataChangedNotification = false;
                 colwidthManager.updateDataView(dataView1);
@@ -1569,7 +1600,7 @@ module powerbitests {
                     }, DefaultWaitForRender);
                 });
 
-                xit("2x8 table with specified text size adjusted row height", (done) => {
+                it("2x8 table with specified text size adjusted row height", (done) => {
                     let dataView = tableTwoGroupsIncreasedFontSize;
                     v.onDataChanged({ dataViews: [dataView] });
 
@@ -1636,7 +1667,7 @@ module powerbitests {
                         validateTable(expectedCells);
 
                         let expectedClassNames: string[][] = [
-                            ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden + NumericCellClassName, ""],
+                            ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ""],
                             ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
                             ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
                             ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
@@ -1671,7 +1702,7 @@ module powerbitests {
                 validateTable(expectedCells);
 
                 let expectedClassNames: string[][] = [
-                    ["", ColumnHeaderClassNameIconHidden + NumericCellClassName, ""],
+                    ["", ColumnHeaderClassNameIconHidden, ""],
                     ["", LastRowClassName + NumericCellClassName]
                 ];
 
@@ -1840,7 +1871,7 @@ module powerbitests {
                 validateTable(expectedCells);
 
                 let expectedClassNames: string[][] = [
-                    ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden + NumericCellClassName, ""],
+                    ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ""],
                     ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
                     ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
                     ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
@@ -1884,7 +1915,7 @@ module powerbitests {
                 validateTable(expectedCells);
 
                 let expectedClassNames: string[][] = [
-                    ["", ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden, ""],
+                    ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ""],
                     ["", RowClassName + NumericCellClassName, RowClassName],
                     ["", RowClassName + NumericCellClassName, RowClassName],
                     ["", LastRowClassName + NumericCellClassName, LastRowClassName],
@@ -2143,7 +2174,7 @@ module powerbitests {
 
             setTimeout(() => {
                 let expectedCells: string[] =
-                    ["powervisuals-glyph caret-down"];
+                    ['powervisuals-glyph caret-down', 'powervisuals-glyph caret-up'];
 
                 validateSortIcons(expectedCells);
                 done();
@@ -2157,7 +2188,7 @@ module powerbitests {
 
             setTimeout(() => {
                 let expectedCells: string[] =
-                    ["powervisuals-glyph caret-up"];
+                    ['powervisuals-glyph caret-up', 'powervisuals-glyph caret-down'];
 
                 validateSortIcons(expectedCells);
                 done();
@@ -2196,7 +2227,7 @@ module powerbitests {
     });
 
     function formatter(value: any, source: DataViewMetadataColumn): string {
-        return valueFormatter.formatValueColumn(value, source, Table.formatStringProp);
+        return valueFormatter.formatValueColumn(value, source, TablixUtils.TablixFormatStringProp);
     }
 
     function validateChildTag(expectedChildTag: string[][], rows: JQuery): void {
@@ -2426,7 +2457,7 @@ module powerbitests {
                         validateTable(expectedCells);
 
                         let expectedClassNames: string[][] = [
-                            ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden + NumericCellClassName],
+                            ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden],
                             ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
                             ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
                             ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
@@ -2459,7 +2490,7 @@ module powerbitests {
                 validateTable(expectedCells);
 
                 let expectedClassNames: string[][] = [
-                    ["", ColumnHeaderClassNameIconHidden + NumericCellClassName],
+                    ["", ColumnHeaderClassNameIconHidden],
                     ["", LastRowClassName + NumericCellClassName]
                 ];
 
@@ -2625,7 +2656,7 @@ module powerbitests {
                 validateTable(expectedCells);
 
                 let expectedClassNames: string[][] = [
-                    ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden + NumericCellClassName],
+                    ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden],
                     ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
                     ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
                     ["", RowClassName, RowClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName, RowClassName + NumericCellClassName],
@@ -2669,7 +2700,7 @@ module powerbitests {
                 validateTable(expectedCells);
 
                 let expectedClassNames: string[][] = [
-                    ["", ColumnHeaderClassNameIconHidden + NumericCellClassName, ColumnHeaderClassNameIconHidden],
+                    ["", ColumnHeaderClassNameIconHidden, ColumnHeaderClassNameIconHidden],
                     ["", RowClassName + NumericCellClassName, RowClassName],
                     ["", RowClassName + NumericCellClassName, RowClassName],
                     ["", LastRowClassName + NumericCellClassName, LastRowClassName],
@@ -2766,6 +2797,16 @@ module powerbitests {
 
                 validateChildTag(expectedChildTags, $(".bi-dashboard-tablix tr"));
 
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it("dashboard table has no sort icons", (done) => {
+            let dataView = tableOneMeasurSortAscending;
+            v.onDataChanged({ dataViews: [dataView] });
+            setTimeout(() => {
+                let sortIcons = element.find(".caret-down, .caret-up");
+                expect(sortIcons.length).toEqual(0);
                 done();
             }, DefaultWaitForRender);
         });

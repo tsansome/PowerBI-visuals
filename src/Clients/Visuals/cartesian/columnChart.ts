@@ -214,12 +214,12 @@ module powerbi.visuals {
         private margin: IMargin;
         private options: CartesianVisualInitOptions;
         private lastInteractiveSelectedColumnIndex: number;
-        private supportsOverflow: boolean;
         private interactivityService: IInteractivityService;
         private dataViewCat: DataViewCategorical;
         private categoryAxisType: string;
         private animator: IColumnChartAnimator;
         private isScrollable: boolean;
+        private tooltipsEnabled: boolean;
         private element: JQuery;
         private seriesLabelFormattingEnabled: boolean;
 
@@ -232,6 +232,7 @@ module powerbi.visuals {
             this.categoryAxisType = null;
             this.animator = options.animator;
             this.isScrollable = options.isScrollable;
+            this.tooltipsEnabled = options.tooltipsEnabled;
             this.interactivityService = options.interactivityService;
             this.seriesLabelFormattingEnabled = options.seriesLabelFormattingEnabled;
         }
@@ -300,27 +301,8 @@ module powerbi.visuals {
             this.colors = this.style.colorPalette.dataColors;
             this.cartesianVisualHost = options.cartesianHost;
             this.options = options;
-            this.supportsOverflow = !EnumExtensions.hasFlag(this.chartType, flagStacked);
             let element = this.element = options.element;
             element.addClass(ColumnChart.ColumnChartClassName);
-
-            switch (this.chartType) {
-                case ColumnChartType.clusteredBar:
-                    this.columnChart = new ClusteredBarChartStrategy();
-                    break;
-                case ColumnChartType.clusteredColumn:
-                    this.columnChart = new ClusteredColumnChartStrategy();
-                    break;
-                case ColumnChartType.stackedBar:
-                case ColumnChartType.hundredPercentStackedBar:
-                    this.columnChart = new StackedBarChartStrategy();
-                    break;
-                case ColumnChartType.stackedColumn:
-                case ColumnChartType.hundredPercentStackedColumn:
-                default:
-                    this.columnChart = new StackedColumnChartStrategy();
-                    break;
-            }
         }
 
         private getCategoryLayout(numCategoryValues: number, options: CalculateScaleAndDomainOptions): CategoryLayout {
@@ -352,7 +334,6 @@ module powerbi.visuals {
             colors: IDataColorPalette,
             is100PercentStacked: boolean = false,
             isScalar: boolean = false,
-            supportsOverflow: boolean = false,
             dataViewMetadata: DataViewMetadata = null,
             chartType?: ColumnChartType,
             interactivityService?: IInteractivityService
@@ -404,7 +385,6 @@ module powerbi.visuals {
                 labelSettings,
                 is100PercentStacked,
                 isScalar,
-                supportsOverflow,
                 converterHelper.categoryIsAlsoSeriesRole(dataView, RoleNames.series, RoleNames.category),
                 categoryInfo.categoryObjects,
                 defaultDataPointColor,
@@ -452,6 +432,10 @@ module powerbi.visuals {
             };
         }
 
+        private static canSupportOverflow(chartType: ColumnChartType, seriesCount: number): boolean {
+            return !EnumExtensions.hasFlag(chartType, flagStacked) || seriesCount === 1;
+        }
+
         private static createDataPoints(
             dataViewCat: DataViewCategorical,
             categories: any[],
@@ -462,7 +446,6 @@ module powerbi.visuals {
             defaultLabelSettings: VisualDataLabelsSettings,
             is100PercentStacked: boolean = false,
             isScalar: boolean = false,
-            supportsOverflow: boolean = false,
             isCategoryAlsoSeries?: boolean,
             categoryObjectsList?: DataViewObjects[],
             defaultDataPointColor?: string,
@@ -515,7 +498,7 @@ module powerbi.visuals {
                 }
             }
 
-            if (highlightsOverflow && !supportsOverflow) {
+            if (highlightsOverflow && !ColumnChart.canSupportOverflow(chartType, seriesCount)) {
                 highlightsOverflow = false;
                 hasHighlights = false;
                 rawValues = rawHighlightValues;
@@ -833,10 +816,43 @@ module powerbi.visuals {
                         this.cartesianVisualHost.getSharedColors(),
                         is100PctStacked,
                         CartesianChart.getIsScalar(dataView.metadata ? dataView.metadata.objects : null, columnChartProps.categoryAxis.axisType, categoryType),
-                        this.supportsOverflow,
                         dataView.metadata,
                         this.chartType,
                         this.interactivityService);
+                }
+            }
+
+            this.setChartStrategy();
+        }
+
+        private setChartStrategy(): void {
+            switch (this.chartType) {
+                case ColumnChartType.clusteredBar:
+                    this.columnChart = new ClusteredBarChartStrategy();
+                    break;
+                case ColumnChartType.clusteredColumn:
+                    this.columnChart = new ClusteredColumnChartStrategy();
+                    break;
+                case ColumnChartType.stackedBar:
+                case ColumnChartType.hundredPercentStackedBar:
+                    this.columnChart = new StackedBarChartStrategy();
+                    break;
+                case ColumnChartType.stackedColumn:
+                case ColumnChartType.hundredPercentStackedColumn:
+                default:
+                    this.columnChart = new StackedColumnChartStrategy();
+                    break;
+            }
+
+            // For single series, render stacked as a clustered
+            if (EnumExtensions.hasFlag(this.chartType, flagStacked) && this.data.series.length === 1) {
+                switch (this.chartType) {
+                    case (ColumnChartType.stackedBar):
+                        this.columnChart = new ClusteredBarChartStrategy();
+                        break;
+                    case (ColumnChartType.stackedColumn):
+                        this.columnChart = new ClusteredColumnChartStrategy();
+                        break;
                 }
             }
         }
@@ -1181,7 +1197,8 @@ module powerbi.visuals {
             let columnChartDrawInfo = this.columnChart.drawColumns(!suppressAnimations /* useAnimations */);
             let data = this.data;
 
-            TooltipManager.addTooltip(columnChartDrawInfo.shapesSelection, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
+            if (this.tooltipsEnabled)
+                TooltipManager.addTooltip(columnChartDrawInfo.shapesSelection, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
             let allDataPoints: ColumnChartDataPoint[] = [];
             let behaviorOptions: ColumnBehaviorOptions = undefined;
             if (this.interactivityService) {

@@ -30,7 +30,7 @@ module powerbi {
     import StringExtensions = jsCommon.StringExtensions;
 
     const maxExponent = 24;
-    const defaultScientificBigNumbersBoundary = 1E14;
+    const defaultScientificBigNumbersBoundary = 1E15;
     const scientificSmallNumbersBoundary = 1E-4;
 
     export class DisplayUnit {
@@ -74,11 +74,15 @@ module powerbi {
         // Constants
         static UNSUPPORTED_FORMATS = /^(p\d*)|(.*\%)|(e\d*)$/i;
         static NUMBER_FORMAT = /#|0/;
+        static SUPPORTED_SCIENTIFIC_FORMATS = /^((0*\.*\,*#*-*)*|g)*$/i;
+        static DEFAULT_SCIENTIFIC_FORMAT = "0.######E+0";
+        static AUTO_DISPLAYUNIT_VALUE = 0;
+        static NONE_DISPLAYUNIT_VALUE = 1;
 
         // Fields
         public units: DisplayUnit[];
         public displayUnit: DisplayUnit;
-        private _unitBaseValue: number;
+        private unitBaseValue: number;
 
         // Constructor
         constructor(units?: DisplayUnit[]) {
@@ -95,24 +99,25 @@ module powerbi {
             if (value === undefined)
                 return;
 
-            this._unitBaseValue = value;
+            this.unitBaseValue = value;
             this.displayUnit = this.findApplicableDisplayUnit(value);
         }
 
         private findApplicableDisplayUnit(value: number): DisplayUnit {
-            let count = this.units.length;
-            for (let i = 0; i < count; i++) {
-                let unit = this.units[i];
-                if (unit.isApplicableTo(value)) {
+            for (let unit of this.units) {
+                if (unit.isApplicableTo(value))
                     return unit;
-                }
             }
+
             return undefined;
         }
 
         public format(value: number, format: string, decimals?: number, trailingZeros?: boolean ): string {
 
             if (this.isFormatSupported(format)) {
+                if (this.hasScientitifcFormat(format)) {
+                    return this.formatHelper(value, value, '', format, decimals, trailingZeros);
+                }
                 if (this.isScalingUnit() && this.shouldRespectScalingUnit(format)) {
                     let projectedValue = this.displayUnit.project(value);
                     let nonScientificFormat = (trailingZeros)
@@ -170,7 +175,7 @@ module powerbi {
             return formattingService.format(nonScientificFormat, [text]);
         }
 
-        private static getNonScientificFormatWithPrecision(baseFormat?: string, decimals?: number): string {
+        private static getNonScientificFormatWithPrecision(baseFormat: string, decimals: number): string {
             if (!decimals || baseFormat === undefined)
                 return baseFormat;
 
@@ -210,10 +215,10 @@ module powerbi {
 
         private removeFractionIfNecessary(formatString: string): string {
             if (formatString) {
-                if (Math.abs(this._unitBaseValue) >= 0.01) {
+                if (Math.abs(this.unitBaseValue) >= 0.01) {
                     formatString = formatString.replace(/^(p\d*)$/i, "p0");
                 }
-                if (Math.abs(this._unitBaseValue) >= 1.0) {
+                if (Math.abs(this.unitBaseValue) >= 1.0) {
                     formatString = formatString.replace(/[#0]\.[#0]+$/, "0"); // Custom number format with hash/zero fraction
                     formatString = formatString.replace(/^(n\d*)$/i, "n0");
                     formatString = formatString.replace(/^(f\d*)$/i, "f0");
@@ -229,7 +234,20 @@ module powerbi {
         }
 
         protected hasScientitifcFormat(format: string): boolean {
-            return !format || format.toUpperCase().indexOf("E") < 0;
+            return format && format.toUpperCase().indexOf("E") !== -1;
+        }
+
+        protected supportsScientificFormat(format: string): boolean {
+            if (format)
+                return DisplayUnitSystem.SUPPORTED_SCIENTIFIC_FORMATS.test(format);
+
+            return true;
+        }
+
+        protected shouldFallbackToScientific(value: number, format: string) {
+            return !this.hasScientitifcFormat(format)
+                && this.supportsScientificFormat(format)
+                && this.isScientific(value);
         }
     }
 
@@ -244,8 +262,7 @@ module powerbi {
     /** Provides a unit system that creates a more concise format for displaying values. This is suitable for most of the cases where
         we are showing values (chart axes) and as such it is the default unit system. */
     export class DefaultDisplayUnitSystem extends DisplayUnitSystem {
-        private static _units: DisplayUnit[];
-        private static _scientificBigNumbersBoundary: number;
+        private static units: DisplayUnit[];
 
         // Constructor
         constructor(unitLookup: (exponent: number) => DisplayUnitSystemNames) {
@@ -255,20 +272,23 @@ module powerbi {
         // Methods
         public format(data: number, format: string, decimals?: number, trailingZeros?: boolean): string {
             // Use scientific format outside of the range
-            if (!this.displayUnit && super.isScientific(data) && !DisplayUnitSystem.UNSUPPORTED_FORMATS.test(format)) {
-                if (super.hasScientitifcFormat(format))
-                    format = "0.######E+0";
+            if (this.isFormatSupported(format) && this.shouldFallbackToScientific(data, format)) {
+                if (trailingZeros && decimals)
+                    format = "0." + StringExtensions.repeat('0', Math.abs(decimals)) + "E+0";
+                else
+                    format = DisplayUnitSystem.DEFAULT_SCIENTIFIC_FORMAT;
             }
+
             return super.format(data, format, decimals, trailingZeros);
         }
 
         public static reset(): void {
-            DefaultDisplayUnitSystem._units = null;
+            DefaultDisplayUnitSystem.units = null;
         }
 
         private static getUnits(unitLookup: (exponent: number) => DisplayUnitSystemNames): DisplayUnit[] {
-            if (!DefaultDisplayUnitSystem._units) {
-                DefaultDisplayUnitSystem._units = createDisplayUnits(unitLookup, (value: number, previousUnitValue: number, min: number) => {
+            if (!DefaultDisplayUnitSystem.units) {
+                DefaultDisplayUnitSystem.units = createDisplayUnits(unitLookup, (value: number, previousUnitValue: number, min: number) => {
                     // When dealing with millions/billions/trillions we need to switch to millions earlier: for example instead of showing 100K 200K 300K we should show 0.1M 0.2M 0.3M etc
                     if (value - previousUnitValue >= 1000) {
                         return value / 10;
@@ -277,16 +297,10 @@ module powerbi {
                     return min;
                 });
 
-                // Set scientific value boundary
-                DefaultDisplayUnitSystem._scientificBigNumbersBoundary = defaultScientificBigNumbersBoundary;
-                for (let i = 0, len = DefaultDisplayUnitSystem._units.length; i < len; ++i) {
-                    let unit = DefaultDisplayUnitSystem._units[i];
-                    if (unit.applicableRangeMax > DefaultDisplayUnitSystem._scientificBigNumbersBoundary) {
-                        DefaultDisplayUnitSystem._scientificBigNumbersBoundary = unit.applicableRangeMax;
-                    }
-                }
+                // Ensure last unit has max of infinity
+                DefaultDisplayUnitSystem.units[DefaultDisplayUnitSystem.units.length - 1].applicableRangeMax = Infinity;
             }
-            return DefaultDisplayUnitSystem._units;
+            return DefaultDisplayUnitSystem.units;
         }
     }
 
@@ -294,7 +308,7 @@ module powerbi {
         one of those units (e.g. 0.9M is not allowed since it's less than 1 million). This is suitable for cases such as dashboard tiles
         where we have restricted space but do not want to show partial units. */
     export class WholeUnitsDisplayUnitSystem extends DisplayUnitSystem {
-        private static _units: DisplayUnit[];
+        private static units: DisplayUnit[];
 
         // Constructor
         constructor(unitLookup: (exponent: number) => DisplayUnitSystemNames) {
@@ -302,14 +316,30 @@ module powerbi {
         }
 
         public static reset(): void {
-            WholeUnitsDisplayUnitSystem._units = null;
+            WholeUnitsDisplayUnitSystem.units = null;
         }
 
         private static getUnits(unitLookup: (exponent: number) => DisplayUnitSystemNames): DisplayUnit[] {
-            if (!WholeUnitsDisplayUnitSystem._units) {
-                WholeUnitsDisplayUnitSystem._units = createDisplayUnits(unitLookup);
+            if (!WholeUnitsDisplayUnitSystem.units) {
+                WholeUnitsDisplayUnitSystem.units = createDisplayUnits(unitLookup);
+                
+                // Ensure last unit has max of infinity
+                WholeUnitsDisplayUnitSystem.units[WholeUnitsDisplayUnitSystem.units.length - 1].applicableRangeMax = Infinity;
             }
-            return WholeUnitsDisplayUnitSystem._units;
+
+            return WholeUnitsDisplayUnitSystem.units;
+        }
+
+        public format(data: number, format: string, decimals?: number, trailingZeros?: boolean): string {
+            // Use scientific format outside of the range
+            if (this.isFormatSupported(format) && this.shouldFallbackToScientific(data, format)) {
+                if (trailingZeros && decimals)
+                    format = "0." + StringExtensions.repeat('0', Math.abs(decimals)) + "E+0";
+                else
+                    format = DisplayUnitSystem.DEFAULT_SCIENTIFIC_FORMAT;
+            }
+
+            return super.format(data, format, decimals, trailingZeros);
         }
     }
 
@@ -318,9 +348,8 @@ module powerbi {
         // Constants
         static UNSUPPORTED_FORMATS = /^(e\d*)$/i;
         static PERCENTAGE_FORMAT = '%';
-        static SUPPORTED_SCIENTIFIC_FORMATS = /^(0*\.*\,*#*-*)*$/i;
 
-        private static _units: DisplayUnit[];
+        private static units: DisplayUnit[];
 
         constructor(unitLookup: (exponent: number) => DisplayUnitSystemNames) {
             super(DataLabelsDisplayUnitSystem.getUnits(unitLookup));
@@ -340,9 +369,12 @@ module powerbi {
         }
 
         private static getUnits(unitLookup: (exponent: number) => DisplayUnitSystemNames): DisplayUnit[] {
-            if (!DataLabelsDisplayUnitSystem._units) {
+            if (!DataLabelsDisplayUnitSystem.units) {
                 let units = [];
                 let adjustMinBasedOnPreviousUnit = (value: number, previousUnitValue: number, min: number): number => {
+                    // Never returns true, we are always ignoring
+                    // We do not early switch (e.g. 100K instead of 0.1M)
+                    // Intended? If so, remove this function, otherwise, remove if statement
                     if (value === -1)
                         if (value - previousUnitValue >= 1000) {
                             return value / 10;
@@ -352,15 +384,27 @@ module powerbi {
 
                 //Add Auto & None
                 let names = unitLookup(-1);
-                addUnitIfNonEmpty(units, 0, names.title, names.format, adjustMinBasedOnPreviousUnit);
+                addUnitIfNonEmpty(units, DisplayUnitSystem.AUTO_DISPLAYUNIT_VALUE, names.title, names.format, adjustMinBasedOnPreviousUnit);
 
                 names = unitLookup(0);
-                addUnitIfNonEmpty(units, 1, names.title, names.format, adjustMinBasedOnPreviousUnit);
+                addUnitIfNonEmpty(units, DisplayUnitSystem.NONE_DISPLAYUNIT_VALUE, names.title, names.format, adjustMinBasedOnPreviousUnit);
 
                 //add normal units
-                DataLabelsDisplayUnitSystem._units = units.concat(createDisplayUnits(unitLookup, adjustMinBasedOnPreviousUnit));
+                DataLabelsDisplayUnitSystem.units = units.concat(createDisplayUnits(unitLookup, adjustMinBasedOnPreviousUnit));
+
+                // Ensure last unit has max of infinity
+                DataLabelsDisplayUnitSystem.units[DataLabelsDisplayUnitSystem.units.length - 1].applicableRangeMax = Infinity;
             }
-            return DataLabelsDisplayUnitSystem._units;
+            return DataLabelsDisplayUnitSystem.units;
+        }
+
+        protected shouldFallbackToScientific(value: number, format: string) {
+            if (!this.displayUnit)
+                return super.shouldFallbackToScientific(value, format);
+            else
+                // Allow auto display unit to pass through
+                return this.displayUnit.value !== DisplayUnitSystem.AUTO_DISPLAYUNIT_VALUE
+                    && super.shouldFallbackToScientific(value, format);
         }
 
         public format(data: number, format: string, decimals?: number, trailingZeros?: boolean): string {
@@ -369,16 +413,10 @@ module powerbi {
                 if (trailingZeros && decimals)
                     format = "0." + StringExtensions.repeat('0', Math.abs(decimals)) + "E+0";
                 else
-                    format = "0E+0";
+                    format = '0E+0';
             }
-            return super.format(data, format, decimals, trailingZeros);
-        }
 
-        private shouldFallbackToScientific(value: number, format: string) {
-            return !this.displayUnit &&
-                super.isScientific(value) &&
-                (format ? DataLabelsDisplayUnitSystem.SUPPORTED_SCIENTIFIC_FORMATS.test(format) : true) &&
-                super.hasScientitifcFormat(format);
+            return super.format(data, format, decimals, trailingZeros);
         }
     }
 

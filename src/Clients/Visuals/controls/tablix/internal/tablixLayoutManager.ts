@@ -827,13 +827,15 @@ module powerbi.visuals.controls.internal {
         }
 
         public onResize(cell: TablixCell, deltaX: number, deltaY: number): void {
-            this._resizeState.resizingDelta = Math.max(deltaX / this._resizeState.scale, ColumnLayoutManager.minColumnWidth - this._resizeState.startColumnWidth);
-            if (this._resizeState.animationFrame === null)
-                this._resizeState.animationFrame = requestAnimationFrame(() => this.performResizing());
+            if (this.isResizing()) {
+                this._resizeState.resizingDelta = Math.max(deltaX / this._resizeState.scale, ColumnLayoutManager.minColumnWidth - this._resizeState.startColumnWidth);
+                if (this._resizeState.animationFrame === null)
+                    this._resizeState.animationFrame = requestAnimationFrame(() => this.performResizing());
+            }
         }
 
         public onEndResize(cell: TablixCell): void {
-            if (this._resizeState.animationFrame !== null) {
+            if (this.isResizing() && this._resizeState.animationFrame !== null) {
                 this.performResizing(); // if we reached the end and we are still waiting for the last animation frame, perform the pending resizing and clear the state 
             }
             this._resizeState = null;

@@ -272,7 +272,7 @@ module powerbi.visuals.controls.internal {
         public initialize(owner: TablixCell) {
             this._owner = owner;
         }
-        
+
         public get owner(): TablixCell {
             return this._owner;
         }
@@ -287,7 +287,7 @@ module powerbi.visuals.controls.internal {
             tableCell.style.verticalAlign = "top";
             tableCell.style.lineHeight = "normal";
         }
-                
+
         public get tableCell(): HTMLTableCellElement {
             return this._tableCell;
         }
@@ -328,6 +328,32 @@ module powerbi.visuals.controls.internal {
             this._tableCell.style.textAlign = value;
         }
 
+        public setColumnSeparator(separatorColor: string, separatorWeight: number): void {
+            this._tableCell.style.borderLeft = separatorWeight + TablixUtils.UnitOfMeasurement + " " + TablixUtils.DefaultColumnSeparatorStyle + " " + separatorColor;
+        }
+
+        public setFontColor(fontColor: string): void {
+            this._tableCell.style.color = fontColor;
+        }
+
+        public setBackgroundColor(backgroundColor: string): void {
+            this._tableCell.style.backgroundColor = backgroundColor;
+        }
+
+        public setRowSeparator(): void {
+            this._tableCell.style.borderBottom = TablixUtils.DefaultRowSeparatorWeight + TablixUtils.UnitOfMeasurement + " " + TablixUtils.DefaultRowSeparatorStyle + " " + TablixUtils.DefaultRowSeparatorColor;
+        }
+
+        public setOutline(borderStyle, borderColor, borderWeight): void {
+            this._tableCell.style.borderStyle = borderStyle;
+            this._tableCell.style.borderColor = borderColor;
+            this._tableCell.style.borderWidth = borderWeight;
+        }
+
+        public setLeadingSpace(leadingSpaces: number): void {
+            this._tableCell.style.paddingTop = leadingSpaces + TablixUtils.UnitOfMeasurement;
+        }
+   
         public onClear(): void {
             this._contentHost.className = "";
             this._contentHostStyle = "";
@@ -365,11 +391,16 @@ module powerbi.visuals.controls.internal {
                 this._tableCell.className = this._containerStyle + " " + TablixCellPresenter._noMarginsStyleName;
             }
         }
-                
+
         public clearContainerStyle() {
             this._containerStyle = undefined;
             if (this._tableCell.className !== TablixCellPresenter._noMarginsStyleName)
                 this._tableCell.className = TablixCellPresenter._noMarginsStyleName;
+
+            //clear all the inline styling after unbinding the cells
+            this._tableCell.style.border = "";
+            this._tableCell.style.background = "";
+            this._tableCell.style.color = "";
         }
 
         public enableHorizontalResize(enable: boolean, handler: ITablixResizeHandler): void {
@@ -458,11 +489,11 @@ module powerbi.visuals.controls.internal {
         public onRemoveCell(cell: TablixCell): void {
             this._tableRow.removeChild(cell._presenter.tableCell);
         }
-        
+
         public getHeight(): number {
             return this.getCellHeight(this._row.getTablixCell());
         }
-    
+
         public getCellHeight(cell: ITablixCell): number {
             debug.assertFail("PureVirtualMethod: TablixRowPresenter.getCellHeight");
             return -1;
@@ -706,7 +737,7 @@ module powerbi.visuals.controls.internal {
         }
 
         public invokeColumnResizeCallBack(columnIndex: number, width: number): void {
-            if(this._columnWidthManager)
+            if (this._columnWidthManager)
                 this._columnWidthManager.columnWidthResizeCallback(columnIndex, width);
         }
 

@@ -74,6 +74,7 @@ module powerbi.visuals {
     export interface IValueFormatter {
         format(value: any): string;
         displayUnit?: DisplayUnit;
+        options?: ValueFormatterOptions;
     }
 
     /** Captures all locale-specific options used by the valueFormatter. */
@@ -274,7 +275,8 @@ module powerbi.visuals {
                             displayUnitSystem.formatSingleValue(value, format, decimals, forcePrecision) :
                             displayUnitSystem.format(value, format, decimals, forcePrecision);
                     },
-                    displayUnit: displayUnitSystem.displayUnit
+                    displayUnit: displayUnitSystem.displayUnit,
+                    options: options
                 };
             }
 
@@ -288,7 +290,8 @@ module powerbi.visuals {
 
                         let formatString = formattingService.dateFormatString(unit);
                         return formatCore(value, formatString);
-                    }
+                    },
+                    options: options
                 };
             }
 

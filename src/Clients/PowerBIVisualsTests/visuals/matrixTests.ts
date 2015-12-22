@@ -36,7 +36,8 @@ module powerbitests {
     import DataViewMetadataColumn = powerbi.DataViewMetadataColumn;
     import Matrix = powerbi.visuals.Matrix;
     import matrixCapabilities = powerbi.visuals.matrixCapabilities;
-    import MatrixDataViewObjects = powerbi.visuals.MatrixDataViewObjects;
+
+    import TablixUtils = powerbi.visuals.controls.internal.TablixUtils;
     import MatrixVisualNode = powerbi.visuals.MatrixVisualNode;
     import MatrixHierarchyNavigator = powerbi.visuals.IMatrixHierarchyNavigator;
     import QueryProjectionCollection = powerbi.data.QueryProjectionCollection;
@@ -545,6 +546,45 @@ module powerbitests {
             levels: [{ sources: [measureSource1] }]
         },
         valueSources: [measureSource1]
+    };
+    let matrixOneMeasureOneRowGroupOneGroupInstanceDataView: powerbi.DataView = {
+        metadata: { columns: [rowGroupSource1, measureSource1] },
+        matrix: matrixOneMeasureOneRowGroupOneGroupInstance
+    };
+
+    // ------------------------
+    // | RowGroup1 | Measure1 |
+    // |-----------+----------|
+    // |   Group 1 |      100 |
+    // |-----------+----------|
+    // |   Group 2 |      200 |
+    // ------------------------
+    let matrixOneMeasureOneRowGroupTwoGroupInstances: DataViewMatrix = {
+        rows: {
+            root: {
+                children: [{
+                    level: 0,
+                    value: "Group 1",
+                    values: { 0: { value: 100 } }
+                }, {
+                    level: 0,
+                    value: "Group 2",
+                    values: { 0: { value: 200 } }
+                }]
+            },
+            levels: [{ sources: [rowGroupSource1] }]
+        },
+        columns: {
+            root: {
+                children: [{ level: 0 }]
+            },
+            levels: [{ sources: [measureSource1] }]
+        },
+        valueSources: [measureSource1]
+    };
+    let matrixOneMeasureOneRowGroupTwoGroupInstancesDataView: powerbi.DataView = {
+        metadata: { columns: [rowGroupSource1, measureSource1] },
+        matrix: matrixOneMeasureOneRowGroupTwoGroupInstances
     };
 
     // ----------------------------------------
@@ -2438,11 +2478,11 @@ module powerbitests {
         });
 
         it("FormatString property should match calculated", () => {
-            expect(powerbi.data.DataViewObjectDescriptors.findFormatString(matrixCapabilities.objects)).toEqual(Matrix.formatStringProp);
+            expect(powerbi.data.DataViewObjectDescriptors.findFormatString(matrixCapabilities.objects)).toEqual(TablixUtils.TablixFormatStringProp);
         });
 
         it("CustomizeQuery picks up enabled row subtotals", () => {
-            let objects: MatrixDataViewObjects = {
+            let objects: powerbi.DataViewObjects = {
                 general: {
                     rowSubtotals: true,
                     columnSubtotals: false,
@@ -2461,7 +2501,7 @@ module powerbitests {
         });
 
         it("CustomizeQuery picks up enabled column subtotals", () => {
-            let objects: MatrixDataViewObjects = {
+            let objects: powerbi.DataViewObjects = {
                 general: {
                     rowSubtotals: false,
                     columnSubtotals: true,
@@ -2480,7 +2520,7 @@ module powerbitests {
         });
 
         it("CustomizeQuery picks up enabled row and column subtotals", () => {
-            let objects: MatrixDataViewObjects = {
+            let objects: powerbi.DataViewObjects = {
                 general: {
                     rowSubtotals: true,
                     columnSubtotals: true,
@@ -2511,7 +2551,7 @@ module powerbitests {
         });
 
         it("CustomizeQuery handles missing subtotal settings", () => {
-            let objects: MatrixDataViewObjects = {
+            let objects: powerbi.DataViewObjects = {
                 general: {
                     rowSubtotals: undefined,
                     columnSubtotals: undefined,
@@ -2531,7 +2571,7 @@ module powerbitests {
         });
 
         it("CustomizeQuery modifies DataReduction if there are Columns", () => {
-            let objects: MatrixDataViewObjects = {
+            let objects: powerbi.DataViewObjects = {
                 general: {
                     rowSubtotals: true,
                     columnSubtotals: true,
@@ -2552,7 +2592,7 @@ module powerbitests {
         });
 
         it("CustomizeQuery doesn't modify DataReduction if there are no Columns", () => {
-            let objects: MatrixDataViewObjects = {
+            let objects: powerbi.DataViewObjects = {
                 general: {
                     rowSubtotals: true,
                     columnSubtotals: true,
@@ -2572,7 +2612,7 @@ module powerbitests {
             expect((<CompiledDataViewRoleForMappingWithReduction>dataViewMapping.matrix.rows).dataReductionAlgorithm.window.count).toEqual(500);
         });
 
-        function createCompiledDataViewMapping(objects?: MatrixDataViewObjects, includeColumns: boolean = false): CompiledDataViewMapping {
+        function createCompiledDataViewMapping(objects?: powerbi.DataViewObjects, includeColumns: boolean = false): CompiledDataViewMapping {
             let columnItems: powerbi.data.CompiledDataViewRoleItem[] = [];
 
             if (includeColumns) {
@@ -3128,12 +3168,17 @@ module powerbitests {
         });
 
         it("loadMoreData calls control refresh", () => {
-            let nav = { updateRows() { } };
-            let control = { refresh() { } };
-            let navSpy = spyOn(nav, "updateRows");
+            
+            //Passing a Dataview with Create Operation to ensure previousDataView is not null when performing Append Operation
+            v.onDataChanged({
+                dataViews: [matrixOneMeasureDataView],
+                operationKind: powerbi.VisualDataChangeOperationKind.Create
+            });
+
+            let nav: any = v["hierarchyNavigator"];
+            let control = v["tablixControl"];
+            let navSpy = spyOn(nav, "update");
             let controlSpy = spyOn(control, "refresh");
-            v["hierarchyNavigator"] = nav;
-            v["tablixControl"] = control;
 
             v.onDataChanged({
                 dataViews: [matrixOneMeasureDataView],
@@ -3144,8 +3189,25 @@ module powerbitests {
             expect(controlSpy).toHaveBeenCalled();
         });
 
-        it("needsMoreData waitingForData", () => {
+        it("loadMore would refresh the tablix model", (done) => {
+            v.onDataChanged({
+                dataViews: [matrixOneMeasureOneRowGroupOneGroupInstanceDataView],
+                operationKind: powerbi.VisualDataChangeOperationKind.Create
+            });
 
+            v.onDataChanged({
+                dataViews: [matrixOneMeasureOneRowGroupTwoGroupInstancesDataView],
+                operationKind: powerbi.VisualDataChangeOperationKind.Append
+            });
+
+            //Checking it's rendering 2 rows
+            setTimeout(() => {
+                expect($('.bi-matrix-body-cell').length).toBe(matrixOneMeasureOneRowGroupTwoGroupInstancesDataView.matrix.rows.root.children.length);
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it("needsMoreData waitingForData", () => {
             let matrix = matrixThreeRowGroups;
 
             v.onDataChanged({
@@ -3235,7 +3297,7 @@ module powerbitests {
             };
 
             let binder = new powerbi.visuals.MatrixBinder(null, binderOptions);
-            binder.bindRowHeader({ displayName: null }, {
+            binder.bindRowHeader({}, {
                 type: null, item: null, colSpan: 0, rowSpan: 0, textAlign: "",
                 extension: { contentHost: { textContent: null }, setContainerStyle: () => { } }
             });
@@ -3252,7 +3314,7 @@ module powerbitests {
             let hierarchyNavigator = powerbi.visuals.createMatrixHierarchyNavigator(matrixTwoRowGroupsTwoColumnGroupsTwoMeasures, powerbi.visuals.valueFormatter.formatValueColumn);
             let binder = new powerbi.visuals.MatrixBinder(hierarchyNavigator, binderOptions);
             let unregisterCalled: boolean = false;
-            binder.unbindColumnHeader({ displayName: null, isSubtotal: true }, {
+            binder.unbindColumnHeader({ isSubtotal: true }, {
                 type: null, item: null, colSpan: 0, rowSpan: 0, textAlign: "",
                 extension: {
                     contentHost: { textContent: null },
@@ -3289,16 +3351,21 @@ module powerbitests {
             });
 
             let objects = v.enumerateObjectInstances({ objectName: "general" });
-            expect(objects).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    rowSubtotals: false,
-                    columnSubtotals: false,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(objects).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        rowSubtotals: false,
+                        columnSubtotals: false,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("enumerateObjectInstances general both totals on", () => {
@@ -3314,9 +3381,13 @@ module powerbitests {
                         ],
                         objects: {
                             general: {
+                                autoSizeColumnWidth: true,
+                                textSize: 8,
                                 rowSubtotals: true,
                                 columnSubtotals: true,
-                                autoSizeColumnWidth: true,
+                                //TODO: add after featureswitch
+                                //outlineColor: "#E8E8E8",
+                                // outlineWeight: 2
                             }
                         }
                     },
@@ -3325,16 +3396,21 @@ module powerbitests {
             });
 
             let objects = v.enumerateObjectInstances({ objectName: "general" });
-            expect(objects).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    rowSubtotals: true,
-                    columnSubtotals: true,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(objects).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        rowSubtotals: true,
+                        columnSubtotals: true,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("enumerateObjectInstances general no objects", () => {
@@ -3354,16 +3430,21 @@ module powerbitests {
             });
 
             let objects = v.enumerateObjectInstances({ objectName: "general" });
-            expect(objects).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    rowSubtotals: true,
-                    columnSubtotals: true,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(objects).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        rowSubtotals: true,
+                        columnSubtotals: true,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("enumerateObjectInstances general no properties", () => {
@@ -3387,16 +3468,21 @@ module powerbitests {
             });
 
             let objects = v.enumerateObjectInstances({ objectName: "general" });
-            expect(objects).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    rowSubtotals: true,
-                    columnSubtotals: true,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(objects).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        rowSubtotals: true,
+                        columnSubtotals: true,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
 
             it("RefreshControl invisible parent", () => {
                 let control = { refresh() { } };
@@ -3454,23 +3540,32 @@ module powerbitests {
             let matrix = matrixTwoRowGroupsTwoColumnGroupsTwoMeasuresAndTotals;
             let objects = {
                 general: {
+                    autoSizeColumnWidth: false,
+                    textSize: 8,
                     rowSubtotals: true,
                     columnSubtotals: true,
-                    autoSizeColumnWidth: false
+                    //TODO: add after featureswitch
+                    //outlineColor: "#E8E8E8",
+                    // outlineWeight: 2
                 }
             };
             let dataView = getMatrixColumnWidthDataView(matrix, objects);
             v.onDataChanged({ dataViews: [dataView] });
-            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    rowSubtotals: true,
-                    columnSubtotals: true,
-                    autoSizeColumnWidth: false,
-                    textSize: 8,
-                }
-            }]);
+            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        autoSizeColumnWidth: false,
+                        textSize: 8,
+                        rowSubtotals: true,
+                        columnSubtotals: true,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
         it("enumerateObjectInstances general autoSizeColumnWidth on", () => {
@@ -3485,19 +3580,24 @@ module powerbitests {
             let dataView = getMatrixColumnWidthDataView(matrix, objects);
             v.onDataChanged({ dataViews: [dataView] });
 
-            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual([{
-                selector: null,
-                objectName: "general",
-                properties: {
-                    rowSubtotals: true,
-                    columnSubtotals: true,
-                    autoSizeColumnWidth: true,
-                    textSize: 8,
-                }
-            }]);
+            expect(v.enumerateObjectInstances({ objectName: "general" })).toEqual({
+                instances: [{
+                    selector: null,
+                    objectName: "general",
+                    properties: {
+                        autoSizeColumnWidth: true,
+                        textSize: 8,
+                        rowSubtotals: true,
+                        columnSubtotals: true,
+                        //TODO: add after featureswitch
+                        //outlineColor: "#E8E8E8",
+                        // outlineWeight: 2
+                    }
+                }]
+            });
         });
 
-        it("ColumnWidthChangedCallback AutoSizeProperty on", (done) => {
+        it("ColumnWidthChangedCallback ColumnAutoSizeProperty on", (done) => {
             let matrix = matrixTwoRowGroupsTwoColumnGroupsTwoMeasuresAndTotals;
             v["isInteractive"] = true;
             let objects = {
@@ -3521,7 +3621,7 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        it("ColumnWidthChangedCallback AutoSizeProperty off", (done) => {
+        it("ColumnWidthChangedCallback ColumnAutoSizeProperty off", (done) => {
             let matrix = matrixTwoRowGroupsTwoColumnGroupsTwoMeasuresAndTotals;
             let objects = {
                 general: {
@@ -3546,7 +3646,7 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        it("ColumnWidthChangedCallback AutoSizeProperty off then resize", (done) => {
+        it("ColumnWidthChangedCallback ColumnAutoSizeProperty off then resize", (done) => {
             let matrix = matrixTwoRowGroupsTwoColumnGroupsTwoMeasuresAndTotals;
             let objects = {
                 general: {
@@ -3561,6 +3661,7 @@ module powerbitests {
             setTimeout(() => {
                 let matrixVisual = <Matrix>v;
                 let colWidthManager = matrixVisual.getColumnWidthManager();
+                
                 // Resize
                 colWidthManager.columnWidthChanged(2, 45);
                 expect(colWidthManager.suppressOnDataChangedNotification).toBe(false);
@@ -3710,7 +3811,7 @@ module powerbitests {
                     }, DefaultWaitForRender);
                 });
 
-                xit("3x8 matrix with specified text size adjusted row height", (done) => {
+                it("3x8 matrix with specified text size adjusted row height", (done) => {
                     let matrix = matrixThreeRowGroups;
                     v.onDataChanged({
                         dataViews: [{
@@ -4972,7 +5073,7 @@ module powerbitests {
         });
 
         function formatter(value: any, source?: DataViewMetadataColumn): string {
-            return valueFormatter.formatValueColumn(value, source, Matrix.formatStringProp);
+            return valueFormatter.formatValueColumn(value, source, TablixUtils.TablixFormatStringProp);
         }
     });
 
@@ -6019,7 +6120,7 @@ module powerbitests {
         });
 
         function formatter(value: any, source?: DataViewMetadataColumn): string {
-            return valueFormatter.formatValueColumn(value, source, Matrix.formatStringProp);
+            return valueFormatter.formatValueColumn(value, source, TablixUtils.TablixFormatStringProp);
         }
     });
 

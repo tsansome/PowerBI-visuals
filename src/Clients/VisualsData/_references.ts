@@ -33,6 +33,8 @@
 /// <reference path="types\fill.ts"/>
 /// <reference path="types\fillRule.ts"/>
 /// <reference path="types\filter.ts"/>
+/// <reference path="types\image.ts"/>
+/// <reference path="types\paragraphs.ts"/>
 /// <reference path="types\structuralType.ts"/>
 /// <reference path="types\valueType.ts"/>
 /// <reference path="contracts\conceptualSchema.ts"/>
@@ -61,6 +63,8 @@
 /// <reference path="dataView\dataViewScopeIdentity.ts"/>
 /// <reference path="dataView\dataViewScopeWildcard.ts"/>
 /// <reference path="dataView\dataViewTransform.ts"/>
+/// <reference path="dataView\rules\evalContext.ts"/>
+/// <reference path="dataView\rules\categoricalEvalContext.ts"/>
 /// <reference path="dataView\rules\ruleEvaluation.ts"/>
 /// <reference path="dataView\rules\colorRuleEvaluation.ts"/>
 /// <reference path="dataView\rules\filterRuleEvaluation.ts"/>

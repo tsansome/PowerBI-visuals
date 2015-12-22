@@ -197,6 +197,7 @@ module powerbitests {
         });
 
         it("Validate scroll behavior with 1 visible item", () => {
+            
             // smaller dataset          
             let dataview2 = slicerHelper.buildSequenceDataView(0, 3);
             dataview2.metadata.objects = slicerHelper.buildDefaultDataViewObjects(SlicerOrientation.Horizontal);

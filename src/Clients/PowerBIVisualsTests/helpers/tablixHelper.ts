@@ -89,7 +89,7 @@ module powerbitests.tablixHelper {
         };
 
         if (options.formatCallback)
-            spyOn(powerbi.visuals.valueFormatter, 'formatRaw').and.callFake(options.formatCallback);
+            spyOn(powerbi.visuals.valueFormatter, 'formatValueColumn').and.callFake(options.formatCallback);
 
         var v: powerbi.IVisual = visualPluginService.getPlugin(options.visualType).create();
         v.init({
@@ -141,52 +141,52 @@ module powerbitests.tablixHelper {
             });
 
         renderTablixPromise.then(
-                () => {
-            var tableBody = $('.tablixContainer > div.bi-tablix > div:nth-child(1) > table.unselectable > tbody');
-            expect(tableBody).toBeInDOM();
+            () => {
+                var tableBody = $('.tablixContainer > div.bi-tablix > div:nth-child(1) > table.unselectable > tbody');
+                expect(tableBody).toBeInDOM();
 
-            // Validate column headers
-            if (expectedColumnHeaders) {
-                for (var i = 0, len = expectedColumnHeaders.length; i < len; i++) {
-                    var coordinate = expectedColumnHeaders[i];
-                    var headerCell = getTableCell(tableBody, coordinate);
-                    if (coordinate.expectedText)
-                        expect(headerCell.text).toBe(coordinate.expectedText);
-                }
-            }
-
-            // Execute the clicks
-            if (clicks) {
-                for (var i = 0, len = clicks.length; i < len; i++) {
-                    var clickCoordinate = clicks[i];
-                    var clickCell = getTableCell(tableBody, clickCoordinate);
-                    if (clickCoordinate.expectedText)
-                        expect(clickCell.text).toBe(clickCoordinate.expectedText);
-                    clickCell.clickTarget.click();
-                }
-            }
-
-            // Validate the expected sorts
-            if (expectedSorts) {
-                expect(expectedSorts.length).toBe(actualSorts.length);
-
-                for (var i = 0, len = expectedSorts.length; i < len; i++) {
-                    var expectedSort = expectedSorts[i];
-                    var actualSort = actualSorts[i];
-                    expect(expectedSort.length).toBe(actualSort.length);
-
-                    for (var j = 0, jlen = expectedSort.length; j < jlen; j++) {
-                        var expectedField = expectedSort[j];
-                        var actualField = actualSort[j];
-
-                        expect(expectedField.queryName).toBe(actualField.queryName);
-                        expect(expectedField.sortDirection).toBe(actualField.sortDirection);
+                // Validate column headers
+                if (expectedColumnHeaders) {
+                    for (var i = 0, len = expectedColumnHeaders.length; i < len; i++) {
+                        var coordinate = expectedColumnHeaders[i];
+                        var headerCell = getTableCell(tableBody, coordinate);
+                        if (coordinate.expectedText)
+                            expect(headerCell.text).toBe(coordinate.expectedText);
                     }
                 }
-            }
 
-            done();
-        });
+                // Execute the clicks
+                if (clicks) {
+                    for (var i = 0, len = clicks.length; i < len; i++) {
+                        var clickCoordinate = clicks[i];
+                        var clickCell = getTableCell(tableBody, clickCoordinate);
+                        if (clickCoordinate.expectedText)
+                            expect(clickCell.text).toBe(clickCoordinate.expectedText);
+                        clickCell.clickTarget.click();
+                    }
+                }
+
+                // Validate the expected sorts
+                if (expectedSorts) {
+                    expect(expectedSorts.length).toBe(actualSorts.length);
+
+                    for (var i = 0, len = expectedSorts.length; i < len; i++) {
+                        var expectedSort = expectedSorts[i];
+                        var actualSort = actualSorts[i];
+                        expect(expectedSort.length).toBe(actualSort.length);
+
+                        for (var j = 0, jlen = expectedSort.length; j < jlen; j++) {
+                            var expectedField = expectedSort[j];
+                            var actualField = actualSort[j];
+
+                            expect(expectedField.queryName).toBe(actualField.queryName);
+                            expect(expectedField.sortDirection).toBe(actualField.sortDirection);
+                        }
+                    }
+                }
+
+                done();
+            });
     }
 
     export function validateMatrix(expectedValues: string[][], selector: string): void {
@@ -321,8 +321,43 @@ module powerbitests.tablixHelper {
      * @param expected: number - height in terms of 'px'
      */
     export function validateCellHeights(cells: JQuery, expected: number) {
-        let expectedPx = jsCommon.PixelConverter.toString(expected);
-        cells.each((index: number, elem: Element) => expect($(elem).css('height')).toBe(expectedPx));
+        cells.each((index: number, elem: Element) => {
+            let height = parseInt($(elem).css('height').replace('px', ''), 10);
+
+            // To prevent tests from being fragile, compare the height within an acceptable range (+-5px)
+            expect(helpers.isCloseTo(height, expected, /*tolerance*/ 5)).toBeTruthy();
+        });
+    }
+
+    export function validateCellLeftSeparator(cells: JQuery, expectedWidth: number, expectedColor: string) {
+        let expectedPx = jsCommon.PixelConverter.toString(expectedWidth);
+        cells.each((index: number, elem: Element) => {
+            let borderLeftColor = $(elem).css('border-left-color');
+            let borderLeftStyle = $(elem).css('border-left-style');
+            let borderLeftWidth = $(elem).css('border-left-width');
+
+            //check if only border exists
+            if (borderLeftStyle !== "none") {
+                helpers.assertColorsMatch(borderLeftColor, expectedColor);
+                expect(borderLeftWidth).toBe(expectedPx);
+            }
+        });
+    }
+
+    export function validateCellBottomSeparator(cells: JQuery, expectedWidth: number, expectedColor: string) {
+        let expectedPx = jsCommon.PixelConverter.toString(expectedWidth);
+        cells.each((index: number, elem: Element) => {
+            let borderBottomColor = $(elem).css('border-bottom-color');
+            let borderBottomStyle = $(elem).css('border-bottom-style');
+            let borderBottomWidth = $(elem).css('border-bottom-width');
+
+            //check if only border exists
+            if (borderBottomStyle !== "none") {
+                helpers.assertColorsMatch(borderBottomColor, expectedColor);
+                expect(borderBottomWidth).toBe(expectedPx);
+            }
+
+        });
     }
 
     function addError(errorString: string, message: string): string {

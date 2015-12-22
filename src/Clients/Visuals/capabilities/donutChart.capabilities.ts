@@ -78,7 +78,8 @@ module powerbi.visuals {
                     titleText: {
                         displayName: data.createDisplayNameGetter('Visual_LegendName'),
                         description: data.createDisplayNameGetter('Visual_LegendNameDescription'),
-                        type: { text: true }
+                        type: { text: true },
+                        suppressFormatPainterCopy: true
                     },
                     labelColor: {
                         displayName: data.createDisplayNameGetter('Visual_LegendTitleColor'),
@@ -123,17 +124,20 @@ module powerbi.visuals {
                     labelDisplayUnits: {
                         displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
                         description: data.createDisplayNameGetter('Visual_DisplayUnitsDescription'),
-                        type: { formatting: { labelDisplayUnits: true } }
+                        type: { formatting: { labelDisplayUnits: true } },
+                        suppressFormatPainterCopy: true,
                     },
                     labelPrecision: {
                         displayName: data.createDisplayNameGetter('Visual_Precision'),
                         description: data.createDisplayNameGetter('Visual_PrecisionDescription'),
                         placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     fontSize: {
                         displayName: data.createDisplayNameGetter('Visual_TextSize'),
-                        type: { formatting: { fontSize: true } }
+                        type: { formatting: { fontSize: true } },
+                        suppressFormatPainterCopy: true,
                     },
                 },
             },

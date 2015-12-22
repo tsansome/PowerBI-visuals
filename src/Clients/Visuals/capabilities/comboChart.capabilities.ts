@@ -87,7 +87,8 @@ module powerbi.visuals {
                     titleText: {
                         displayName: data.createDisplayNameGetter('Visual_LegendName'),
                         description: data.createDisplayNameGetter('Visual_LegendNameDescription'),
-                        type: { text: true }
+                        type: { text: true },
+                        suppressFormatPainterCopy: true
                     },
                     labelColor: {
                         displayName: data.createDisplayNameGetter('Visual_LegendTitleColor'),
@@ -104,7 +105,7 @@ module powerbi.visuals {
                 properties: {
                     show: {
                         displayName: data.createDisplayNameGetter('Visual_Show'),
-                        type: { bool: true }
+                        type: { bool: true },
                     },
                     axisScale: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Scale'),
@@ -113,16 +114,18 @@ module powerbi.visuals {
                     start: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Start'),
                         description: data.createDisplayNameGetter('Visual_Axis_StartDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     end: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_End'),
                         description: data.createDisplayNameGetter('Visual_Axis_EndDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     axisType: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Type'),
-                        type: { enumeration: axisType.type }
+                        type: { enumeration: axisType.type },
                     },
                     showAxisTitle: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Title'),
@@ -135,12 +138,12 @@ module powerbi.visuals {
                     },
                     labelDisplayUnits: {
                         displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
-                        type: { formatting: { labelDisplayUnits: true } }
+                        type: { formatting: { labelDisplayUnits: true } },
                     },
                     labelPrecision: {
                         displayName: data.createDisplayNameGetter('Visual_Precision'),
                         placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
-                        type: { numeric: true }
+                        type: { numeric: true },
                     }
                 }
             },
@@ -149,15 +152,15 @@ module powerbi.visuals {
                 properties: {
                     show: {
                         displayName: data.createDisplayNameGetter('Visual_Show'),
-                        type: { bool: true }
+                        type: { bool: true },
                     },
                     axisLabel: {
                         displayName: data.createDisplayNameGetter('Visual_YAxis_ColumnTitle'),
-                        type: { none: true }
+                        type: { none: true },
                     },
                     position: {
                         displayName: data.createDisplayNameGetter('Visual_YAxis_Position'),
-                        type: { enumeration: yAxisPosition.type }
+                        type: { enumeration: yAxisPosition.type },
                     },
                     axisScale: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Scale'),
@@ -166,12 +169,14 @@ module powerbi.visuals {
                     start: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Start'),
                         description: data.createDisplayNameGetter('Visual_Axis_StartDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     end: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_End'),
                         description: data.createDisplayNameGetter('Visual_Axis_EndDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     showAxisTitle: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Title'),
@@ -184,56 +189,56 @@ module powerbi.visuals {
                     },
                     labelDisplayUnits: {
                         displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
-                        type: { formatting: { labelDisplayUnits: true } }
+                        type: { formatting: { labelDisplayUnits: true } },
                     },
                     labelPrecision: {
                         displayName: data.createDisplayNameGetter('Visual_Precision'),
                         placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
-                        type: { numeric: true }
+                        type: { numeric: true },
                     },
                     secShow: {
                         displayName: data.createDisplayNameGetter('Visual_YAxis_ShowSecondary'),
-                        type: { bool: true }
+                        type: { bool: true },
                     },
                     secAxisLabel: {
                         displayName: data.createDisplayNameGetter('Visual_YAxis_LineTitle'),
-                        type: { none: true }
+                        type: { none: true },
                     },
                     secPosition: {
                         displayName: data.createDisplayNameGetter('Visual_YAxis_Position'),
-                        type: { enumeration: yAxisPosition.type }
+                        type: { enumeration: yAxisPosition.type },
                     },
                     secAxisScale: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Scale'),
-                        type: { enumeration: axisScale.type }
+                        type: { enumeration: axisScale.type },
                     },
                     secStart: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Start'),
                         description: data.createDisplayNameGetter('Visual_Axis_StartDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
                     },
                     secEnd: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_End'),
                         description: data.createDisplayNameGetter('Visual_Axis_EndDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
                     },
                     secShowAxisTitle: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Title'),
                         description: data.createDisplayNameGetter('Visual_Axis_YTitleDescription'),
-                        type: { bool: true }
+                        type: { bool: true },
                     },
                     secAxisStyle: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Style'),
-                        type: { enumeration: axisStyle.type }
+                        type: { enumeration: axisStyle.type },
                     },
                     secLabelDisplayUnits: {
                         displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
-                        type: { formatting: { labelDisplayUnits: true } }
+                        type: { formatting: { labelDisplayUnits: true } },
                     },
                     secLabelPrecision: {
                         displayName: data.createDisplayNameGetter('Visual_Precision'),
                         placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
-                        type: { numeric: true }
+                        type: { numeric: true },
                     }
                 }
             },
@@ -282,13 +287,15 @@ module powerbi.visuals {
                     labelDisplayUnits: {
                         displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
                         description: data.createDisplayNameGetter('Visual_DisplayUnitsDescription'),
-                        type: { formatting: { labelDisplayUnits: true } }
+                        type: { formatting: { labelDisplayUnits: true } },
+                        suppressFormatPainterCopy: true,
                     },
                     labelPrecision: {
                         displayName: data.createDisplayNameGetter('Visual_Precision'),
                         description: data.createDisplayNameGetter('Visual_PrecisionDescription'),
                         placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     fontSize: {
                         displayName: data.createDisplayNameGetter('Visual_TextSize'),

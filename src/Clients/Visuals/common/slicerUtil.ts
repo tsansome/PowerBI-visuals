@@ -129,6 +129,10 @@ module powerbi.visuals {
                 return outlineElement === '0px' ? 'none' : 'solid';
             }
 
+            export function getBorderStyleWithWeight(outlineType: string, outlineWeight: number): string {
+                return (outlineType === 'None' || outlineWeight === 0) ? 'none' : 'solid';
+            }
+
             export function getBorderWidth(outlineElement: string, outlineWeight: number): string {
                 switch (outlineElement) {
                     case 'None':
@@ -137,6 +141,10 @@ module powerbi.visuals {
                         return '0px 0px ' + outlineWeight + 'px 0px';
                     case 'TopOnly':
                         return outlineWeight + 'px 0px 0px 0px';
+                    case 'LeftOnly':
+                        return '0px 0px 0px ' + outlineWeight + 'px';
+                    case 'RightOnly':
+                        return '0px ' + outlineWeight + 'px 0px 0px';
                     case 'TopBottom':
                         return outlineWeight + 'px 0px ' + outlineWeight + 'px 0px';
                     case 'LeftRight':

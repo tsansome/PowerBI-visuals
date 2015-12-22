@@ -94,7 +94,8 @@ module powerbi.visuals {
         private data: WaterfallChartData;
         private element: JQuery;
         private isScrollable: boolean;
-        
+        private tooltipsEnabled: boolean;
+
         /**
          * Note: If we overflowed horizontally then this holds the subset of data we should render.
          */
@@ -112,6 +113,7 @@ module powerbi.visuals {
 
         constructor(options: WaterfallChartConstructorOptions) {
             this.isScrollable = options.isScrollable;
+            this.tooltipsEnabled = options.tooltipsEnabled;
             this.interactivityService = options.interactivityService;
         }
 
@@ -576,7 +578,8 @@ module powerbi.visuals {
             let bars = this.createRects(dataPoints);
             let connectors = this.createConnectors(dataPoints);
 
-            TooltipManager.addTooltip(bars, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
+            if (this.tooltipsEnabled) 
+                TooltipManager.addTooltip(bars, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
 
             let hasSelection = this.interactivityService && this.interactivityService.hasSelection();
 
@@ -714,7 +717,7 @@ module powerbi.visuals {
                         },
                         outsideFill: labelSettings.labelColor ? labelSettings.labelColor : NewDataLabelUtils.defaultLabelColor,
                         insideFill: NewDataLabelUtils.defaultInsideLabelColor,
-                        isParentRect: true,
+                        parentType: LabelDataPointParentType.Rectangle,
                         parentShape: {
                             rect: parentRect,
                             orientation: dataPoint.value >= 0 ? NewRectOrientation.VerticalBottomBased : NewRectOrientation.VerticalTopBased,

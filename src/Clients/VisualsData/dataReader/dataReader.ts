@@ -46,6 +46,9 @@ module powerbi.data {
 
         /** rewriteCacheEntries */
         rewriteCacheEntries?(dataSource: DataReaderDataSource, rewriter: DataReaderCacheRewriter): void;
+
+        /** Sets the result into the local cache */
+        setLocalCacheResult?(options: DataReaderExecutionOptions, dataAsObject: DataReaderData): void;
     }
 
     /** Represents a query generator. */

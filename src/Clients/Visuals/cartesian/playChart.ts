@@ -589,7 +589,7 @@ module powerbi.visuals {
             }
         }
 
-        export function render(playData: PlayChartData, behaviorOptions: PlayBehaviorOptions, interactivityService: IInteractivityService, suppressAnimations: boolean): CartesianVisualRenderResult {
+        export function render(playData: PlayChartData, behaviorOptions: PlayBehaviorOptions, interactivityOptions: InteractivityOptions, interactivityService: IInteractivityService, suppressAnimations: boolean): CartesianVisualRenderResult {
             if (!playData) {
                 return { dataPoints: [], behaviorOptions: null, labelDataPoints: null, labelsAreNumeric: false };
             }
@@ -604,8 +604,8 @@ module powerbi.visuals {
             let currentFrameIndex = playData.currentFrameIndex;
             let height = playData.currentViewport.height;
             let width = playData.currentViewport.width;
-            
-            if (!playData.playAxisContainer && interactivityService) {
+
+            if (!playData.playAxisContainer && interactivityService && !interactivityOptions.isInteractiveLegend) {
                 createSliderDOM(playData, behaviorOptions, interactivityService);
             }
             if (playData.playAxisContainer) {

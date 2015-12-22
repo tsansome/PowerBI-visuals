@@ -115,18 +115,40 @@ module powerbi.visuals {
                     },
                     labelPosition: {
                         displayName: data.createDisplayNameGetter('Visual_Position'),
-                        type: { enumeration: labelPosition.type }
+                        type: { enumeration: labelPosition.type },
+                        suppressFormatPainterCopy: true,
                     },
                     labelDisplayUnits: {
                         displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
                         description: data.createDisplayNameGetter('Visual_DisplayUnitsDescription'),
-                        type: { formatting: { labelDisplayUnits: true } }
+                        type: { formatting: { labelDisplayUnits: true } },
+                        suppressFormatPainterCopy: true,
                     },
                     labelPrecision: {
                         displayName: data.createDisplayNameGetter('Visual_Precision'),
                         description: data.createDisplayNameGetter('Visual_PrecisionDescription'),
                         placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
+                    },
+                    fontSize: {
+                        displayName: data.createDisplayNameGetter('Visual_TextSize'),
+                        type: { formatting: { fontSize: true } }
+                    },
+                }
+            },
+            percentBarLabel: {
+                displayName: data.createDisplayNameGetter('Visual_PercentBarLabel'),
+                description: data.createDisplayNameGetter('Visual_PercentBarLabelDescription'),
+                properties: {
+                    show: {
+                        displayName: data.createDisplayNameGetter('Visual_Show'),
+                        type: { bool: true }
+                    },
+                    color: {
+                        displayName: data.createDisplayNameGetter('Visual_LabelsFill'),
+                        description: data.createDisplayNameGetter('Visual_LabelsFillDescription'),
+                        type: { fill: { solid: { color: true } } }
                     },
                     fontSize: {
                         displayName: data.createDisplayNameGetter('Visual_TextSize'),

@@ -29,12 +29,15 @@
 module powerbi.data {
     /** Responsible for evaluating object property expressions to be applied at various scopes in a DataView. */
     export module DataViewObjectEvaluator {
-        let colorValueType: ValueType = ValueType.fromDescriptor({ formatting: { color: true } });
-        let numericType: ValueType = ValueType.fromDescriptor({ numeric: true });
+        const colorValueType: ValueType = ValueType.fromDescriptor({ formatting: { color: true } });
+        const numericType: ValueType = ValueType.fromDescriptor({ numeric: true });
+        const textType: ValueType = ValueType.fromDescriptor({ text: true });
 
         export function run(
+            evalContext: IEvalContext,
             objectDescriptor: DataViewObjectDescriptor,
             propertyDefinitions: DataViewObjectPropertyDefinitions): DataViewObject {
+            debug.assertValue(evalContext, 'evalContext');
             debug.assertAnyValue(objectDescriptor, 'objectDescriptor');
             debug.assertValue(propertyDefinitions, 'propertyDefinitions');
 
@@ -50,7 +53,7 @@ module powerbi.data {
                 if (!propertyDescriptor)
                     continue;
 
-                let propertyValue = evaluateProperty(propertyDescriptor, propertyDefinition);
+                let propertyValue = evaluateProperty(evalContext, propertyDescriptor, propertyDefinition);
                 if (propertyValue === undefined)
                     continue;
 
@@ -64,8 +67,10 @@ module powerbi.data {
 
         /** Note: Exported for testability */
         export function evaluateProperty(
+            evalContext: IEvalContext,
             propertyDescriptor: DataViewObjectPropertyDescriptor,
             propertyDefinition: DataViewObjectPropertyDefinition) {
+            debug.assertValue(evalContext, 'evalContext');
             debug.assertValue(propertyDescriptor, 'propertyDescriptor');
             debug.assertValue(propertyDefinition, 'propertyDefinition');
 
@@ -73,22 +78,18 @@ module powerbi.data {
             if (structuralType && structuralType.expression)
                 return propertyDefinition;
 
-            let value = evaluateValue(<any>propertyDefinition, ValueType.fromDescriptor(propertyDescriptor.type));
+            let value = evaluateValue(evalContext, <any>propertyDefinition, ValueType.fromDescriptor(propertyDescriptor.type));
             if (value !== undefined || (propertyDefinition instanceof RuleEvaluation))
                 return value;
 
-            let valueFill = evaluateFill(<FillDefinition>propertyDefinition, structuralType);
-            if (valueFill)
-                return valueFill;
-
-            let valueFillRule = evaluateFillRule(<FillRuleDefinition>propertyDefinition, structuralType);
-            if (valueFillRule)
-                return valueFillRule;
-
-            return propertyDefinition;
+            return evaluateFill(evalContext, <FillDefinition>propertyDefinition, structuralType)
+                || evaluateFillRule(evalContext, <FillRuleDefinition>propertyDefinition, structuralType)
+                || evaluateImage(evalContext, <ImageDefinition>propertyDefinition, structuralType)
+                || evaluateParagraphs(evalContext, <ParagraphsDefinition>propertyDefinition, structuralType)
+                || propertyDefinition;
         }
 
-        function evaluateFill(fillDefn: FillDefinition, type: StructuralTypeDescriptor) {
+        function evaluateFill(evalContext: IEvalContext, fillDefn: FillDefinition, type: StructuralTypeDescriptor): Fill {
             let fillType = type.fill;
             if (!fillType)
                 return;
@@ -96,13 +97,13 @@ module powerbi.data {
             if (fillType && fillType.solid && fillType.solid.color && fillDefn.solid) {
                 return {
                     solid: {
-                        color: evaluateValue(fillDefn.solid.color, ValueType.fromExtendedType(ExtendedType.Color)),
+                        color: evaluateValue(evalContext, fillDefn.solid.color, ValueType.fromExtendedType(ExtendedType.Color)),
                     }
                 };
             }
         }
 
-        function evaluateFillRule(fillRuleDefn: FillRuleDefinition, type: StructuralTypeDescriptor): any {
+        function evaluateFillRule(evalContext: IEvalContext, fillRuleDefn: FillRuleDefinition, type: StructuralTypeDescriptor): FillRule {
             if (!type.fillRule)
                 return;
 
@@ -110,8 +111,8 @@ module powerbi.data {
                 let linearGradient2 = fillRuleDefn.linearGradient2;
                 return {
                     linearGradient2: {
-                        min: evaluateColorStop(linearGradient2.min),
-                        max: evaluateColorStop(linearGradient2.max),
+                        min: evaluateColorStop(evalContext, linearGradient2.min),
+                        max: evaluateColorStop(evalContext, linearGradient2.max),
                     }
                 };
             }
@@ -120,48 +121,143 @@ module powerbi.data {
                 let linearGradient3 = fillRuleDefn.linearGradient3;
                 return {
                     linearGradient3: {
-                        min: evaluateColorStop(linearGradient3.min),
-                        mid: evaluateColorStop(linearGradient3.mid),
-                        max: evaluateColorStop(linearGradient3.max),
+                        min: evaluateColorStop(evalContext, linearGradient3.min),
+                        mid: evaluateColorStop(evalContext, linearGradient3.mid),
+                        max: evaluateColorStop(evalContext, linearGradient3.max),
                     }
                 };
             }
         }
 
-        function evaluateColorStop(colorStop: RuleColorStopDefinition): RuleColorStop {
+        function evaluateColorStop(evalContext: IEvalContext, colorStop: RuleColorStopDefinition): RuleColorStop {
+            debug.assertValue(evalContext, 'evalContext');
             debug.assertValue(colorStop, 'colorStop');
 
             let step: RuleColorStop = {
-                color: evaluateValue(colorStop.color, colorValueType),
+                color: evaluateValue(evalContext, colorStop.color, colorValueType),
             };
 
-            let value = evaluateValue(colorStop.value, numericType);
+            let value = evaluateValue(evalContext, colorStop.value, numericType);
             if (value != null)
                 step.value = value;
 
             return step;
         }
 
-        function evaluateValue(definition: SQExpr | RuleEvaluation, valueType: ValueType): any {
+        function evaluateImage(evalContext: IEvalContext, definition: ImageDefinition, type: StructuralTypeDescriptor): ImageValue {
+            debug.assertValue(evalContext, 'evalContext');
+            debug.assertAnyValue(definition, 'definition');
+            debug.assertValue(type, 'type');
+
+            if (!type.image || !definition)
+                return;
+
+            let value: ImageValue = {
+                name: evaluateValue(evalContext, definition.name, textType),
+                url: evaluateValue(evalContext, definition.url, ValueType.fromDescriptor(ImageDefinition.urlType)),
+            };
+
+            if (definition.scaling)
+                value.scaling = evaluateValue(evalContext, definition.scaling, textType);
+
+            return value;
+        }
+
+        function evaluateParagraphs(evalContext: IEvalContext, definition: ParagraphsDefinition, type: StructuralTypeDescriptor): Paragraphs {
+            debug.assertValue(evalContext, 'evalContext');
+            debug.assertAnyValue(definition, 'definition');
+            debug.assertValue(type, 'type');
+
+            if (!type.paragraphs || !definition)
+                return;
+
+            return evaluateArrayCopyOnChange(evalContext, definition, evaluateParagraph);
+        }
+
+        function evaluateParagraph(evalContext: IEvalContext, definition: ParagraphDefinition): Paragraph {
+            debug.assertValue(evalContext, 'evalContext');
+            debug.assertValue(definition, 'definition');
+
+            let evaluated: Paragraph;
+
+            let definitionTextRuns = definition.textRuns;
+            let evaluatedTextRuns: TextRun[] = evaluateArrayCopyOnChange(evalContext, definitionTextRuns, evaluateTextRun);
+            if (definitionTextRuns !== evaluatedTextRuns) {
+                evaluated = _.clone(<any>definition);
+                evaluated.textRuns = evaluatedTextRuns;
+            }
+
+            return evaluated || <Paragraph>definition;
+        }
+
+        function evaluateTextRun(evalContext: IEvalContext, definition: TextRunDefinition): TextRun {
+            debug.assertValue(evalContext, 'evalContext');
+            debug.assertValue(definition, 'definition');
+
+            let evaluated: TextRun;
+
+            let definitionValue = definition.value;
+            let evaluatedValue = evaluateValue(evalContext, <any> definitionValue, textType) || definitionValue;
+            if (definitionValue !== evaluatedValue) {
+                evaluated = _.clone(<any>definition);
+                evaluated.value = evaluatedValue;
+            }
+
+            return evaluated || <TextRun>definition;
+        }
+
+        /**
+         * Evaluates an array, and lazily copies on write whenever the evaluator function returns something
+         * other than the input to it.
+         */
+        function evaluateArrayCopyOnChange<TDefinition, TEvaluated>(
+            evalContext: IEvalContext,
+            definitions: TDefinition[],
+            evaluator: (ctx: IEvalContext, defn: TDefinition) => TEvaluated): TEvaluated[]{
+            debug.assertValue(evalContext, 'evalContext');
+            debug.assertValue(definitions, 'definitions');
+            debug.assertValue(evaluator, 'evaluator');
+
+            let evaluatedValues: TEvaluated[];
+
+            for (let i = 0, len = definitions.length; i < len; i++) {
+                let definition = definitions[i];
+                let evaluated: TEvaluated = evaluator(evalContext, definition);
+
+                // NOTE: the any casts here are necessary due to the compiler not knowing the relationship
+                // between TEvaluated & TDefinition
+                if (!evaluatedValues && <any>definition !== evaluated) {
+                    evaluatedValues = _.take(<TEvaluated[]><any>definitions, i);
+                }
+
+                if (evaluatedValues) {
+                    evaluatedValues.push(evaluated);
+                }
+            }
+
+            return evaluatedValues || <TEvaluated[]><any>definitions;
+        }
+
+        function evaluateValue(evalContext: IEvalContext, definition: SQExpr | RuleEvaluation, valueType: ValueType): any {
             if (definition instanceof SQExpr)
-                return ExpressionEvaluator.evaluate(<SQExpr>definition, valueType);
+                return ExpressionEvaluator.evaluate(<SQExpr>definition, evalContext);
 
             if (definition instanceof RuleEvaluation)
-                return (<RuleEvaluation>definition).evaluate();
+                return (<RuleEvaluation>definition).evaluate(evalContext);
         }
 
         /** Responsible for evaluating SQExprs into values. */
-        class ExpressionEvaluator extends DefaultSQExprVisitorWithArg<any, ValueType> {
+        class ExpressionEvaluator extends DefaultSQExprVisitorWithArg<any, IEvalContext> {
             private static instance: ExpressionEvaluator = new ExpressionEvaluator();
 
-            public static evaluate(expr: SQExpr, type: ValueType): any {
+            public static evaluate(expr: SQExpr, evalContext: IEvalContext): any {
                 if (expr == null)
                     return;
 
-                return expr.accept(ExpressionEvaluator.instance, type);
+                return expr.accept(ExpressionEvaluator.instance, evalContext);
             }
 
-            public visitConstant(expr: SQConstantExpr, type: ValueType): any {
+            public visitConstant(expr: SQConstantExpr, evalContext: IEvalContext): any {
                 // TODO: We should coerce/respect property type.
                 // NOTE: There shouldn't be a need to coerce color strings, since the UI layers can handle that directly.
                 return expr.value;

@@ -197,7 +197,17 @@ module powerbi {
                 this.isCounty(fieldRefName) ||
                 this.isStateOrProvince(fieldRefName) ||
                 this.isPostalCode(fieldRefName) ||
-                this.isTerritory(fieldRefName);
+                this.isTerritory(fieldRefName) ||
+                this.isGeoshapableEnglish(fieldRefName);
+        }
+
+        private isGeoshapableEnglish(fieldRefName: string): boolean {
+            return this.isEnglishCity(fieldRefName) ||
+                this.isEnglishCountry(fieldRefName) ||
+                this.isEnglishCounty(fieldRefName) ||
+                this.isEnglishStateOrProvince(fieldRefName) ||
+                this.isEnglishPostalCode(fieldRefName) ||
+                this.isEnglishTerritory(fieldRefName);
         }
 
         private isAddress(fieldRefName: string): boolean {

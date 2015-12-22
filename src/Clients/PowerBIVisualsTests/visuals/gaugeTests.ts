@@ -397,6 +397,7 @@ module powerbitests {
             gaugeDataBuilder.onDataChanged();
 
             setTimeout(() => {
+                
                 // Check Arc Drawn
                 let backgroundArc = $(".backgroundArc");
                 let foregroundArc = $(".foregroundArc");
@@ -496,8 +497,10 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
+                
                 //Callout value
                 expect($(".mainText").length).toBe(0);
+                
                 //Data labels
                 expect($(".labelText").length).toBe(0);
                 done();
@@ -520,6 +523,7 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
+                
                 //Data labels
                 expect($(".labelText").css("font-size")).toBe("20px");
                 done();
@@ -542,6 +546,7 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
+                
                 //Callout value
                 let mainText = $(".mainText");
                 expect(mainText.length).toBe(1);
@@ -576,8 +581,10 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
+                
                 //Callout value
                 expect($(".mainText").text()).toBe("$1,000.00K");
+                
                 //Data labels
                 let labels = $(".labelText");
                 expect($(labels[0]).text()).toBe("$0");
@@ -591,7 +598,7 @@ module powerbitests {
                 general: { formatString: "0.00" }
             };
 
-            gaugeDataBuilder.values = [[500000000000000], [0], [1000000000000000], [0]];
+            gaugeDataBuilder.values = [[500000000000000], [0], [1000000000000001], [0]];
             gaugeDataBuilder.dataViewMetadata.objects = {
                 labels: {
                     show: true,
@@ -605,11 +612,13 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
+                
                 //Callout value
                 expect($(".mainText").text()).toBe("500T");
+                
                 //Data labels
                 let labels = $(".labelText");
-                expect(labels.eq(0).text()).toBe("0");
+                expect(labels.eq(0).text()).toBe("0T");
                 expect(labels.eq(1).text()).toBe("1E+15");
                 done();
             }, DefaultWaitForRender);
@@ -638,12 +647,14 @@ module powerbitests {
             gaugeDataBuilder.onDataChanged();
 
             setTimeout(() => {
+                
                 //Callout value
                 expect($(".mainText").text()).toBe("$563.73T");
+                
                 //Data labels
                 let labels = $(".labelText");
-                expect(labels.eq(0).text()).toBe("$0.00");
-                expect(labels.eq(1).text()).toBe("$1,127,464,456,000,000.00");
+                expect(labels.eq(0).text()).toBe("$0.00T");
+                expect(labels.eq(1).text()).toBe("$1,127.46T");
 
                 done();
             }, DefaultWaitForRender);
@@ -828,6 +839,7 @@ module powerbitests {
         });
 
         it("Gauge_formatting_min_max_target", () => {
+            
             // 1
             let dataViewMetadata: powerbi.DataViewMetadata = {
                 columns: [
@@ -1130,6 +1142,7 @@ module powerbitests {
                 setTimeout(() => {
                     let foregroundArc = $(".foregroundArc");
                     let path: string = foregroundArc.attr("d");
+                    
                     // ensure the radius is correct
                     expect(path.indexOf("A 60 60") > -1 || path.indexOf("A60,60") > -1 || path.indexOf("A60 60") > -1).toBeTruthy();
 

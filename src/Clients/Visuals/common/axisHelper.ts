@@ -51,10 +51,6 @@ module powerbi.visuals {
          */
         values: any[];
         /** 
-         * The D3.Selection that the axis should render to.
-         */
-        graphicsContext?: D3.Selection;
-        /** 
          * The ValueType of the column used for this axis.
          */
         axisType: ValueType;
@@ -569,9 +565,10 @@ module powerbi.visuals {
                 return 0;
 
             let width = scale.rangeBand();
-            let halfInnerPadding = (leftEdges[1] - width) / 2;
+            let halfInnerPadding = (leftEdges[1] - leftEdges[0] - width) / 2;
+            
             let j;
-            for (j = 0; x > (leftEdges[j] + width + halfInnerPadding) && (leftEdges.length - 1) > j; j++)
+            for (j = 0; x > (leftEdges[j] + width + halfInnerPadding) && j < (leftEdges.length - 1); j++)
                 ;
             return scale.domain()[j];
         }
@@ -849,7 +846,12 @@ module powerbi.visuals {
                     // so formatting works correctly.
                     if (bestTickCount === 1)
                         value = value2 = new Date(dataDomain[0]);
-                    formatter = valueFormatter.create({ format: formatString, value: value, value2: value2, tickCount: bestTickCount });
+                    formatter = valueFormatter.create({
+                        format: formatString,
+                        value: value,
+                        value2: value2,
+                        tickCount: bestTickCount,
+                    });
                 }
                 else {
                     if (getValueFn == null) {
@@ -857,7 +859,12 @@ module powerbi.visuals {
                     }
                     let minDate: Date = getValueFn(0, dataType);
                     let maxDate: Date = getValueFn(scaleDomain.length - 1, dataType);
-                    formatter = valueFormatter.create({ format: formatString, value: minDate, value2: maxDate, tickCount: bestTickCount });
+                    formatter = valueFormatter.create({
+                        format: formatString,
+                        value: minDate,
+                        value2: maxDate,
+                        tickCount: bestTickCount,
+                    });
                 }
             }
             else {
@@ -867,7 +874,13 @@ module powerbi.visuals {
                 if (useTickIntervalForDisplayUnits && isScalar && tickValues.length > 1) {
                     let displayUnit = axisDisplayUnits ? axisDisplayUnits: tickValues[1] - tickValues[0];
                     let domainMax = 0; //force tickInterval to be used with display units
-                    formatter = valueFormatter.create({ format: formatString, value: displayUnit, value2: domainMax, allowFormatBeautification: true, precision: axisPrecision });
+                    formatter = valueFormatter.create({
+                        format: formatString,
+                        value: displayUnit,
+                        value2: domainMax,
+                        allowFormatBeautification: true,
+                        precision: axisPrecision,
+                    });
                 }
                 else {
                     // do not use display units, just the basic value formatter
@@ -1148,57 +1161,6 @@ module powerbi.visuals {
                     svgEllipsis(text[0][0], availableWidth);
                 });
             }
-
-        }
-
-        export module ToolTip {
-            let calloutHtml =
-                '<div class="callout triangle-border ms-font-mi">' +
-                '<div class="textArea"/>' +
-                '</div>';
-
-            export function createCallout(): JQuery {
-                return $(calloutHtml);
-            }
-
-            export function clearCallout(callout: JQuery): void {
-                callout.find('.destroyme').remove();
-            }
-
-            export function renderCallout(callout: JQuery, x: number, rangeEnd: number, leftMargin: number) {
-                let calloutBleed = 0;
-                let calloutWidth = callout.width();
-                let calloutHalfWidth = calloutWidth / 2;
-                let xOffset = (leftMargin - calloutHalfWidth) - 10;
-                let innerTriangleOffset = 2;
-                let left: number;
-                let triangleLeftBefore: number;
-                let triangleLeftAfter: number;
-
-                if (x + (calloutHalfWidth - calloutBleed) > rangeEnd) {
-                    left = (rangeEnd + xOffset - (calloutHalfWidth - calloutBleed));
-                    triangleLeftBefore = ((calloutWidth - innerTriangleOffset - calloutBleed) - (rangeEnd - x));
-                    triangleLeftAfter = ((calloutWidth - calloutBleed) - (rangeEnd - x));
-
-                } else if (x > (calloutHalfWidth - calloutBleed)) {
-                    left = (x + xOffset);
-                    triangleLeftBefore = (calloutHalfWidth - innerTriangleOffset);
-                    triangleLeftAfter = (calloutHalfWidth);
-                }
-                else {
-                    left = (calloutHalfWidth - calloutBleed) + xOffset;
-                    triangleLeftBefore = (x + calloutBleed - innerTriangleOffset);
-                    triangleLeftAfter = (x + calloutBleed);
-                }
-                renderCalloutImpl(callout, left, triangleLeftBefore, triangleLeftAfter);
-            }
-
-            function renderCalloutImpl(callout: JQuery, left: number, triangleLeftBefore: number, triangleLeftAfter: number) {
-                callout.css('left', left + 'px');
-                callout.find('.destroyme').remove();
-                callout.append('<style class="destroyme">.triangle-border:before{left:' + triangleLeftBefore + 'px;}</style>');
-                callout.append('<style class="destroyme">.triangle-border:after{left:' + triangleLeftAfter + 'px;}</style>');
-            }
         }
 
         export function createOrdinalScale(pixelSpan: number, dataDomain: any[], outerPaddingRatio: number = 0): D3.Scale.OrdinalScale {
@@ -1322,16 +1284,17 @@ module powerbi.visuals {
             return combinedDomain;
         }
 
-        export function createAxisLabel(properties: DataViewObject, label: string, unitType: string): string {  
-            if (!properties || !properties['axisStyle']) {
+        export function createAxisLabel(properties: DataViewObject, label: string, unitType: string, y2: boolean = false): string {
+            let propertyName = y2 ? 'secAxisStyle' : 'axisStyle';
+            if (!properties || !properties[propertyName]) {
                 return label;
             }
 
             let modifiedLabel;
-            if (properties['axisStyle'] === axisStyle.showBoth) {
+            if (properties[propertyName] === axisStyle.showBoth) {
                 modifiedLabel = label + ' (' + unitType + ')';//todo: localize
             }
-            else if (properties['axisStyle'] === axisStyle.showUnitOnly) {
+            else if (properties[propertyName] === axisStyle.showUnitOnly) {
                 modifiedLabel = unitType;
             }
             else {

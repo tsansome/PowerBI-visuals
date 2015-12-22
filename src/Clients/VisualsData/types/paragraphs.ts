@@ -26,18 +26,44 @@
 
 /// <reference path="../_references.ts"/>
 
-module powerbi.visuals {
-    export const richTextboxCapabilities: VisualCapabilities = {
-        objects: {
-            general: {
-                properties: {
-                    paragraphs: {
-                        type: { /* ParagraphContext */ }
-                    }
-                }
-            }
-        },
-        suppressDefaultTitle: true,
-        supportsSelection: false,
-    };
+module powerbi {
+    import SQExpr = powerbi.data.SQExpr;
+
+    export interface ParagraphsTypeDescriptor {
+    }
+
+    export type ParagraphsDefinition = ParagraphDefinition[];
+    export type ParagraphDefinition = ParagraphDefinitionGeneric<SQExpr>;
+    export type TextRunDefinition = TextRunDefinitionGeneric<SQExpr>;
+
+    export interface ParagraphDefinitionGeneric<TExpr> {
+        horizontalTextAlignment?: string;
+        textRuns: TextRunDefinitionGeneric<TExpr>[];
+    }
+
+    export interface TextRunDefinitionGeneric<TExpr> {
+        textStyle?: TextRunStyle;
+        url?: string;
+        value: string | TExpr;
+    }
+
+    export type Paragraphs = Paragraph[];
+    export interface Paragraph {
+        horizontalTextAlignment?: string;
+        textRuns: TextRun[];
+    }
+
+    export interface TextRunStyle {
+        fontFamily?: string;
+        fontSize?: string;
+        fontStyle?: string;
+        fontWeight?: string;
+        textDecoration?: string;
+    }
+
+    export interface TextRun {
+        textStyle?: TextRunStyle;
+        url?: string;
+        value: string;
+    }
 }

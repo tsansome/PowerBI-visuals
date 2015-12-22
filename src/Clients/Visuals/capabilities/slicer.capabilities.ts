@@ -59,11 +59,11 @@ module powerbi.visuals {
                         type: { formatting: { formatString: true } },
                     },
                     outlineColor: {
-                        displayName: data.createDisplayNameGetter('Visual_outlineColor'),
+                        displayName: data.createDisplayNameGetter('Visual_OutlineColor'),
                         type: { fill: { solid: { color: true } } }
                     },
                     outlineWeight: {
-                        displayName: data.createDisplayNameGetter('Visual_outlineWeight'),
+                        displayName: data.createDisplayNameGetter('Visual_OutlineWeight'),
                         type: { numeric: true }
                     },
                     orientation: {

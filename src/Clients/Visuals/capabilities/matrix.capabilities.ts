@@ -74,6 +74,108 @@ module powerbi.visuals {
                         displayName: data.createDisplayNameGetter('Visual_TextSize'),
                         type: { numeric: true }
                     },
+                    outlineColor: {
+                        displayName: data.createDisplayNameGetter('Visual_OutlineColor'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    outlineWeight: {
+                        displayName: data.createDisplayNameGetter('Visual_OutlineWeight'),
+                        type: { numeric: true }
+                    }
+                },
+            },
+            columns:
+            {
+                displayName: data.createDisplayNameGetter('Role_DisplayName_Columns'),
+                properties: {
+                    showSeparators: {
+                        displayName: data.createDisplayNameGetter('Tablix_Column_Separator'),
+                        type: { bool: true }
+                    },
+                    separatorColor: {
+                        displayName: data.createDisplayNameGetter('Role_DisplayName_Color'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    columnSeparatorWeight: {
+                        displayName: data.createDisplayNameGetter('Visual_BasicShape_Weight'),
+                        type: { numeric: true }
+                    }
+                }
+            },
+            header: {
+                displayName: data.createDisplayNameGetter('Visual_Header'),
+                properties: {
+                    fontColor: {
+                        displayName: data.createDisplayNameGetter('Visual_FontColor'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    backgroundColor: {
+                        displayName: data.createDisplayNameGetter('Visual_Background'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    outline: {
+                        displayName: data.createDisplayNameGetter('Visual_Outline'),
+                        type: { enumeration: outline.type }
+                    }
+                },
+            },
+            rows: {
+                displayName: data.createDisplayNameGetter('Role_DisplayName_Rows'),
+                properties: {
+                    showSeparators: {
+                        displayName: data.createDisplayNameGetter('Tablix_Row_Separator'),
+                        type: { bool: true }
+                    },
+                    fontColor: {
+                        displayName: data.createDisplayNameGetter('Visual_FontColor'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    backgroundColor: {
+                        displayName: data.createDisplayNameGetter('Visual_Background'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    outline: {
+                        displayName: data.createDisplayNameGetter('Visual_Outline'),
+                        type: { enumeration: outline.type }
+                    }
+                },
+            },
+            values: {
+                displayName: data.createDisplayNameGetter('Role_DisplayName_Values'),
+                properties: {
+                    fontColor: {
+                        displayName: data.createDisplayNameGetter('Visual_FontColor'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    backgroundColor: {
+                        displayName: data.createDisplayNameGetter('Visual_Background'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    outline: {
+                        displayName: data.createDisplayNameGetter('Visual_Outline'),
+                        type: { enumeration: outline.type }
+                    }
+                },
+            },
+            totals: {
+                displayName: data.createDisplayNameGetter('Visual_Totals'),
+                properties: {
+                    fontColor: {
+                        displayName: data.createDisplayNameGetter('Visual_FontColor'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    backgroundColor: {
+                        displayName: data.createDisplayNameGetter('Visual_Background'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    outline: {
+                        displayName: data.createDisplayNameGetter('Visual_Outline'),
+                        type: { enumeration: outline.type }
+                    },
+                    leadingSpace: {
+                        displayName: data.createDisplayNameGetter('Tablix_Total_LeadingSpace'),
+                        type: { numeric: true }
+                    }
                 },
             }
         },

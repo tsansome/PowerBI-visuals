@@ -65,6 +65,7 @@ module powerbi.visuals {
         private options: ListViewOptions;
         private visibleGroupContainer: D3.Selection;
         private scrollContainer: D3.Selection;
+        private scrollbarInner: D3.Selection;
         private cancelMeasurePass: () => void;
         private renderTimeoutId: number;
         
@@ -79,15 +80,20 @@ module powerbi.visuals {
             // make a copy of options so that it is not modified later by caller
             this.options = $.extend(true, {}, options);
 
-            this.options.baseContainer
-                .style('overflow-y', 'auto')
-                .on('scroll', () => this.renderImpl(this.options.rowHeight));
-            this.scrollContainer = options.baseContainer
+            this.scrollbarInner = options.baseContainer
                 .append('div')
-                .attr('class', 'scrollRegion');
+                .classed('scrollbar-inner', true)
+                .on('scroll', () => this.renderImpl(this.options.rowHeight));
+
+            this.scrollContainer = this.scrollbarInner
+                .append('div')
+                .classed('scrollRegion', true);
+
             this.visibleGroupContainer = this.scrollContainer
                 .append('div')
-                .attr('class', 'visibleGroup');
+                .classed('visibleGroup', true);
+
+            $(options.baseContainer.node()).find('.scroll-element').attr('drag-resize-disabled', 'true');
 
             ListView.SetDefaultOptions(options);
         }
@@ -105,9 +111,9 @@ module powerbi.visuals {
             this._data = data;
             this.getDatumIndex = getDatumIndex;
             this.setTotalRows();
-            if (dataReset) {
-                $(this.options.baseContainer.node()).scrollTop(0);
-            }
+            if (dataReset)
+                $(this.scrollbarInner.node()).scrollTop(0);
+
             this.render();
             return this;
         }
@@ -133,7 +139,7 @@ module powerbi.visuals {
                 });
                 this.renderTimeoutId = undefined;
             },0);
-            }
+        }
 
         private renderImpl(rowHeight: number): void {
             let totalHeight = this.options.scrollEnabled ? Math.max(0, (this._totalRows * rowHeight)) : this.options.viewport.height;
@@ -150,7 +156,7 @@ module powerbi.visuals {
             let totalRows = this._totalRows;
             let rowHeight = options.rowHeight || ListView.defaultRowHeight;
             let visibleRows = this.getVisibleRows() || 1;
-            let scrollTop: number = options.baseContainer.node().scrollTop;
+            let scrollTop: number = this.scrollbarInner.node().scrollTop;
             let scrollPosition = (scrollTop === 0) ? 0 : Math.floor(scrollTop / rowHeight);
             let transformAttr = SVGUtil.translateWithPixels(0, scrollPosition * rowHeight);
 

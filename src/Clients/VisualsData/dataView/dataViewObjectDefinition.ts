@@ -84,10 +84,9 @@ module powerbi.data {
             if (!defn)
                 return;
 
-            //note: We decided that delete is acceptable here and that we don't need optimization here
-            delete defn.properties[propertyName];
+            DataViewObjectDefinition.deleteSingleProperty(defn, propertyName);
         }
-
+        
         export function getValue(
             defns: DataViewObjectDefinitions,
             propertyId: DataViewObjectPropertyIdentifier,
@@ -199,8 +198,33 @@ module powerbi.data {
                     value = null;
                 }
             }
+            else if ((<StructuralTypeDescriptor>valueTypeDescriptor).image) {
+                if (value) {
+                    let imageValue = <ImageValue>value;
+                    let imageDefinition: ImageDefinition = {
+                        name: SQExprBuilder.text(imageValue.name),
+                        url: SQExprBuilder.text(imageValue.url),
+                    };
+
+                    if (imageValue.scaling)
+                        imageDefinition.scaling = SQExprBuilder.text(imageValue.scaling);
+
+                    return imageDefinition;
+                }
+            }
 
             return value;
+        }
+    }
+
+    export module DataViewObjectDefinition {
+
+        export function deleteSingleProperty(
+            defn: DataViewObjectDefinition,
+            propertyName: string): void {
+
+            //note: We decided that delete is acceptable here and that we don't need optimization here
+            delete defn.properties[propertyName];
         }
     }
 }

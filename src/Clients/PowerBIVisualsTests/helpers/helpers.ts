@@ -27,8 +27,8 @@
 /// <reference path="../_references.ts"/>
 
 /* tslint:disable */
-var powerBIAccessToken = "fooBarBaz";
-var powerBIAccessTokenExpiry = "2115-01-01 00:00:00Z";
+const powerBIAccessToken = "fooBarBaz";
+const powerBIAccessTokenExpiry = "2115-01-01 00:00:00Z";
 /* tslint:enable */
 
 module powerbitests.helpers {
@@ -36,7 +36,7 @@ module powerbitests.helpers {
         expect(message).toBe('DEBUG asserts should never happen.  There is a product or test bug.');
     };
 
-    export var dataSets = {
+    export let dataSets = {
         singleMeasureDataViewSource: '{"descriptor": {"Select": [{"Kind": 2, "Value": "M0"}]}, "dsr": {"DataShapes":[{"Id":"DS0","PrimaryHierarchy":[{"Id":"DM0","Instances":[{"Calculations":[{"Id":"M0","Value":"21852688.46698004D"}]}]}],"IsComplete":true}]}}',
         dataViewSourceWithErrors: '{"descriptor":{"Select":[{"Kind":1,"Depth":0,"Value":"G0"},{"Kind":2,"Value":"M0","Subtotal":["A0"],"Min":["A2"],"Max":["A1"]}],"Expressions":{"Primary":{"Groupings":[{"Keys":[{"Source":{"Entity":"DimDate","Property":"Month Name"},"Select":0},{"Source":{"Entity":"DimDate","Property":"Month Number"},"Calc":"K0"}]}]}}},"dsr":{"DataShapes":[{"Id":"DS0","odata.error":{"code":"rsDataShapeQueryTranslationError","message":{"lang":"da-DK","value":"Data Shape Query translation failed with error code: \'InvalidExpression\'. Check the report server logs for more information."},"azure:values":[{"timestamp":"2015-01-15T07:44:45.8135124Z"},{"details":"Microsoft.ReportingServices.DataShapeQueryTranslation.DataShapeQueryTranslationException: Data Shape Query translation failed with error code: \'InvalidExpression\'. Check the report server logs for more information."},{"helpLink":"http://go.microsoft.com/fwlink/?LinkId=20476&EvtSrc=Microsoft.ReportingServ…Error&ProdName=Microsoft%20SQL%20Server%20Reporting%20Services&ProdVer=1.0"},{"productInfo":{"productName":"change this","productVersion":"1.0","productLocaleId":127,"operatingSystem":"OsIndependent","countryLocaleId":1033}},{"moreInformation":{"odata.error":{"code":"System.Exception","message":{"lang":"da-DK","value":"For more information about this error navigate to the report server on the local server machine, or enable remote errors"},"azure:values":[{"details":"System.Exception: For more information about this error navigate to the report server on the local server machine, or enable remote errors"}]}}}]}}]}}',
     };
@@ -47,11 +47,15 @@ module powerbitests.helpers {
         jasmine.clock().tick(0);
     }
 
-    export function testDom(height: string, width: string): JQuery {
-        var testhtml = '<div id="item" style="height: ' + height + 'px; width: ' + width + 'px;"></div>';
-        setFixtures(testhtml);
-        var element = $('#item');
-        return element;
+    export function testDom(height: string, width: string, cssClass: string = ''): JQuery {
+        let element = $('<div></div>')
+            .attr('id', 'item')
+            .css('width', width)
+            .css('height', height)
+            .addClass(cssClass);
+        setFixtures(element[0].outerHTML);
+
+        return $('#item');
     }
 
     /**
@@ -60,32 +64,38 @@ module powerbitests.helpers {
      * @param {number} delay Time to wait in milliseconds
      */
     export function executeWithDelay(fn: Function, delay: number): void {
+        
         // Uninstalling jasmine.clock() to enable using the following timer
         jasmine.clock().uninstall();
+        
         // Waiting until scroll takes effect
         setTimeout(() => {
+            
             // Calling the assert function
             fn();
         }, delay);
+        
         // installing the clock again
         jasmine.clock().install();
     }
 
     export function isTranslateCloseTo(actualTranslate: string, expectedX: number, expectedY: number): boolean {
-        var splitChar = actualTranslate.indexOf(",") > 0 ? ',' : ' ';
-        var translateValues = actualTranslate.substr(10, actualTranslate.lastIndexOf(')') - 10).split(splitChar);
-        var actualX = parseInt(translateValues[0], 10);
-        var actualY = parseInt(translateValues[1], 10);
+        let splitChar = actualTranslate.indexOf(",") > 0 ? ',' : ' ';
+        let translateValues = actualTranslate.substr(10, actualTranslate.lastIndexOf(')') - 10).split(splitChar);
+        let actualX = parseInt(translateValues[0], 10);
+        let actualY = parseInt(translateValues[1], 10);
 
-        var deltaX = Math.abs(expectedX - actualX);
-        var deltaY = Math.abs(expectedY - actualY);
+        return isCloseTo(actualX, expectedX, /*tolerance*/ 1)
+            && isCloseTo(actualY, expectedY, /*tolerance*/ 1);
+    }
 
-        // Tolerance of 1
-        return deltaX <= 1 && deltaY <= 1;
+    export function isCloseTo(actual: number, expected: number, tolerance: number = 1): boolean {
+        let delta = Math.abs(expected - actual);
+        return delta <= tolerance;
     }
 
     export function buildSelectorForColumn(queryName: string, data, selector?) {
-        var newSelector = selector ? selector : {};
+        let newSelector = selector ? selector : {};
         newSelector[queryName] = data;
 
         return newSelector;
@@ -93,14 +103,14 @@ module powerbitests.helpers {
 
     /** Returns a function that can be called to trigger a dragstart. */
     export function getDragStartTriggerFunctionForD3(element: HTMLElement): (arg) => {} {
-        var elem: any = element;
+        let elem: any = element;
         if (elem.__ondragstart)
             return arg => elem.__ondragstart(arg);
     }
 
     /** Returns a function that can be called to trigger a click. */
     export function getClickTriggerFunctionForD3(element: HTMLElement): (arg) => {} {
-        var elem: any = element;
+        let elem: any = element;
         if (elem.__onclick)
             return arg => elem.__onclick(arg);
     }
@@ -120,9 +130,9 @@ module powerbitests.helpers {
 
     // Defining a simulated click event (see http://stackoverflow.com/questions/9063383/how-to-invoke-click-event-programmaticaly-in-d3)
     jQuery.fn.d3Click = function (x: number, y: number, eventType?: ClickEventType) {
-        var type = eventType || ClickEventType.Default;
+        let type = eventType || ClickEventType.Default;
         this.each(function (i, e) {
-            var evt: any = document.createEvent("MouseEvents");
+            let evt: any = document.createEvent("MouseEvents");
             evt.initMouseEvent("click", // type
                 true,   // canBubble
                 true,   // cancelable
@@ -144,7 +154,7 @@ module powerbitests.helpers {
     };
 
     export function runWithImmediateAnimationFrames(func: () => void): void {
-        var requestAnimationFrame = window.requestAnimationFrame;
+        let requestAnimationFrame = window.requestAnimationFrame;
         try {
             window.requestAnimationFrame = (f) => setTimeout(f, 0);
             func();
@@ -159,12 +169,13 @@ module powerbitests.helpers {
     }
 
     export function getLocalTimeFromUTCBase(utcYear: number, utcMonth: number, utcDay: number, utcHours: number, utcMinutes: number, utcSeconds: number): Date {
+        
         // IMPORTANT: We need to dynamically calculate the UTC offset to use for our test date instead of hard-coding the offset so that:
         // i) It doesn't break when daylight savings changes the UTC offset
         // ii) The test works even if your machine is not in the US Pacific Time zone :)
-        var baseDate = new Date(utcYear, utcMonth, utcDay, utcHours, utcMinutes, utcSeconds);
-        var offsetMinutes = baseDate.getTimezoneOffset();
-        var date = new Date();
+        let baseDate = new Date(utcYear, utcMonth, utcDay, utcHours, utcMinutes, utcSeconds);
+        let offsetMinutes = baseDate.getTimezoneOffset();
+        let date = new Date();
         date.setTime(baseDate.getTime() - offsetMinutes * 60000);
         return date;
     }
@@ -197,7 +208,7 @@ module powerbitests.helpers {
     }
 
     export function parseDateString(dateString: string): Date {
-        var date,
+        let date,
             timezoneOffset;
 
         date = new Date(dateString);
@@ -270,6 +281,13 @@ module powerbitests.helpers {
             return expect(rgbActual).toEqual(rgbExpected);
     }
 
+    export function assertFontSizeMatch(actual: string, expectedInPt: number): boolean {
+        let actualInPx = parseFloat(actual);
+        let actualInPt = jsCommon.PixelConverter.toPoint(actualInPx);
+
+        return expect(actualInPt).toBeCloseTo(expectedInPt, 0);
+    }
+
     export function verifyPositionAttributes(element: JQuery): void {
         let checkAttrs = ['x', 'y', 'x1', 'x2', 'y1', 'y2'];
         for (let attr of checkAttrs) {
@@ -312,7 +330,7 @@ module powerbitests.helpers {
         }
 
         public categoryBuilder(category: powerbi.DataViewCategoryColumn = { source: null, values: null }) {
-            var self = this;
+            let self = this;
 
             return {
                 setIdentity(identity: powerbi.DataViewScopeIdentity[]) {
@@ -342,16 +360,16 @@ module powerbitests.helpers {
         }
 
         public valueColumnsBuilder() {
-            var self = this;
+            let self = this;
 
             this.initCategorical();
 
-            var tempValues: powerbi.DataViewValueColumn[] = [];
-            var valueIdentityFields: powerbi.data.SQExpr[];
-            var source: powerbi.DataViewMetadataColumn;
+            let tempValues: powerbi.DataViewValueColumn[] = [];
+            let valueIdentityFields: powerbi.data.SQExpr[];
+            let source: powerbi.DataViewMetadataColumn;
             return {
                 newValueBuilder(value: powerbi.DataViewValueColumn = <powerbi.DataViewValueColumn>{}) {
-                    var self = this;
+                    let self = this;
                     return {
                         setSubtotal(subtotal: any) {
                             value.subtotal = subtotal;
@@ -545,6 +563,96 @@ module powerbitests.helpers {
             this.init();
 
             return this.visualPlugin;
+        }
+    }
+
+    export interface VerifyReferenceLineProperties {
+        color: string;
+        opacity: number;
+        style: string;
+        inFront: boolean;
+        isHorizontal: boolean;
+        label?: {
+            text: string;
+            color: string;
+            horizontalPosition: string;
+            verticalPosition: string;
+        };
+    };
+
+    const dashedArray = '5px, 5px';
+    const dottedArray = '1px, 5px';
+
+    export function verifyReferenceLine(line: JQuery, label: JQuery, graphicsContext: JQuery, properties: VerifyReferenceLineProperties) {
+
+        helpers.assertColorsMatch(line.css('stroke'), properties.color);
+
+        if (properties.style === powerbi.visuals.lineStyle.dotted)
+            expect(line.css('stroke-dasharray')).toEqual(dottedArray);
+        else if (properties.style === powerbi.visuals.lineStyle.dashed)
+            expect(line.css('stroke-dasharray')).toEqual(dashedArray);
+        else
+            expect(line.css('stroke-dasharray')).toBeUndefined();
+
+        expect(parseFloat(line.css('stroke-opacity'))).toBeCloseTo(properties.opacity, 3);
+
+        let y1 = line.attr('y1');
+        let y2 = line.attr('y2');
+        let x1 = line.attr('x1');
+        let x2 = line.attr('x2');
+        if (properties.isHorizontal) {
+            expect(y1).toEqual(y2);
+        }
+        else {
+            expect(x1).toEqual(x2);
+        }
+
+        let index = line.index();
+        let graphicsIndex = graphicsContext.index();
+        if (properties.inFront)
+            expect(index).toBeGreaterThan(graphicsIndex);
+        else
+            expect(index).toBeLessThan(graphicsIndex);
+
+        if (!properties.label)
+            return;
+
+        expect(label.text()).toEqual(properties.label.text);
+
+        let labelColor = properties.label.color;
+        helpers.assertColorsMatch(label.css('fill'), labelColor);
+
+        let labelX = parseFloat(label.attr('x'));
+        let labelY = parseFloat(label.attr('y'));
+        if (properties.isHorizontal) {
+            if (properties.label.horizontalPosition === powerbi.visuals.referenceLineDataLabelHorizontalPosition.left) {
+                expect(helpers.isCloseTo(labelX, parseFloat(x1), 20)).toBeTruthy();
+            }
+            else {
+                expect(helpers.isCloseTo(labelX + label.width(), parseFloat(x2), 20)).toBeTruthy();
+            }
+
+            if (properties.label.verticalPosition === powerbi.visuals.referenceLineDataLabelVerticalPosition.above) {
+                expect(labelY).toBeLessThan(y1);
+            }
+            else {
+                expect(labelY).toBeGreaterThan(y1);
+            }
+        }
+        else {
+            if (properties.label.horizontalPosition === powerbi.visuals.referenceLineDataLabelHorizontalPosition.left) {
+                expect(labelX).toBeLessThan(x1);
+            }
+            else {
+                expect(labelX).toBeGreaterThan(x1);
+            }
+
+            if (properties.label.verticalPosition === powerbi.visuals.referenceLineDataLabelVerticalPosition.above) {
+                expect(helpers.isCloseTo(labelY, parseFloat(y1), 20)).toBeTruthy();
+            }
+            else {
+                expect(helpers.isCloseTo(labelY, parseFloat(y2), 20)).toBeTruthy();
+            }
         }
     }
 }

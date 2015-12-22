@@ -112,7 +112,7 @@ module powerbi.visuals {
                 properties: {
                     show: {
                         displayName: data.createDisplayNameGetter('Visual_Show'),
-                        type: { bool: true }
+                        type: { bool: true },
                     },
                     axisScale: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Scale'),
@@ -121,12 +121,14 @@ module powerbi.visuals {
                     start: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Start'),
                         description: data.createDisplayNameGetter('Visual_Axis_StartDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     end: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_End'),
                         description: data.createDisplayNameGetter('Visual_Axis_EndDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     showAxisTitle: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Title'),
@@ -143,12 +145,12 @@ module powerbi.visuals {
                     },
                     labelDisplayUnits: {
                         displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
-                        type: { formatting: { labelDisplayUnits: true } }
+                        type: { formatting: { labelDisplayUnits: true } },
                     },
                     labelPrecision: {
                         displayName: data.createDisplayNameGetter('Visual_Precision'),
                         placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
-                        type: { numeric: true }
+                        type: { numeric: true },
                     }
                 }
             },
@@ -157,12 +159,12 @@ module powerbi.visuals {
                 properties: {
                     show: {
                         displayName: data.createDisplayNameGetter('Visual_Show'),
-                        type: { bool: true }
+                        type: { bool: true },
                     },
                     position: {
                         displayName: data.createDisplayNameGetter('Visual_YAxis_Position'),
                         description: data.createDisplayNameGetter('Visual_YAxis_PositionDescription'),
-                        type: { enumeration: yAxisPosition.type }
+                        type: { enumeration: yAxisPosition.type },
                     },
                     axisScale: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Scale'),
@@ -171,12 +173,14 @@ module powerbi.visuals {
                     start: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Start'),
                         description: data.createDisplayNameGetter('Visual_Axis_StartDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     end: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_End'),
                         description: data.createDisplayNameGetter('Visual_Axis_EndDescription'),
-                        type: { numeric: true }
+                        type: { numeric: true },
+                        suppressFormatPainterCopy: true,
                     },
                     showAxisTitle: {
                         displayName: data.createDisplayNameGetter('Visual_Axis_Title'),
@@ -193,14 +197,134 @@ module powerbi.visuals {
                     },
                     labelDisplayUnits: {
                         displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
-                        type: { formatting: { labelDisplayUnits: true } }
+                        type: { formatting: { labelDisplayUnits: true } },
                     },
                     labelPrecision: {
                         displayName: data.createDisplayNameGetter('Visual_Precision'),
                         placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
-                        type: { numeric: true }
+                        type: { numeric: true },
                     }
                 }
+            },           
+            xAxisReferenceLine: {
+                displayName: data.createDisplayNameGetter('Visual_Reference_Line_X'),
+                description: data.createDisplayNameGetter('Visual_Reference_Line_Description'),
+                properties: {
+                    show: {
+                        displayName: data.createDisplayNameGetter('Visual_Show'),
+                        type: { bool: true }
+                    },
+                    value: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Value'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Value_Description'),
+                        type: { numeric: true }
+                    },
+                    lineColor: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Color'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Color_Description'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    transparency: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Transparency'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Transparency_Description'),
+                        type: { numeric: true }
+                    },
+                    style: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Style'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Style_Description'),
+                        type: { enumeration: lineStyle.type }
+                    },
+                    position: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Arrange'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Arrange_Description'),
+                        type: { enumeration: referenceLinePosition.type }
+                    },
+                    dataLabelShow: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Label"),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Show_Description'),
+                        type: { bool: true }
+                    },
+                    dataLabelColor: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Label_Color"),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Color_Description'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    dataLabelDecimalPoints: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Decimal_Points"),
+                        placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
+                        type: { numeric: true }
+                    },
+                    dataLabelHorizontalPosition: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Horizontal_Position"),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Horizontal_Position_Description'),
+                        type: { enumeration: referenceLineDataLabelHorizontalPosition.type }
+                    },
+                    dataLabelVerticalPosition: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Vertical_Position"),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Vertical_Position_Description'),
+                        type: { enumeration: referenceLineDataLabelVerticalPosition.type }
+                    },
+                },
+            },
+            y1AxisReferenceLine: {
+                displayName: data.createDisplayNameGetter('Visual_Reference_Line_Y'),
+                description: data.createDisplayNameGetter('Visual_Reference_Line_Description'),
+                properties: {
+                    show: {
+                        displayName: data.createDisplayNameGetter('Visual_Show'),
+                        type: { bool: true }
+                    },
+                    value: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Value'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Value_Description'),                        
+                        type: { numeric: true }
+                    },
+                    lineColor: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Color'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Color_Description'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    transparency: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Transparency'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Transparency_Description'),
+                        type: { numeric: true }
+                    },
+                    style: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Style'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Style_Description'),                        
+                        type: { enumeration: lineStyle.type }
+                    },
+                    position: {
+                        displayName: data.createDisplayNameGetter('Visual_Reference_Line_Arrange'),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Arrange_Description'), 
+                        type: { enumeration: referenceLinePosition.type }
+                    },
+                    dataLabelShow: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Label"),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Show_Description'),
+                        type: { bool: true }
+                    },
+                    dataLabelColor: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Label_Color"),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Color_Description'),
+                        type: { fill: { solid: { color: true } } }
+                    },
+                    dataLabelDecimalPoints: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Decimal_Points"),
+                        placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
+                        type: { numeric: true }
+                    },
+                    dataLabelHorizontalPosition: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Horizontal_Position"),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Horizontal_Position_Description'),
+                        type: { enumeration: referenceLineDataLabelHorizontalPosition.type }
+                    },
+                    dataLabelVerticalPosition: {
+                        displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Vertical_Position"),
+                        description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Vertical_Position_Description'),
+                        type: { enumeration: referenceLineDataLabelVerticalPosition.type }
+                    },
+                },
             },
             legend: {
                 displayName: data.createDisplayNameGetter('Visual_Legend'),
@@ -223,7 +347,8 @@ module powerbi.visuals {
                     titleText: {
                         displayName: data.createDisplayNameGetter('Visual_LegendName'),
                         description: data.createDisplayNameGetter('Visual_LegendNameDescription'),
-                        type: { text: true }
+                        type: { text: true },
+                        suppressFormatPainterCopy: true
                     },
                     labelColor: {
                         displayName: data.createDisplayNameGetter('Visual_LegendTitleColor'),
@@ -288,10 +413,23 @@ module powerbi.visuals {
                     }
                 }
             },
+            plotArea: {
+                displayName: data.createDisplayNameGetter('Visual_Plot'),
+                //description: data.createDisplayNameGetter('Visual_PlotDescription'),
+                properties: {
+                    transparency: {
+                        displayName: data.createDisplayNameGetter('Visual_Background_Transparency'),
+                        type: { numeric: true },
+                    },
+                    image: {
+                        type: { image: {} },
+                    },
+                },
+            },
         },
         dataViewMappings: [{
             conditions: [
-                { 'Category': { max: 1 }, 'Series': { max: 1 }, 'X': { max: 1 }, 'Y': { max: 1 }, 'Size': { max: 1 }, 'Gradient': { max: 0 }, 'Play': { max: 0 }},
+                { 'Category': { max: 1 }, 'Series': { max: 1 }, 'X': { max: 1 }, 'Y': { max: 1 }, 'Size': { max: 1 }, 'Gradient': { max: 0 }, 'Play': { max: 0 } },
                 { 'Category': { max: 1 }, 'Series': { max: 0 }, 'X': { max: 1 }, 'Y': { max: 1 }, 'Size': { max: 1 }, 'Gradient': { max: 1 }, 'Play': { max: 0 } },
             ],
             categorical: {
@@ -373,6 +511,10 @@ module powerbi.visuals {
         },
         legend: {
             labelColor: <DataViewObjectPropertyIdentifier>{ objectName: 'legend', propertyName: 'labelColor' },
+        },
+        plotArea: {
+            image: <DataViewObjectPropertyIdentifier>{ objectName: 'plotArea', propertyName: 'image' },
+            transparency: <DataViewObjectPropertyIdentifier>{ objectName: 'plotArea', propertyName: 'transparency' },
         },
     };
 }

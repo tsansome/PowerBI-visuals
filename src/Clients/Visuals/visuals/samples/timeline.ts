@@ -23,6 +23,7 @@
 *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 *  THE SOFTWARE.
 */
+
 module powerbi.visuals.samples {
     import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
 
@@ -432,18 +433,30 @@ module powerbi.visuals.samples {
         }
 
         public static converter(timelineData: TimelineData, timelineFormat: TimelineFormat): void {
-            var showHeader = false;
-            var dataView = timelineData.dataView;
-            if (dataView && dataView.metadata.objects) {
+            var showHeader = false,
+                dataView = timelineData.dataView;
+
+            if (!dataView ||
+                !dataView.metadata ||
+                !dataView.categorical ||
+                !dataView.categorical.categories ||
+                dataView.categorical.categories.length <= 0 ||
+                dataView.categorical.categories[0] === undefined ||
+                dataView.categorical.categories[0].identityFields === undefined ||
+                dataView.categorical.categories[0].identityFields.length <= 0) {
+                return;
+            }
+
+            if (dataView && dataView.metadata && dataView.metadata.objects) {
                 var header = dataView.metadata.objects['header'];
                 if (header && header['show'] !== undefined) {
                     showHeader = <boolean>header['show'];
                 }
             }
+
             timelineFormat.showHeader = showHeader;
             timelineData.categorySourceName = dataView.categorical.categories[0].source.displayName;
 
-            if (dataView.categorical.categories.length <= 0 || dataView.categorical.categories[0] === undefined || dataView.categorical.categories[0].identityFields === undefined || dataView.categorical.categories[0].identityFields.length <= 0) return;
             timelineData.columnIdentity = dataView.categorical.categories[0].identityFields[0];
             var timesLine = timelineData.dataView.categorical.categories[0].values;
 
@@ -957,7 +970,7 @@ module powerbi.visuals.samples {
         }
 
         public getTimeRangeColorFill(dataView: DataView): Fill {
-            if (dataView && dataView.metadata.objects) {
+            if (dataView && dataView.metadata &&dataView.metadata.objects) {
                 var label = dataView.metadata.objects['timeRangeColor'];
                 if (label) {
                     return <Fill>label['fill'];
@@ -968,7 +981,7 @@ module powerbi.visuals.samples {
 
         public getHeaderFill(dataView: DataView): Fill {
             var headerColor: Fill = { solid: { color: '#333111' } };
-            if (dataView && dataView.metadata.objects) {
+            if (dataView && dataView.metadata && dataView.metadata.objects) {
                 var header = dataView.metadata.objects['header'];
                 if (header && header['fontColor']) {
                     headerColor = header['fontColor'];

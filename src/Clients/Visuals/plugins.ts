@@ -218,6 +218,13 @@ module powerbi.visuals.plugins {
         create: () => new Treemap()
     };
 
+    export let sunburst: IVisualPlugin = {
+        name: 'sunburst',
+        watermarkKey: 'defaultWatermark',
+        capabilities: capabilities.sunburst,
+        create: () => new samples.Sunburst()
+    };
+
     export let pieChart: IVisualPlugin = {
         name: 'pieChart',
         watermarkKey: 'pie',
@@ -234,7 +241,7 @@ module powerbi.visuals.plugins {
 
     export let stackedAreaChart: IVisualPlugin = {
         name: 'stackedAreaChart',
-        watermarkKey: 'area',//todo: wating for stacked area watermark
+        watermarkKey: 'stackedarea',
         capabilities: capabilities.lineChart,
         create: () => new CartesianChart({ chartType: CartesianChartType.StackedArea }),
         customizeQuery: LineChart.customizeQuery,
@@ -269,7 +276,7 @@ module powerbi.visuals.plugins {
     export let textbox: IVisualPlugin = {
         name: 'textbox',
         capabilities: capabilities.textbox,
-        create: () => new RichTextbox()
+        create: () => new Textbox()
     };
 
     export let waterfallChart: IVisualPlugin = {
@@ -335,11 +342,12 @@ module powerbi.visuals.plugins {
         capabilities: samples.StreamGraph.capabilities,
         create: () => new samples.StreamGraph()
     };
-    
-    export var sunburst: IVisualPlugin = {
-        name: 'sunburst',
-        capabilities: samples.Sunburst.capabilities,
-        create: () => new samples.Sunburst()
+
+    export let scriptVisual: IVisualPlugin = {
+        name: 'scriptVisual',
+        watermarkKey: 'scriptvisual',
+        capabilities: capabilities.scriptVisual,
+        create: () => new ScriptVisual({ canRefresh: false })
     };
     
     export var radarChart: IVisualPlugin = {
@@ -352,12 +360,6 @@ module powerbi.visuals.plugins {
         name: 'dotPlot',
         capabilities: samples.DotPlot.capabilities,
         create: () => new samples.DotPlot()
-    };
-
-    export let scriptVisual: IVisualPlugin = {
-        name: 'scriptVisual',
-        capabilities: capabilities.scriptVisual,
-        create: () => new ScriptVisual()
     };
 
     export var histogram: IVisualPlugin = {
@@ -376,5 +378,11 @@ module powerbi.visuals.plugins {
         name: 'timeline',
         capabilities: samples.Timeline.capabilities,
         create: () => new samples.Timeline()
+    };
+
+    export var tornadoChart: IVisualPlugin = {
+        name: "tornadoChart",
+        capabilities: samples.TornadoChart.capabilities,
+        create: () => new samples.TornadoChart()
     };
 }

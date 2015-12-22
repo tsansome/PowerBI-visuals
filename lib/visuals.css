@@ -1579,6 +1579,11 @@ body {
   visibility: hidden;
   opacity: 0;
 }
+.no-border-radius {
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0;
+}
 .expAppBarMenu {
   position: absolute;
   left: 10px;
@@ -2247,12 +2252,20 @@ body {
             */
   padding: 0px 5px 0px 10px;
 }
-.tablixContainer .bi-tablix .bi-table-column-header i {
-  visibility: hidden;
+.tablixContainer .bi-tablix .bi-sort-icon-container {
+  float: right;
 }
-.tablixContainer .bi-tablix .bi-table-column-header.sorted i,
-.tablixContainer .bi-tablix .bi-table-column-header:hover i {
-  visibility: visible;
+.tablixContainer .bi-tablix .bi-table-column-header div.future {
+  display: none;
+}
+.tablixContainer .bi-tablix .bi-table-column-header div.sorted {
+  display: inline-block;
+}
+.tablixContainer .bi-tablix .bi-table-column-header > div:hover div.sorted {
+  display: none;
+}
+.tablixContainer .bi-tablix .bi-table-column-header > div:hover div.future {
+  display: inline-block;
 }
 .tablixContainer .bi-tablix .bi-table-cell-numeric {
   text-align: right;
@@ -2380,6 +2393,15 @@ body {
   border-bottom-color: #CCCCCC;
   padding: 0px 5px 0px 10px;
 }
+.tablixContainer .bi-dashboard-tablix .bi-sort-icon-container {
+  float: right;
+}
+.tablixContainer .bi-dashboard-tablix .bi-table-column-header div.future {
+  display: none;
+}
+.tablixContainer .bi-dashboard-tablix .bi-table-column-header div.sorted {
+  display: inline-block;
+}
 .tablixContainer .bi-dashboard-tablix .bi-table-cell-numeric {
   text-align: right;
 }
@@ -2494,6 +2516,10 @@ body {
   display: block;
   width: 0;
 }
+.visual {
+  /* Adding custom styles to the listView jQuery Scrollbar. */
+  /* Only show the scrollbars on hover or when being dragged. */
+}
 .visual .mapControl {
   position: relative;
 }
@@ -2540,6 +2566,37 @@ body {
 }
 .visual .powervisuals-glyph.big-kpi {
   font-size: 48px;
+}
+.visual .scroll-wrapper {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.visual .scroll-wrapper .scroll-content {
+  height: inherit;
+}
+.visual .scroll-wrapper .scroll-element.scroll-x {
+  height: 8px !important;
+}
+.visual .scroll-wrapper .scroll-element.scroll-y {
+  width: 8px !important;
+}
+.visual .scroll-wrapper .scroll-element .scroll-element_track {
+  background-color: transparent !important;
+}
+.visual .scroll-wrapper .scroll-element .scroll-element_outer,
+.visual .scroll-wrapper .scroll-element .scroll-bar {
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0;
+}
+.visual .scroll-wrapper .scroll-element .scroll-bar {
+  background-color: #C8C8C8 !important;
+  opacity: 0;
+}
+.visual .scroll-wrapper:hover .scroll-element .scroll-bar,
+.visual .scroll-wrapper .scroll-element.scroll-draggable .scroll-bar {
+  opacity: 1;
 }
 .interactive-legend {
   white-space: nowrap;
@@ -2640,6 +2697,14 @@ body {
   text-anchor: middle;
   font-family: Tahoma,Verdana,Geneva,sans-serif;
 }
+.labelGraphicsContext .catagorylabel {
+  font-size: 12px;
+  text-anchor: middle;
+  font-family: Tahoma,Verdana,Geneva,sans-serif;
+}
+.leader-lines .line-label {
+  opacity: 0.5;
+}
 /* Kept around for funnel labels; can be removed once it's moved to the new system */
 .data-labels {
   font-size: 12px;
@@ -2651,6 +2716,7 @@ body {
 .richtextbox {
   color: #333333;
   pointer-events: all;
+  white-space: pre-wrap;
 }
 .richtextbox a {
   color: #0000EE;
@@ -2935,7 +3001,8 @@ div.ql-toolbar .ql-format-button.ql-link:hover {
   border-bottom: 0px;
   padding-bottom: 0px;
 }
-.clearCatcher {
+.clearCatcher,
+.backgroundRect {
   fill-opacity: 0;
 }
 .visual.owlGaugeVisual {
@@ -3023,10 +3090,6 @@ div.ql-toolbar .ql-format-button.ql-link:hover {
     transform: rotate(2deg);
   }
 }
-.visual-sandbox {
-  border: none;
-  overflow: hidden;
-}
 .streamGraph .axis path,
 .streamGraph .axis line {
   fill: none;
@@ -3036,6 +3099,18 @@ div.ql-toolbar .ql-format-button.ql-link:hover {
 .streamGraph .axis text {
   font-family: sans-serif;
   font-size: 11px;
+}
+.visual-sandbox {
+  border: none;
+  overflow: hidden;
+}
+.x-ref-line {
+  stroke-width: 3px;
+  stroke-opacity: 0.5;
+}
+.y1-ref-line {
+  stroke-width: 3px;
+  stroke-opacity: 0.5;
 }
 .radarChart .axis path,
 .radarChart .axis line {
@@ -3061,6 +3136,16 @@ div.ql-toolbar .ql-format-button.ql-link:hover {
   shape-rendering: crispEdges;
 }
 .dotPlot .axis text {
+  font-family: sans-serif;
+  font-size: 11px;
+}
+.timeline .axis path,
+.timeline .axis line {
+  fill: none;
+  stroke: black;
+  shape-rendering: crispEdges;
+}
+.timeline .axis text {
   font-family: sans-serif;
   font-size: 11px;
 }

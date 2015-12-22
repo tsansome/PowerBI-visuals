@@ -27,9 +27,13 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
+
+    import TablixFormattingProperties = powerbi.visuals.controls.TablixFormattingPropertiesMatrix;
+    import TablixUtils = controls.internal.TablixUtils;
     /**
      * Extension of the Matrix node for Matrix visual.
      */
+
     export interface MatrixVisualNode extends DataViewMatrixNode {
         /**
          * Index of the node in its parent's children collection.
@@ -68,25 +72,14 @@ module powerbi.visuals {
         textContent?: string;
         domContent?: JQuery;
         isSubtotal: boolean;
+        isLeftMost: boolean;
     }
     
     /**
      * Interface for refreshing Matrix Data View.
      */
     export interface MatrixDataAdapter {
-        update(dataViewMatrix?: DataViewMatrix): void;
-        updateRows(): void;
-    }
-
-    export interface MatrixDataViewObjects extends DataViewObjects {
-        general: MatrixDataViewObject;
-    }
-
-    export interface MatrixDataViewObject extends DataViewObject {
-        rowSubtotals: boolean;
-        columnSubtotals: boolean;
-        autoSizeColumnWidth: boolean;
-        textSize: number;
+        update(dataViewMatrix?: DataViewMatrix, updateColumns?: boolean): void;
     }
 
     export interface IMatrixHierarchyNavigator extends controls.ITablixHierarchyNavigator, MatrixDataAdapter {
@@ -122,7 +115,6 @@ module powerbi.visuals {
     }
 
     class MatrixHierarchyNavigator implements IMatrixHierarchyNavigator {
-
         private matrix: DataViewMatrix;
         private rowHierarchy: MatrixHierarchy;
         private columnHierarchy: MatrixHierarchy;
@@ -279,33 +271,36 @@ module powerbi.visuals {
         public getIntersection(rowItem: MatrixVisualNode, columnItem: MatrixVisualNode): MatrixVisualBodyItem {
             debug.assertValue(rowItem, 'rowItem');
             debug.assertValue(columnItem, 'columnItem');
-            let TablixUtils = controls.internal.TablixUtils;
             let isSubtotalItem = rowItem.isSubtotal === true || columnItem.isSubtotal === true;
 
             if (!rowItem.values)
                 return {
-                    content: '',
+                    textContent: '',
                     isSubtotal: isSubtotalItem,
+                    isLeftMost: columnItem.index === 0
                 };
 
             let intersection = <DataViewMatrixNodeValue>(rowItem.values[columnItem.leafIndex]);
             if (!intersection)
                 return {
                     isSubtotal: isSubtotalItem,
+                    isLeftMost: columnItem.index === 0
                 };
 
             let valueSource = this.matrix.valueSources[intersection.valueSourceIndex || 0];
-            let formattedValue = this.formatter(intersection.value, valueSource, Matrix.formatStringProp);
+            let formattedValue = this.formatter(intersection.value, valueSource, TablixUtils.TablixFormatStringProp);
 
             if (TablixUtils.isValidStatusGraphic(valueSource.kpi, formattedValue))
                 return {
                     domContent: TablixUtils.createKpiDom(valueSource.kpi, intersection.value),
                     isSubtotal: isSubtotalItem,
+                    isLeftMost: columnItem.index === 0
                 };
 
             return {
                 textContent: formattedValue,
                 isSubtotal: isSubtotalItem,
+                isLeftMost: columnItem.index === 0
             };
         }
         
@@ -369,23 +364,18 @@ module powerbi.visuals {
         /**
          * Implementation for MatrixDataAdapter interface.
          */
-        public update(dataViewMatrix?: DataViewMatrix): void {
+        public update(dataViewMatrix?: DataViewMatrix, updateColumns: boolean = true): void {
             if (dataViewMatrix) {
                 this.matrix = dataViewMatrix;
                 this.rowHierarchy = MatrixHierarchyNavigator.wrapMatrixHierarchy(dataViewMatrix.rows);
-                this.columnHierarchy = MatrixHierarchyNavigator.wrapMatrixHierarchy(dataViewMatrix.columns);
+                if (updateColumns)
+                    this.columnHierarchy = MatrixHierarchyNavigator.wrapMatrixHierarchy(dataViewMatrix.columns);
             }
             this.updateHierarchy(this.rowHierarchy);
-            this.updateHierarchy(this.columnHierarchy);
-
-            MatrixHierarchyNavigator.updateStaticColumnHeaders(this.columnHierarchy);
-        }
-
-        /**
-         * Implementation for MatrixDataAdapter interface.
-         */
-        public updateRows(): void {
-            this.updateHierarchy(this.rowHierarchy);
+            if (updateColumns) {
+                this.updateHierarchy(this.columnHierarchy);
+                MatrixHierarchyNavigator.updateStaticColumnHeaders(this.columnHierarchy);
+            }
         }
 
         private static wrapMatrixHierarchy(hierarchy: DataViewHierarchy): MatrixHierarchy {
@@ -415,9 +405,9 @@ module powerbi.visuals {
 
                 if (level) {
                     let source = level.sources[node.levelSourceIndex ? node.levelSourceIndex : 0];
-                    let formatString = valueFormatter.getFormatString(source, Matrix.formatStringProp);
+                    let formatString = valueFormatter.getFormatString(source, TablixUtils.TablixFormatStringProp);
                     if (formatString)
-                        node.name = this.formatter(node.value, source, Matrix.formatStringProp);
+                        node.name = this.formatter(node.value, source, TablixUtils.TablixFormatStringProp);
                     node.queryName = source.queryName;
                 }
 
@@ -482,6 +472,7 @@ module powerbi.visuals {
         private static totalClassName = "total";
         private static nonBreakingSpace = '&nbsp;';
 
+        private formattingProperties: TablixFormattingProperties;
         private hierarchyNavigator: IMatrixHierarchyNavigator;
         private options: MatrixBinderOptions;
 
@@ -491,6 +482,26 @@ module powerbi.visuals {
             // survive data changes and gets updated with the latest data view.
             this.hierarchyNavigator = hierarchyNavigator;
             this.options = options;
+        }
+
+        public onDataViewChanged(formattingProperties: TablixFormattingProperties): void {
+            this.formattingProperties = formattingProperties;
+        }
+
+        public setTablixColumnSeparator(cell: controls.ITablixCell): void {
+            if (this.formattingProperties.columns.showSeparators)
+                cell.extension.setColumnSeparator(this.formattingProperties.columns.separatorColor, this.formattingProperties.columns.separatorWeight);
+        }
+
+        public setTablixRegionStyle(cell: controls.ITablixCell, fontColor: string, backgroundColor, outline: string, outlineWeight: number, outlineColor: string): void {
+            if (fontColor !== "")
+                cell.extension.setFontColor(fontColor);
+            if (backgroundColor)
+                cell.extension.setBackgroundColor(backgroundColor);
+
+            let borderStyle = SlicerUtil.DOMHelper.getBorderStyleWithWeight(outline, outlineWeight);
+            let borderWeight = SlicerUtil.DOMHelper.getBorderWidth(outline, outlineWeight);
+            cell.extension.setOutline(borderStyle, outlineColor, borderWeight);
         }
 
         public onStartRenderingSession(): void {
@@ -529,6 +540,21 @@ module powerbi.visuals {
 
             if (this.options.onBindRowHeader)
                 this.options.onBindRowHeader(item);
+
+            if (this.formattingProperties) {
+                let fontColor = item.isSubtotal ? this.formattingProperties.totals.fontColor : this.formattingProperties.rows.fontColor;
+                let backgroundColor = item.isSubtotal ? this.formattingProperties.totals.backgroundColor : this.formattingProperties.rows.backgroundColor;
+                let outlineStyle = item.isSubtotal ? this.formattingProperties.totals.outline : this.formattingProperties.rows.outline;
+
+                this.setTablixRegionStyle(cell, fontColor, backgroundColor, outlineStyle, this.formattingProperties.general.outlineWeight, this.formattingProperties.general.outlineColor);
+
+                if (this.formattingProperties.rows.showSeparators)
+                    cell.extension.setRowSeparator();
+
+                //set leading spaces for totals
+                if (item.isSubtotal)
+                    cell.extension.setLeadingSpace(this.formattingProperties.totals.leadingSpace);
+            }
         }
 
         public unbindRowHeader(item: any, cell: controls.ITablixCell): void {
@@ -564,10 +590,14 @@ module powerbi.visuals {
                 styleClasses += ' ' + MatrixBinder.totalClassName;
 
             styleClasses += ' ' + MatrixBinder.numericCellClassName;
-
             cell.extension.setContainerStyle(styleClasses);
-            cell.extension.disableDragResize();
 
+            if (this.formattingProperties) {
+                this.setTablixRegionStyle(cell, this.formattingProperties.header.fontColor, this.formattingProperties.header.backgroundColor, this.formattingProperties.header.outline, this.formattingProperties.general.outlineWeight, this.formattingProperties.general.outlineColor);
+                this.setTablixColumnSeparator(cell);
+            }
+
+            cell.extension.disableDragResize();
             this.bindHeader(item, cell, this.getColumnHeaderMetadata(item), overwriteTotalLabel);
         }
 
@@ -591,10 +621,27 @@ module powerbi.visuals {
                 styleClasses += ' ' + MatrixBinder.totalClassName;
 
             cell.extension.setContainerStyle(styleClasses);
+
             if (item.textContent)
                 cell.extension.contentHost.textContent = item.textContent;
             else if (!_.isEmpty(item.domContent))
                 $(cell.extension.contentHost).append(item.domContent);
+
+            if (this.formattingProperties) {
+                let outlineStyle = item.isSubtotal ? this.formattingProperties.totals.outline : item.isLeftMost ? this.formattingProperties.values.outline : 'None';
+                let fontColor = item.isSubtotal ? this.formattingProperties.totals.fontColor : this.formattingProperties.values.fontColor;
+                let backgroundColor = item.isSubtotal ? this.formattingProperties.totals.backgroundColor : this.formattingProperties.values.backgroundColor;
+
+                this.setTablixRegionStyle(cell, fontColor, backgroundColor, outlineStyle, this.formattingProperties.general.outlineWeight, this.formattingProperties.general.outlineColor);
+                //set leading spaces for totals
+                if (item.isSubtotal)
+                    cell.extension.setLeadingSpace(this.formattingProperties.totals.leadingSpace);
+
+                if (this.formattingProperties.rows.showSeparators)
+                    cell.extension.setRowSeparator();
+
+                this.setTablixColumnSeparator(cell);
+            }
         }
 
         public unbindBodyCell(item: MatrixVisualBodyItem, cell: controls.ITablixCell): void {
@@ -646,6 +693,10 @@ module powerbi.visuals {
 
             cell.extension.disableDragResize();
             cell.extension.contentHost.textContent = item.metadata ? item.metadata.displayName : '';
+
+            if (this.formattingProperties) {
+                this.setTablixRegionStyle(cell, this.formattingProperties.header.fontColor, this.formattingProperties.header.backgroundColor, this.formattingProperties.header.outline, this.formattingProperties.general.outlineWeight, this.formattingProperties.general.outlineColor);
+            }
         }
 
         public unbindCornerCell(item: MatrixCornerItem, cell: controls.ITablixCell): void {
@@ -716,9 +767,9 @@ module powerbi.visuals {
             }
 
             if (metadata && UrlHelper.isValidUrl(metadata, value)) {
-                controls.internal.TablixUtils.appendATagToBodyCell(item.value, cell);
+                TablixUtils.appendATagToBodyCell(item.value, cell);
             } else if (metadata && UrlHelper.isValidImage(metadata, value)) {
-                controls.internal.TablixUtils.appendImgTagToBodyCell(item.value, cell);
+                TablixUtils.appendImgTagToBodyCell(item.value, cell);
             }
             else
                 cell.extension.contentHost.textContent = value;
@@ -824,12 +875,6 @@ module powerbi.visuals {
     }
 
     export class Matrix implements IVisual {
-        public static formatStringProp: DataViewObjectPropertyIdentifier = { objectName: 'general', propertyName: 'formatString' };
-        public static rowSubtotals: DataViewObjectPropertyIdentifier = { objectName: 'general', propertyName: 'rowSubtotals' };
-        public static columnSubtotals: DataViewObjectPropertyIdentifier = { objectName: 'general', propertyName: 'columnSubtotals' };
-        public static autoSizeProp: DataViewObjectPropertyIdentifier = { objectName: 'general', propertyName: 'autoSizeColumnWidth' };
-        public static textSizeProp: DataViewObjectPropertyIdentifier = { objectName: 'general', propertyName: 'textSize' };
-
         private static preferredLoadMoreThreshold: number = 0.8;
         
         /**
@@ -850,7 +895,11 @@ module powerbi.visuals {
         private lastAllowHeaderResize: boolean;
         private waitingForSort: boolean;
         private columnWidthManager: controls.TablixColumnWidthManager;
+        private isFormattingPropertiesEnabled: boolean;
 
+        constructor(isFormattingPropertiesEnabled?: boolean) {
+            this.isFormattingPropertiesEnabled = isFormattingPropertiesEnabled;
+        }
         public static customizeQuery(options: CustomizeQueryOptions): void {
             let dataViewMapping = options.dataViewMappings[0];
             if (!dataViewMapping || !dataViewMapping.matrix || !dataViewMapping.metadata)
@@ -862,10 +911,9 @@ module powerbi.visuals {
             if (!_.isEmpty(dataViewMatrix.columns.for.in.items)) {
                 dataViewMatrix.rows.dataReductionAlgorithm.window.count = 100;
             }
-
-            let objects: MatrixDataViewObjects = <MatrixDataViewObjects>dataViewMapping.metadata.objects;
-            (<data.CompiledDataViewRoleForMappingWithReduction>dataViewMatrix.rows).for.in.subtotalType = Matrix.shouldShowRowSubtotals(objects) ? data.CompiledSubtotalType.After : data.CompiledSubtotalType.None;
-            dataViewMatrix.columns.for.in.subtotalType = Matrix.shouldShowColumnSubtotals(objects) ? data.CompiledSubtotalType.After : data.CompiledSubtotalType.None;
+            let objects: controls.TablixFormattingPropertiesMatrix = <controls.TablixFormattingPropertiesMatrix>dataViewMapping.metadata.objects;
+            (<data.CompiledDataViewRoleForMappingWithReduction>dataViewMatrix.rows).for.in.subtotalType = TablixUtils.shouldShowRowSubtotals(objects) ? data.CompiledSubtotalType.After : data.CompiledSubtotalType.None;
+            dataViewMatrix.columns.for.in.subtotalType = TablixUtils.shouldShowColumnSubtotals(objects) ? data.CompiledSubtotalType.After : data.CompiledSubtotalType.None;
         }
 
         public static getSortableRoles(): string[] {
@@ -883,6 +931,17 @@ module powerbi.visuals {
             this.waitingForData = false;
             this.lastAllowHeaderResize = true;
             this.waitingForSort = false;
+        }
+
+        public static converter(dataView: DataView, isFormattingPropertiesEnabled: boolean): TablixFormattingProperties {
+            debug.assertValue(dataView, 'dataView');
+            let formattingProperties: TablixFormattingProperties;
+
+            if (isFormattingPropertiesEnabled) {
+                formattingProperties = TablixUtils.getMatrixFormattingProperties(dataView);
+            }
+
+            return formattingProperties;
         }
 
         public onResizing(finalViewport: IViewport): void {
@@ -905,20 +964,30 @@ module powerbi.visuals {
                 this.columnWidthManager.suppressOnDataChangedNotification = false;
                 return;
             }
-
             let previousDataView = this.dataView;
+
             if (options.dataViews && options.dataViews.length > 0) {
                 this.dataView = options.dataViews[0];
+                let formattingProperties = Matrix.converter(this.dataView, this.isFormattingPropertiesEnabled);
+                let textSize = formattingProperties ? formattingProperties.general.textSize : TablixUtils.getTextSize(this.dataView.metadata.objects);
 
                 if (options.operationKind === VisualDataChangeOperationKind.Append) {
-                    this.hierarchyNavigator.updateRows();
-                    this.refreshControl(false);
+                    let rootChanged = previousDataView.matrix.rows.root !== this.dataView.matrix.rows.root;
+
+                    this.hierarchyNavigator.update(this.dataView.matrix, rootChanged);
+                    //If Root for Rows or Columns has changed by the DataViewTransform (e.g. when having reorders in values)
+                    if (rootChanged)
+                        this.tablixControl.updateModels(/*resetScrollOffsets*/false, this.dataView.matrix.rows.root.children, this.dataView.matrix.columns.root.children);
+
+                    this.refreshControl(/*clear*/false);
                 } else {
                     this.createOrUpdateHierarchyNavigator();
                     this.createColumnWidthManager();
-                    this.createTablixControl();
+                    this.createTablixControl(textSize);
+                    let binder = <MatrixBinder>this.tablixControl.getBinder();
+                    binder.onDataViewChanged(formattingProperties);
                     this.populateColumnWidths();
-                    this.updateInternal(this.dataView, previousDataView);
+                    this.updateInternal(this.dataView, textSize, previousDataView);
                 }
             }
 
@@ -950,7 +1019,7 @@ module powerbi.visuals {
                 this.tablixControl.viewport = this.currentViewport;
                 this.verifyHeaderResize();
 
-                this.refreshControl(false);
+                this.refreshControl(/*clear*/false);
             }
         }
 
@@ -974,10 +1043,10 @@ module powerbi.visuals {
             }
         }
 
-        private createTablixControl(): void {
+        private createTablixControl(textSize: number): void {
             if (!this.tablixControl) {
                 // Create the control
-                this.tablixControl = this.createControl(this.hierarchyNavigator);
+                this.tablixControl = this.createControl(this.hierarchyNavigator, textSize);
             }
         }
 
@@ -992,7 +1061,7 @@ module powerbi.visuals {
             }
         }
 
-        private createControl(matrixNavigator: IMatrixHierarchyNavigator): controls.TablixControl {
+        private createControl(matrixNavigator: IMatrixHierarchyNavigator, textSize: number): controls.TablixControl {
             let layoutKind = this.getLayoutKind();
 
             let matrixBinderOptions: MatrixBinderOptions = {
@@ -1012,18 +1081,18 @@ module powerbi.visuals {
             let tablixOptions: controls.TablixOptions = {
                 interactive: this.isInteractive,
                 enableTouchSupport: false,
-                fontSize: this.getFontSize(),
+                fontSize: TablixUtils.getTextSizeInPx(textSize),
             };
 
             return new controls.TablixControl(matrixNavigator, layoutManager, matrixBinder, tablixContainer, tablixOptions);
         }
 
-        private updateInternal(dataView: DataView, previousDataView: DataView) {
+        private updateInternal(dataView: DataView, textSize: number, previousDataView: DataView) {
             if (this.getLayoutKind() === controls.TablixLayoutKind.DashboardTile) {
                 this.tablixControl.layoutManager.adjustContentSize(UrlHelper.hasImageColumn(dataView));
             }
 
-            this.tablixControl.fontSize = this.getFontSize();
+            this.tablixControl.fontSize = TablixUtils.getTextSizeInPx(textSize);
             this.verifyHeaderResize();
 
             // Update models before the viewport to make sure column widths are computed correctly
@@ -1079,64 +1148,14 @@ module powerbi.visuals {
             return this.hierarchyNavigator.getLeafIndex(item) >= loadMoreThreshold;
         }
 
-        private static shouldShowRowSubtotals(objects: MatrixDataViewObjects): boolean {
-            if (objects && objects.general)
-                return objects.general.rowSubtotals !== false;
+        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+            let enumeration = new ObjectEnumerationBuilder();
 
-            // By default, totals are enabled
-            return true;
-        }
-
-        private static shouldShowColumnSubtotals(objects: MatrixDataViewObjects): boolean {
-            if (objects && objects.general)
-                return objects.general.columnSubtotals !== false;
-
-            // By default, totals are enabled
-            return true;
-        }
-
-        private static getTextSize(objects: MatrixDataViewObjects): number {
-            // By default, let tablixControl set default font size
-            return DataViewObjects.getValue<number>(objects, Matrix.textSizeProp, controls.TablixDefaultTextSize);
-        }
-
-        private getFontSize(): string {
-            let objects = this.getMatrixDataViewObjects();
-            return jsCommon.PixelConverter.fromPoint(Matrix.getTextSize(objects));
-        }
-
-        private shouldAutoSizeColumnWidth(objects: MatrixDataViewObjects): boolean {
-            if (objects && objects.general) {
-                return objects.general.autoSizeColumnWidth !== false;
+            if (this.dataView) {
+                TablixUtils.setEnumeration(options, enumeration, this.dataView, this.isFormattingPropertiesEnabled, controls.TablixType.Matrix);
             }
 
-            // Auto adjust is turned on by default
-            return controls.AutoSizeColumnWidthDefault;
-        }
-
-        private getMatrixDataViewObjects(): MatrixDataViewObjects {
-            if (this.dataView && this.dataView.metadata && this.dataView.metadata.objects)
-                return <MatrixDataViewObjects>this.dataView.metadata.objects;
-        }
-
-        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] {
-            let instances: VisualObjectInstance[] = [];
-            if (options.objectName === 'general') {
-                let objects = this.getMatrixDataViewObjects();
-
-                instances.push({
-                    selector: null,
-                    properties: {
-                        rowSubtotals: Matrix.shouldShowRowSubtotals(objects),
-                        columnSubtotals: Matrix.shouldShowColumnSubtotals(objects),
-                        autoSizeColumnWidth: this.shouldAutoSizeColumnWidth(objects),
-                        textSize: Matrix.getTextSize(objects),
-
-                    },
-                    objectName: options.objectName
-                });
-            }
-            return instances;
+            return enumeration.complete();
         }
 
         private shouldAllowHeaderResize(): boolean {

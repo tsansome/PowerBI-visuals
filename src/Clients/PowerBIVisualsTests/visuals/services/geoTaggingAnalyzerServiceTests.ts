@@ -93,6 +93,16 @@ module powerbitests {
             expect(germanGeoTaggingAnalyzerService.getFieldType("breitengrad")).toBe("Latitude");
             expect(germanGeoTaggingAnalyzerService.getFieldType("latitude")).toBe("Latitude");
         });
+        
+        it("isGeoshapable uses English backup", () => {
+            let germanGeoTaggingAnalyzerService = powerbi.createGeoTaggingAnalyzerService((stringId: string) => getLocalizedString(stringId));
+            germanGeoTaggingAnalyzerService["GeotaggingString_State"] = "zustand";
+            germanGeoTaggingAnalyzerService["GeotaggingString_Latitude"] = "breitengrad";
+            expect(germanGeoTaggingAnalyzerService.isGeoshapable("zustand")).toBe(true);
+            expect(germanGeoTaggingAnalyzerService.isGeoshapable("breitengrad")).toBe(false);
+            expect(germanGeoTaggingAnalyzerService.isGeoshapable("state")).toBe(true);
+            expect(germanGeoTaggingAnalyzerService.isGeoshapable("latitude")).toBe(false);
+        });
 
         it("can detect non latitude fields that partially match the string latitude", () => {
             let nonLatitudeString = "population";

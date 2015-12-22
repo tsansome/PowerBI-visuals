@@ -118,6 +118,7 @@ module powerbi.visuals.controls.TouchUtils {
      * A simple touch event class that's abstracted away from any platform specific traits.
      */
     export class TouchEvent {
+        /* tslint:disable:no-underscore-prefix-for-variables*/
         /**
          * X-axis (not neccessarily in pixels (see IPixelToItem)).
          */
@@ -137,11 +138,11 @@ module powerbi.visuals.controls.TouchUtils {
          * Delta of y-axis (not neccessarily in pixels (see IPixelToItem)).
          */
         private _dy: number;
-        
+        /* tslint:enable:no-underscore-prefix-for-variables*/
         /**
          * Determines if the mouse button is pressed.
          */
-        private _isMouseDown: boolean;
+        private isMouseButtonDown: boolean;
 
         /**
          * @constructor
@@ -154,7 +155,7 @@ module powerbi.visuals.controls.TouchUtils {
         constructor(x: number, y: number, isMouseDown: boolean, dx?: number, dy?: number) {
             this._x = x;
             this._y = y;
-            this._isMouseDown = isMouseDown;
+            this.isMouseButtonDown = isMouseDown;
             this._dx = dx || 0;
             this._dy = dy || 0;
         }
@@ -182,7 +183,7 @@ module powerbi.visuals.controls.TouchUtils {
          * otherwise false.
          */
         public get isMouseDown(): boolean {
-            return this._isMouseDown;
+            return this.isMouseButtonDown;
         }
     }
 
@@ -207,32 +208,32 @@ module powerbi.visuals.controls.TouchUtils {
         /**
          * List of touch regions and their correlating data memebers.
          */
-        private _touchList: ITouchHandlerSet[];
+        private touchList: ITouchHandlerSet[];
         
         /**
          * Boolean to enable thresholds for fixing to an axis when scrolling.
          */
-        private _scrollThreshold: boolean;
+        private scrollThreshold: boolean;
         
         /**
          * Boolean to enable locking to an axis when gesture is fixed to an axis.
          */
-        private _lockThreshold: boolean;
+        private lockThreshold: boolean;
         
         /**
          * The current direction of the swipe.
          */
-        private _swipeDirection: SwipeDirection;
+        private swipeDirection: SwipeDirection;
         
         /**
          * The count of consecutive events match the current swipe direction.
          */
-        private _matchingDirectionCount: number;
+        private matchingDirectionCount: number;
         
         /**
          * The last recieved mouse event.
          */
-        private _lastEvent: TouchEvent;
+        private lastTouchEvent: TouchEvent;
 
         /**
          * Default constructor.
@@ -240,17 +241,17 @@ module powerbi.visuals.controls.TouchUtils {
          * The default behavior is to enable thresholds and lock to axis.
          */
         constructor() {
-            this._touchList = [];
-            this._swipeDirection = SwipeDirection.FreeForm;
-            this._matchingDirectionCount = 0;
+            this.touchList = [];
+            this.swipeDirection = SwipeDirection.FreeForm;
+            this.matchingDirectionCount = 0;
 
-            this._lockThreshold = true;
-            this._scrollThreshold = true;
-            this._lastEvent = new TouchEvent(0, 0, false);
+            this.lockThreshold = true;
+            this.scrollThreshold = true;
+            this.lastTouchEvent = new TouchEvent(0, 0, false);
         }
 
         public get lastEvent(): TouchEvent {
-            return this._lastEvent;
+            return this.lastTouchEvent;
         }
 
         /**
@@ -268,7 +269,7 @@ module powerbi.visuals.controls.TouchUtils {
                 converter: converter
             };
 
-            this._touchList = this._touchList.concat([item]);
+            this.touchList = this.touchList.concat([item]);
         }
 
         /**
@@ -278,20 +279,20 @@ module powerbi.visuals.controls.TouchUtils {
             let eventPoint: TouchEvent;
             let length: number;
 
-            length = this._touchList.length;
+            length = this.touchList.length;
             for (let i = 0; i < length; i++) {
-                if (this._touchList[i].lastPoint.isMouseDown) {
-                    eventPoint = this._touchList[i].converter.getPixelToItem(this._touchList[i].lastPoint.x,
-                                                                             this._touchList[i].lastPoint.y,
+                if (this.touchList[i].lastPoint.isMouseDown) {
+                    eventPoint = this.touchList[i].converter.getPixelToItem(this.touchList[i].lastPoint.x,
+                                                                             this.touchList[i].lastPoint.y,
                                                                              0, 0, false);
-                    this._touchList[i].handler.touchEvent(eventPoint);
+                    this.touchList[i].handler.touchEvent(eventPoint);
                 }
 
-                this._touchList[i].lastPoint = new TouchEvent(this._touchList[i].lastPoint.x,
-                                                           this._touchList[i].lastPoint.y, false);
+                this.touchList[i].lastPoint = new TouchEvent(this.touchList[i].lastPoint.x,
+                                                           this.touchList[i].lastPoint.y, false);
             }
 
-            this._lastEvent = new TouchEvent(0, 0, false);
+            this.lastTouchEvent = new TouchEvent(0, 0, false);
         }
 
         public touchEvent(e: TouchEvent): void {
@@ -310,14 +311,14 @@ module powerbi.visuals.controls.TouchUtils {
             list = this._getActive();
 
             //if this is the start of a mouse drag event, repopulate the list with touched regions
-            if (!this._lastEvent.isMouseDown && e.isMouseDown) {
+            if (!this.lastTouchEvent.isMouseDown && e.isMouseDown) {
                 list = this._findRegions(e);
             }
 
             //determine the delta values and update last event (delta ignored on first mouse down event)
-            dx = this._lastEvent.x - e.x;
-            dy = this._lastEvent.y - e.y;
-            this._lastEvent = new TouchEvent(e.x, e.y, e.isMouseDown, dx, dy);
+            dx = this.lastTouchEvent.x - e.x;
+            dy = this.lastTouchEvent.y - e.y;
+            this.lastTouchEvent = new TouchEvent(e.x, e.y, e.isMouseDown, dx, dy);
 
             //go through the list
             length = list.length;
@@ -333,13 +334,13 @@ module powerbi.visuals.controls.TouchUtils {
                     //calculate the absolute angle from the horizontal axis
                     angle = Math.abs(180 / Math.PI * Math.atan(dy / dx));
 
-                    if (this._scrollThreshold) {
+                    if (this.scrollThreshold) {
                         //is the gesture already locked? (6 prior events within the threshold)
-                        if (this._lockThreshold && (this._matchingDirectionCount > 5)) {
-                            if (this._swipeDirection === SwipeDirection.Horizontal) {
+                        if (this.lockThreshold && (this.matchingDirectionCount > 5)) {
+                            if (this.swipeDirection === SwipeDirection.Horizontal) {
                                 dy = 0;
                             }
-                            else if (this._swipeDirection === SwipeDirection.Vertical) {
+                            else if (this.swipeDirection === SwipeDirection.Vertical) {
                                 dx = 0;
                             }
                         }
@@ -347,12 +348,12 @@ module powerbi.visuals.controls.TouchUtils {
                             //is it within the horizontal threshold?
                             if (angle < 20) {
                                 dy = 0;
-                                if (this._swipeDirection === SwipeDirection.Horizontal) {
-                                    this._matchingDirectionCount++;
+                                if (this.swipeDirection === SwipeDirection.Horizontal) {
+                                    this.matchingDirectionCount++;
                                 }
                                 else {
-                                    this._matchingDirectionCount = 1;
-                                    this._swipeDirection = SwipeDirection.Horizontal;
+                                    this.matchingDirectionCount = 1;
+                                    this.swipeDirection = SwipeDirection.Horizontal;
                                 }
                             }
                             else {
@@ -363,21 +364,21 @@ module powerbi.visuals.controls.TouchUtils {
                                 if (angle < 20) {
                                     dx = 0;
 
-                                    if (this._swipeDirection === SwipeDirection.Vertical) {
-                                        this._matchingDirectionCount++;
+                                    if (this.swipeDirection === SwipeDirection.Vertical) {
+                                        this.matchingDirectionCount++;
                                     }
                                     else {
-                                        this._matchingDirectionCount = 1;
-                                        this._swipeDirection = SwipeDirection.Vertical;
+                                        this.matchingDirectionCount = 1;
+                                        this.swipeDirection = SwipeDirection.Vertical;
                                     }
                                 }
                                 else {
-                                    if (this._swipeDirection === SwipeDirection.FreeForm) {
-                                        this._matchingDirectionCount++;
+                                    if (this.swipeDirection === SwipeDirection.FreeForm) {
+                                        this.matchingDirectionCount++;
                                     }
                                     else {
-                                        this._swipeDirection = SwipeDirection.FreeForm;
-                                        this._matchingDirectionCount = 1;
+                                        this.swipeDirection = SwipeDirection.FreeForm;
+                                        this.matchingDirectionCount = 1;
                                     }
                                 }
                             }
@@ -388,8 +389,8 @@ module powerbi.visuals.controls.TouchUtils {
                 else {
                     dx = 0;
                     dy = 0;
-                    this._swipeDirection = SwipeDirection.FreeForm;
-                    this._matchingDirectionCount = 0;
+                    this.swipeDirection = SwipeDirection.FreeForm;
+                    this.matchingDirectionCount = 0;
                 }
 
                 list[i].lastPoint = new TouchEvent(x, y, e.isMouseDown, dx, dy);
@@ -407,10 +408,10 @@ module powerbi.visuals.controls.TouchUtils {
             let list: ITouchHandlerSet[] = [];
             let length: number;
 
-            length = this._touchList.length;
+            length = this.touchList.length;
             for (let i = 0; i < length; i++) {
-                if (this._touchList[i].region.contains(new Point(e.x, e.y))) {
-                    list = list.concat([this._touchList[i]]);
+                if (this.touchList[i].region.contains(new Point(e.x, e.y))) {
+                    list = list.concat([this.touchList[i]]);
                 }
             }
 
@@ -424,10 +425,10 @@ module powerbi.visuals.controls.TouchUtils {
             let list: ITouchHandlerSet[] = [];
             let length: number;
 
-            length = this._touchList.length;
+            length = this.touchList.length;
             for (let i = 0; i < length; i++) {
-                if (this._touchList[i].lastPoint.isMouseDown) {
-                    list = list.concat([this._touchList[i]]);
+                if (this.touchList[i].lastPoint.isMouseDown) {
+                    list = list.concat([this.touchList[i]]);
                 }
             }
 
@@ -445,52 +446,52 @@ module powerbi.visuals.controls.TouchUtils {
         /**
          * HTML element that touch events are drawn from.
          */
-        private _touchPanel: HTMLElement;
+        private touchPanel: HTMLElement;
         
         /**
          * Boolean enabling mouse drag.
          */
-        private _allowMouseDrag: boolean;
+        private allowMouseDrag: boolean;
         
         /**
          * Touch events are interpreted and passed on this manager.
          */
-        private _manager: TouchManager;
+        private manager: TouchManager;
         
         /**
          * @see TablixLayoutManager. 
          */
-        private _scale: number;
+        private scale: number;
         
         /**
          * Used for mouse location when a secondary div is used along side the primary with this one being the primary.
          */
-        private _touchReferencePoint: HTMLElement;
+        private touchReferencePoint: HTMLElement;
         
         /** 
          * Rectangle containing the targeted Div.
          */
-        private _rect: ClientRect;
+        private rect: ClientRect;
 
-        private _documentMouseMoveWrapper: any;
-        private _documentMouseUpWrapper: any;
+        private documentMouseMoveWrapper: any;
+        private documentMouseUpWrapper: any;
 
         constructor(manager: TouchManager) {
-            this._manager = manager;
-            this._allowMouseDrag = true;
-            this._touchPanel = null;
-            this._scale = 1;
-            this._documentMouseMoveWrapper = null;
-            this._documentMouseUpWrapper = null;
+            this.manager = manager;
+            this.allowMouseDrag = true;
+            this.touchPanel = null;
+            this.scale = 1;
+            this.documentMouseMoveWrapper = null;
+            this.documentMouseUpWrapper = null;
         }
 
         public initTouch(panel: HTMLElement, touchReferencePoint?: HTMLElement, allowMouseDrag?: boolean): void {
             panel.style.setProperty("-ms-touch-action", "pinch-zoom");
 
-            this._touchReferencePoint = touchReferencePoint;
+            this.touchReferencePoint = touchReferencePoint;
 
-            this._touchPanel = panel;
-            this._allowMouseDrag = allowMouseDrag === undefined ? true : allowMouseDrag;
+            this.touchPanel = panel;
+            this.allowMouseDrag = allowMouseDrag === undefined ? true : allowMouseDrag;
             if ("ontouchmove" in panel) {
                 panel.addEventListener("touchstart", e => this.onTouchStart(e));
                 panel.addEventListener("touchend", e => this.onTouchEnd(e));
@@ -503,7 +504,7 @@ module powerbi.visuals.controls.TouchUtils {
         }
 
         private getXYByClient(event: MouseEvent): Point {
-            let rect: any = this._rect;
+            let rect: any = this.rect;
             let x: number = rect.left;
             let y: number = rect.top;
 
@@ -541,28 +542,28 @@ module powerbi.visuals.controls.TouchUtils {
         }
 
         public onTouchMouseDown(e: MouseEvent): void {
-            this._scale = HTMLElementUtils.getAccumulatedScale(this._touchPanel);
+            this.scale = HTMLElementUtils.getAccumulatedScale(this.touchPanel);
 
             //any prior touch scrolling that produced a selection outside Tablix will prevent the next touch scroll (1262519)
             document.getSelection().removeAllRanges();
 
-            this._rect = (this._touchReferencePoint ? this._touchReferencePoint : this._touchPanel).getBoundingClientRect();
+            this.rect = (this.touchReferencePoint ? this.touchReferencePoint : this.touchPanel).getBoundingClientRect();
 
-            if ("ontouchmove" in this._touchPanel) {
-                this._documentMouseMoveWrapper = e => this.onTouchMove(e);
-                document.addEventListener("touchmove", this._documentMouseMoveWrapper);
-                this._documentMouseUpWrapper = e => this.onTouchEnd(e);
-                document.addEventListener("touchend", this._documentMouseUpWrapper);
+            if ("ontouchmove" in this.touchPanel) {
+                this.documentMouseMoveWrapper = e => this.onTouchMove(e);
+                document.addEventListener("touchmove", this.documentMouseMoveWrapper);
+                this.documentMouseUpWrapper = e => this.onTouchEnd(e);
+                document.addEventListener("touchend", this.documentMouseUpWrapper);
             }
             else {
-                this._documentMouseMoveWrapper = e => this.onTouchMouseMove(e);
-                document.addEventListener("mousemove", this._documentMouseMoveWrapper);
-                this._documentMouseUpWrapper = e => this.onTouchMouseUp(e);
-                document.addEventListener("mouseup", this._documentMouseUpWrapper);
+                this.documentMouseMoveWrapper = e => this.onTouchMouseMove(e);
+                document.addEventListener("mousemove", this.documentMouseMoveWrapper);
+                this.documentMouseUpWrapper = e => this.onTouchMouseUp(e);
+                document.addEventListener("mouseup", this.documentMouseUpWrapper);
             }
 
-            if ("setCapture" in this._touchPanel) {
-                this._touchPanel.setCapture();
+            if ("setCapture" in this.touchPanel) {
+                this.touchPanel.setCapture();
             }
         }
         
@@ -570,16 +571,16 @@ module powerbi.visuals.controls.TouchUtils {
             let event: TouchEvent;
             let point: Point;
 
-            let validMouseDragEvent: boolean = (this._rect !== null) && (e.which !== MouseButton.NoClick);
+            let validMouseDragEvent: boolean = (this.rect !== null) && (e.which !== MouseButton.NoClick);
 
             // Ignore events that are not part of a drag event
             if (!validMouseDragEvent)
                 return;
 
             point = this.getXYByClient(e);
-            event = new TouchEvent(point.x / this._scale, point.y / this._scale, validMouseDragEvent);
+            event = new TouchEvent(point.x / this.scale, point.y / this.scale, validMouseDragEvent);
 
-            this._manager.touchEvent(event);
+            this.manager.touchEvent(event);
 
             if (e.preventDefault)
                 e.preventDefault();
@@ -588,28 +589,28 @@ module powerbi.visuals.controls.TouchUtils {
         }
 
         public onTouchMouseUp(e: MouseEvent, bubble?: boolean): void {
-            this._rect = null;
+            this.rect = null;
 
-            this._manager.upAllTouches();
+            this.manager.upAllTouches();
 
-            if ("releaseCapture" in this._touchPanel) {
-                this._touchPanel.releaseCapture();
+            if ("releaseCapture" in this.touchPanel) {
+                this.touchPanel.releaseCapture();
             }
 
-            if (this._documentMouseMoveWrapper === null)
+            if (this.documentMouseMoveWrapper === null)
                 return;
 
-            if ("ontouchmove" in this._touchPanel) {
-                document.removeEventListener("touchmove", this._documentMouseMoveWrapper);
-                document.removeEventListener("touchend", this._documentMouseUpWrapper);
+            if ("ontouchmove" in this.touchPanel) {
+                document.removeEventListener("touchmove", this.documentMouseMoveWrapper);
+                document.removeEventListener("touchend", this.documentMouseUpWrapper);
             }
             else {
-                document.removeEventListener("mousemove", this._documentMouseMoveWrapper);
-                document.removeEventListener("mouseup", this._documentMouseUpWrapper);
+                document.removeEventListener("mousemove", this.documentMouseMoveWrapper);
+                document.removeEventListener("mouseup", this.documentMouseUpWrapper);
             }
 
-            this._documentMouseMoveWrapper = null;
-            this._documentMouseUpWrapper = null;
+            this.documentMouseMoveWrapper = null;
+            this.documentMouseUpWrapper = null;
         }
     }
 }

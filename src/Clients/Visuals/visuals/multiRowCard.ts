@@ -30,6 +30,15 @@ module powerbi.visuals {
     import getKpiImageMetadata = powerbi.visuals.KpiUtil.getKpiImageMetadata;
     import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
     import createClassAndSelector = jsCommon.CssConstants.createClassAndSelector;
+    import PixelConverter = jsCommon.PixelConverter;
+
+    const TitleFontFamily = 'wf_segoe-ui_semibold';
+    const DefaultFontFamily = 'wf_segoe-ui_normal';
+    const DefaultCaptionFontSizeInPt = 10;
+    const DefaultTitleFontSizeInPt = 13;
+    const DefaultDetailFontSizeInPt = 9;
+    const DefaultTitleColor = '#767676';
+    const DefaultTextColor = '#333333';
 
     export interface CardItemData {
         caption: string;
@@ -38,6 +47,13 @@ module powerbi.visuals {
         showImage: boolean;
         showKPI: boolean;
         columnIndex: number;
+    }
+
+    export interface MultiRowCardData {
+        dataModel: CardData[];
+        cardTitleSettings: VisualDataLabelsSettings;
+        dataLabelsSettings: VisualDataLabelsSettings;
+        categoryLabelsSettings: VisualDataLabelsSettings;
     }
 
     export interface CardData {
@@ -67,8 +83,18 @@ module powerbi.visuals {
             paddingRight?: number;
             minWidth?: number;
         };
+        details?: {
+            fontSize?: number;
+            color?: string,
+            isVisible?: boolean;
+        };
         caption?: {
-            lineHeight?: number;
+            fontSize?: number;
+            color?: string,
+        };
+        title?: {
+            fontSize?: number;
+            color?: string,
         };
         imageCaption?: ImageStyle;
         imageTitle?: ImageStyle;
@@ -84,15 +110,14 @@ module powerbi.visuals {
         /**
          * This includes card height with margin that will be passed to list view.
          */
-        private settings: MultiRowCardStyle;
-        private dataModel: CardData[];
         private interactivity: InteractivityOptions;
         private isInteractivityOverflowHidden: boolean = false;
         private waitingForData: boolean;
         private cardHasTitle: boolean;
         private isSingleRowCard: boolean;
         private maxColPerRow: number;
-        
+        private data: MultiRowCardData;
+
         /**
          * Note: Public for testability.
          */
@@ -101,7 +126,7 @@ module powerbi.visuals {
             propertyName: 'formatString',
         };
 
-        private static multiRowCardClass = 'multiRowCard';
+        private static MultiRowCardRoot = createClassAndSelector('multiRowCard');
         private static Card: ClassAndSelector = createClassAndSelector('card');
         private static Title: ClassAndSelector = createClassAndSelector('title');
         private static CardItemContainer: ClassAndSelector = createClassAndSelector('cardItemContainer');
@@ -123,9 +148,6 @@ module powerbi.visuals {
             cardItemContainer: {
                 paddingRight: 20,
                 minWidth: 120,
-            },
-            caption: {
-                lineHeight: 20,
             },
             imageCaption: {
                 maxHeight: 75,
@@ -162,9 +184,6 @@ module powerbi.visuals {
                     cardItemContainer: {
                         minWidth: 130,
                     },
-                    caption: {
-                        lineHeight: 24,
-                    },
                     imageCaption: {
                         maxHeight: 52,
                     }
@@ -179,9 +198,6 @@ module powerbi.visuals {
                     cardItemContainer: {
                         minWidth: 120,
                     },
-                    caption: {
-                        lineHeight: 20,
-                    },
                     imageCaption: {
                         maxHeight: 53,
                     }
@@ -195,13 +211,12 @@ module powerbi.visuals {
             this.style = options.style;
             let viewport = this.currentViewport = options.viewport;
             let interactivity = this.interactivity = options.interactivity;
-
+            
             if (interactivity && interactivity.overflow === 'hidden')
                 this.isInteractivityOverflowHidden = true;
 
-            this.settings = $.extend(true, {}, MultiRowCard.DefaultStyle);
             let multiRowCardDiv = this.element = $('<div/>')
-                .addClass(MultiRowCard.multiRowCardClass)
+                .addClass(MultiRowCard.MultiRowCardRoot.class)
                 .css({
                     'height': getPixelString(viewport.height),
                 });
@@ -218,9 +233,9 @@ module powerbi.visuals {
                 let columnMetadata: DataViewMetadataColumn[] = dataView.table.columns;
                 let tableRows: any[][] = dataView.table.rows;
                 let resetScrollbarPosition = options.operationKind !== VisualDataChangeOperationKind.Append;
-                let dataModel = this.dataModel = MultiRowCard.converter(dataView, columnMetadata.length, tableRows.length, this.isInteractivityOverflowHidden);
+                let data = this.data = MultiRowCard.converter(dataView, columnMetadata.length, tableRows.length, this.isInteractivityOverflowHidden);
                 this.setCardDimensions();
-                this.listView.data(dataModel, (d: CardData) => dataModel.indexOf(d), resetScrollbarPosition);
+                this.listView.data(data.dataModel, (d: CardData) => data.dataModel.indexOf(d), resetScrollbarPosition);
             }
 
             this.waitingForData = false;
@@ -242,11 +257,29 @@ module powerbi.visuals {
             this.listView.viewport(viewport);
         }
 
-        public static converter(dataView: DataView, columnCount: number, maxCards: number, isDashboardVisual: boolean = false): CardData[] {
+        public static converter(dataView: DataView, columnCount: number, maxCards: number, isDashboardVisual: boolean = false): MultiRowCardData {
             let details: CardData[] = [];
             let tableDataRows = dataView.table.rows;
             let columnMetadata: DataViewMetadataColumn[] = dataView.table.columns;
-            
+            let cardTitleSettings: VisualDataLabelsSettings ,
+                dataLabelsSettings: VisualDataLabelsSettings,
+                categoryLabelsSettings: VisualDataLabelsSettings;
+
+            cardTitleSettings = dataLabelUtils.getDefaultLabelSettings(true, DefaultTitleColor, DefaultTitleFontSizeInPt);
+            dataLabelsSettings = dataLabelUtils.getDefaultLabelSettings(true, DefaultTextColor, DefaultCaptionFontSizeInPt);
+            categoryLabelsSettings = dataLabelUtils.getDefaultLabelSettings(true, DefaultTextColor, DefaultDetailFontSizeInPt);
+
+            if (dataView.metadata && dataView.metadata.objects) {
+                let cardTitleLabelObjects = <DataLabelObject>DataViewObjects.getObject(dataView.metadata.objects, 'cardTitle');
+                dataLabelUtils.updateLabelSettingsFromLabelsObject(cardTitleLabelObjects, cardTitleSettings);
+
+                let dataLabelObject = <DataLabelObject>DataViewObjects.getObject(dataView.metadata.objects, 'dataLabels');
+                dataLabelUtils.updateLabelSettingsFromLabelsObject(dataLabelObject, dataLabelsSettings);
+
+                let categoryLabelObject = <DataLabelObject>DataViewObjects.getObject(dataView.metadata.objects, 'categoryLabels');
+                dataLabelUtils.updateLabelSettingsFromLabelsObject(categoryLabelObject, categoryLabelsSettings);
+            }
+
             for (let i = 0, len = maxCards; i < len; i++) {
                 let row = tableDataRows[i];
                 let isValuePromoted: boolean = undefined;
@@ -306,7 +339,12 @@ module powerbi.visuals {
                     cardItemsData: isValuePromoted ? cardData.filter((d: CardItemData) => d.caption !== title) : cardData
                 });
             }
-            return details;
+            return {
+                dataModel: details,
+                cardTitleSettings: cardTitleSettings,
+                categoryLabelsSettings: categoryLabelsSettings,
+                dataLabelsSettings: dataLabelsSettings,
+            };
         }
 
         private initializeCardRowSelection() {
@@ -380,13 +418,30 @@ module powerbi.visuals {
             */
             let rowUpdate = (rowSelection: D3.Selection) => {
                 let style = this.getStyle();
+                let dataLabelHeight = TextMeasurementService.estimateSvgTextHeight(MultiRowCard.getTextProperties(false, style.caption.fontSize));
+                let categoryLabelHeight = TextMeasurementService.estimateSvgTextHeight(MultiRowCard.getTextProperties(false, style.details.fontSize));
+                let titleLabelHeight = TextMeasurementService.estimateSvgTextHeight(MultiRowCard.getTextProperties(true, style.title.fontSize));
+
                 if (!isDashboardVisual && this.cardHasTitle) {
-                    rowSelection.selectAll(MultiRowCard.Title.selector).filter((d: CardData) => !d.showTitleAsURL && !d.showTitleAsImage && !d.showTitleAsKPI).text((d: CardData) => d.title);
+                    rowSelection.selectAll(MultiRowCard.Title.selector)
+                        .filter((d: CardData) => !d.showTitleAsImage && !d.showTitleAsKPI)
+                        .style({
+                            'font-size': PixelConverter.fromPoint(style.title.fontSize),
+                            'line-height': PixelConverter.toString(titleLabelHeight),
+                            'color': style.title.color,
+                        });
+
+                    rowSelection.selectAll(MultiRowCard.Title.selector)
+                        .filter((d: CardData) => !d.showTitleAsURL && !d.showTitleAsImage && !d.showTitleAsKPI)
+                        .text((d: CardData) => d.title);
+
                     rowSelection
                         .selectAll(MultiRowCard.TitleUrlSelector)
-                        .attr('href', (d: CardData) => d.title)
-                        .attr('target', '_blank')
-                        .text((d: CardData) => d.title);
+                        .text((d: CardData) => d.title)
+                        .attr({
+                            'href': (d: CardData) => d.title,
+                            'target': '_blank',
+                        });
 
                     rowSelection
                         .selectAll(MultiRowCard.TitleImageSelector)
@@ -396,7 +451,7 @@ module powerbi.visuals {
                     rowSelection
                         .selectAll(MultiRowCard.KPITitle.selector)
                         .each(function (d: CardData) {
-                        let element = d3.select(this);
+                            let element = d3.select(this);
                             element.classed(d.title);
                         });
                 }
@@ -405,11 +460,14 @@ module powerbi.visuals {
 
                 cardSelection
                     .selectAll(MultiRowCard.Caption.selector)
-                    .filter((d: CardItemData) => !(d.showURL || d.showImage || d.showKPI))
-                    .text((d: CardItemData) => d.caption)
+                    .filter((d: CardItemData) => !(d.showImage || d.showKPI))
                     .style({
-                        'line-height': getPixelString(style.caption.lineHeight),
-                    });
+                        'line-height': PixelConverter.toString(dataLabelHeight),
+                        'font-size': PixelConverter.fromPoint(style.caption.fontSize),
+                        'color': style.caption.color,
+                    })
+                    .filter((d: CardItemData) => !d.showURL)
+                    .text((d: CardItemData) => d.caption);
 
                 cardSelection
                     .selectAll(MultiRowCard.CaptionImageSelector)
@@ -434,12 +492,22 @@ module powerbi.visuals {
 
                 cardSelection
                     .selectAll(MultiRowCard.CaptionUrlSelector)
-                    .attr('href', (d: CardItemData) => d.caption)
-                    .attr('target', '_blank')
+                    .attr({
+                        'href': (d: CardItemData) => d.caption,
+                        'target': '_blank',
+                    })
                     .text((d: CardItemData) => d.caption);
 
-                cardSelection
-                    .selectAll(MultiRowCard.Details.selector).text((d: CardItemData) => d.details);
+                if (style.details.isVisible) {
+                    cardSelection
+                        .selectAll(MultiRowCard.Details.selector)
+                        .text((d: CardItemData) => d.details)
+                        .style({
+                            'font-size': PixelConverter.fromPoint(style.details.fontSize),
+                            'line-height': PixelConverter.toString(categoryLabelHeight),
+                            'color': style.details.color
+                        });
+                }
 
                 cardSelection
                     .style('margin-bottom', isDashboardVisual ? '0px' : (this.isSingleRowCard ? '0px' : getPixelString(style.card.marginBottom)));
@@ -477,7 +545,7 @@ module powerbi.visuals {
         }
 
         private getStyle(): MultiRowCardStyle {
-            let defaultStyle = this.settings;
+            let defaultStyle = this.getOverridenStyle();
             if (!this.isInteractivityOverflowHidden)
                 return $.extend(true, {}, defaultStyle);
 
@@ -489,6 +557,38 @@ module powerbi.visuals {
                     break;
                 }
             return $.extend(true, {}, defaultStyle, overrideStyle);
+        }
+
+        private getOverridenStyle(): MultiRowCardStyle {
+            let defaultStyle = MultiRowCard.DefaultStyle;
+            let dataLabelsSettings = this.data.dataLabelsSettings;
+            let categoryLabelSettings = this.data.categoryLabelsSettings;
+            let titleLabelSettings = this.data.cardTitleSettings;
+
+            let overrideStyle: MultiRowCardStyle = {
+                caption: {
+                    fontSize: dataLabelsSettings.fontSize,
+                    color: dataLabelsSettings.labelColor,
+                },
+                title: {
+                    fontSize: titleLabelSettings.fontSize,
+                    color: titleLabelSettings.labelColor,
+                },
+                details: {
+                    fontSize: categoryLabelSettings.fontSize,
+                    color: categoryLabelSettings.labelColor,
+                    isVisible: categoryLabelSettings.show,
+                }
+            };
+
+            return $.extend(true, overrideStyle, defaultStyle);
+        }
+
+        private static getTextProperties(isTitle: boolean, fontSizeInPt: number): TextProperties {
+            return {
+                fontFamily: isTitle ? TitleFontFamily : DefaultFontFamily,
+                fontSize: PixelConverter.fromPoint(fontSizeInPt),
+            };
         }
 
         private hideColumn(fieldIndex: number): boolean {
@@ -539,7 +639,7 @@ module powerbi.visuals {
         private setCardDimensions(): void {
             this.cardHasTitle = false;
 
-            let dataModel = this.dataModel;
+            let dataModel = this.data.dataModel;
 
             if (!this.isInteractivityOverflowHidden && dataModel && dataModel.length > 0) {
                 this.cardHasTitle = dataModel[0].title !== undefined;
@@ -552,6 +652,39 @@ module powerbi.visuals {
                 this.options.host.loadMoreData();
                 this.waitingForData = true;
             }
+        }
+
+        private static getDataLabelSettingsOptions(enumeration: ObjectEnumerationBuilder, labelSettings: VisualDataLabelsSettings, show: boolean = false): VisualDataLabelsSettingsOptions {
+            return {
+                enumeration: enumeration,
+                dataLabelsSettings: labelSettings,
+                show: show,
+                fontSize: true,
+            };
+        }
+
+        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+            let enumeration = new ObjectEnumerationBuilder();
+
+            let cardTitleSettings = this.data.cardTitleSettings;
+            let dataLabelsSettings = this.data.dataLabelsSettings;
+            let categoryLabelsSettings = this.data.categoryLabelsSettings;
+
+            switch (options.objectName) {
+                case 'cardTitle':
+                    //display title options only if title visible
+                    if (!this.isInteractivityOverflowHidden && this.cardHasTitle)
+                        dataLabelUtils.enumerateDataLabels(MultiRowCard.getDataLabelSettingsOptions(enumeration, cardTitleSettings));
+                    break;
+                case 'dataLabels':
+                    dataLabelUtils.enumerateDataLabels(MultiRowCard.getDataLabelSettingsOptions(enumeration, dataLabelsSettings));
+                    break;
+                case 'categoryLabels':
+                    dataLabelUtils.enumerateDataLabels(MultiRowCard.getDataLabelSettingsOptions(enumeration, categoryLabelsSettings, true));
+                    break;
+            }
+
+            return enumeration.complete();
         }
     }
 

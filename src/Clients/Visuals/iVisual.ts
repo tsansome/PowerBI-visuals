@@ -357,6 +357,9 @@ module powerbi {
 
         /** Gets Geocoding Service. */
         geocoder(): IGeocoder;
+
+        /** Gets the locale string */
+        locale?(): string;
     }
 
     /** Animation options for visuals. */

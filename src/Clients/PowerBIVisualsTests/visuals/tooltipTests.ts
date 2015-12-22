@@ -173,6 +173,7 @@ module powerbitests {
             // Show tooltip
             let clickedArea = new powerbi.visuals.controls.TouchUtils.Rectangle(200, 200, 0, 0);
             TooltipManager.ToolTipInstance.show(tooltipInfo, clickedArea);
+            
             // Hide
             hideTooltip();
 
@@ -186,6 +187,7 @@ module powerbitests {
             // Show tooltip
             let clickedArea = new powerbi.visuals.controls.TouchUtils.Rectangle(200, 200, 0, 0);
             TooltipManager.ToolTipInstance.show(tooltipInfo, clickedArea);
+            
             // Hide
             hideTooltip();
 
@@ -194,6 +196,7 @@ module powerbitests {
         });
 
         it('DOM arrow exists', () => {
+            
             // Show tooltip
             let clickedArea = new powerbi.visuals.controls.TouchUtils.Rectangle(200, 200, 0, 0);
             TooltipManager.ToolTipInstance.show(tooltipInfo, clickedArea);
@@ -323,6 +326,7 @@ module powerbitests {
         }
 
         function emulateShowTooltip() {
+            
             // Fire mouseover event
             let evt: any = document.createEvent("MouseEvents");
             evt.initMouseEvent("mouseover", true, true, window, 1, 2, 2, 2, 2, false, false, false, false, 0, null);
@@ -330,6 +334,7 @@ module powerbitests {
         }
 
         function emulateTouchClick() {
+            
             // Simulate a touch event using 'touchstart' and 'touchend'
             let evt: any = document.createEvent("TouchEvent");
             evt.initEvent("touchstart", true, true);
@@ -354,6 +359,7 @@ module powerbitests {
 
         function createDomElement() {
             if (element) {
+                
                 // remove existing one
                 element.remove();
             }
@@ -384,6 +390,7 @@ module powerbitests {
         });
 
         it('should have header', () => {
+            
             // Show tooltip
             let clickedArea = new powerbi.visuals.controls.TouchUtils.Rectangle(200, 200, 0, 0);
             TooltipManager.ToolTipInstance.show(tooltipInfo, clickedArea);
@@ -395,6 +402,7 @@ module powerbitests {
         });
 
         it('should have dots with color', () => {
+            
             // Show tooltip
             let clickedArea = new powerbi.visuals.controls.TouchUtils.Rectangle(200, 200, 0, 0);
             TooltipManager.ToolTipInstance.show(tooltipInfo, clickedArea);
@@ -405,6 +413,7 @@ module powerbitests {
         });
 
         it('should have the right content', () => {
+            
             // Show tooltip
             let clickedArea = new powerbi.visuals.controls.TouchUtils.Rectangle(200, 200, 0, 0);
             TooltipManager.ToolTipInstance.show(tooltipInfo, clickedArea);

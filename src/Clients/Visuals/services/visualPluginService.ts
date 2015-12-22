@@ -34,6 +34,8 @@ module powerbi.visuals {
         removeAnyCustomVisuals(): void;
         requireSandbox(plugin: IVisualPlugin): boolean;
         isCustomVisual(visual: string): boolean;
+        // VSTS 6217994 - [R Viz] Remove temporary DataViewAnalysis validation workaround of static R Script Visual mappings
+        isScriptVisualQueryable(): boolean;
         shouldDisableVisual(type: string, mapDisabled: boolean): boolean;
     }
 
@@ -65,9 +67,20 @@ module powerbi.visuals {
         */
         scriptVisualEnabled?: boolean;
 
-        isLabelInteractivityEnabled?: boolean;
+        isLabelInteractivityEnabled?: boolean;        
 
-        stackedAreaEnabled?: boolean;
+        referenceLinesEnabled?: boolean;
+
+        sunburstVisualEnabled?: boolean;
+
+        matrixFormattingEnabled?: boolean;
+
+        filledMapDataLabelsEnabled?: boolean;
+
+        // Control the imageUpload feature, If it will be disable there will be no image slices on cards
+        backgroundImageEnabled?: boolean;
+
+        lineChartLabelDensityEnabled?: boolean;
     }
 
     export interface SmallViewPortProperties {
@@ -78,17 +91,19 @@ module powerbi.visuals {
 
     export module visualPluginFactory {
         export class VisualPluginService implements IVisualPluginService {
-            private _plugins: jsCommon.IStringDictionary<IVisualPlugin>;
+            private plugins: jsCommon.IStringDictionary<IVisualPlugin>;
+            protected featureSwitches: MinervaVisualFeatureSwitches;
 
-            public constructor() {
-                this._plugins = <any>powerbi.visuals.plugins;
+            public constructor(featureSwitches: MinervaVisualFeatureSwitches) {
+                this.plugins = <any>powerbi.visuals.plugins;
+                this.featureSwitches = featureSwitches;
             }
 
             /**
              * Gets metadata for all registered.
              */
             public getVisuals(): IVisualPlugin[] {
-                let registry = this._plugins,
+                let registry = this.plugins,
                     names: string[] = Object.keys(registry);
 
                 return names.map(name => registry[name]);
@@ -99,7 +114,7 @@ module powerbi.visuals {
                     return;
                 }
 
-                let plugin: IVisualPlugin = this._plugins[type];
+                let plugin: IVisualPlugin = this.plugins[type];
                 if (!plugin) {
                     return;
                 }
@@ -128,8 +143,8 @@ module powerbi.visuals {
             }
 
             public isCustomVisual(visual: string): boolean {
-                if (visual && this._plugins[visual]) {
-                    return this._plugins[visual].custom === true;
+                if (visual && this.plugins[visual]) {
+                    return this.plugins[visual].custom === true;
                 }
 
                 return false;
@@ -137,6 +152,11 @@ module powerbi.visuals {
 
             public shouldDisableVisual(type: string, mapDisabled: boolean): boolean {
                 return (type === plugins.map.name || type === plugins.filledMap.name) && mapDisabled;
+            }
+
+            public isScriptVisualQueryable(): boolean {
+                // Feature switch determines if Script visuals are query visuals - currently non-query in PBI site
+                return (this.featureSwitches !== undefined && this.featureSwitches.scriptVisualEnabled);
             }
         }
 
@@ -154,19 +174,146 @@ module powerbi.visuals {
             visualPlugins[base.name] = visualPlugin;
         }
 
+        function createDashboardPlugins(plugins: jsCommon.IStringDictionary<IVisualPlugin>, featureSwitches?: MinervaVisualFeatureSwitches) {
+            let tooltipsOnDashboard: boolean = true;
+            let lineChartLabelDensityEnabled: boolean = featureSwitches && featureSwitches.lineChartLabelDensityEnabled;
+            
+            // Bar Chart
+            createPlugin(plugins, powerbi.visuals.plugins.barChart, () => new CartesianChart({
+                chartType: CartesianChartType.StackedBar,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Clustered Bar Chart
+            createPlugin(plugins, powerbi.visuals.plugins.clusteredBarChart, () => new CartesianChart({
+                chartType: CartesianChartType.ClusteredBar,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Clustered Column Chart
+            createPlugin(plugins, powerbi.visuals.plugins.clusteredColumnChart, () => new CartesianChart({
+                chartType: CartesianChartType.ClusteredColumn,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Column Chart
+            createPlugin(plugins, powerbi.visuals.plugins.columnChart, () => new CartesianChart({
+                chartType: CartesianChartType.StackedColumn,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Data Dot Clustered Combo Chart
+            createPlugin(plugins, powerbi.visuals.plugins.dataDotClusteredColumnComboChart, () => new CartesianChart({
+                chartType: CartesianChartType.DataDotClusteredColumnCombo,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Data Dot Stacked Combo Chart
+            createPlugin(plugins, powerbi.visuals.plugins.dataDotStackedColumnComboChart, () => new CartesianChart({
+                chartType: CartesianChartType.DataDotStackedColumnCombo,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Donut Chart
+            createPlugin(plugins, powerbi.visuals.plugins.donutChart, () => new DonutChart({
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Funnel Chart
+            createPlugin(plugins, powerbi.visuals.plugins.funnel, () => new FunnelChart({
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Gauge
+            createPlugin(plugins, powerbi.visuals.plugins.gauge, () => new Gauge({
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Hundred Percent Stacked Bar Chart
+            createPlugin(plugins, powerbi.visuals.plugins.hundredPercentStackedBarChart, () => new CartesianChart({
+                chartType: CartesianChartType.HundredPercentStackedBar,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Hundred Percent Stacked Column Chart
+            createPlugin(plugins, powerbi.visuals.plugins.hundredPercentStackedColumnChart, () => new CartesianChart({
+                chartType: CartesianChartType.HundredPercentStackedColumn,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Line Chart
+            createPlugin(plugins, powerbi.visuals.plugins.lineChart, () => new CartesianChart({
+                chartType: CartesianChartType.Line,
+                tooltipsEnabled: tooltipsOnDashboard,
+                lineChartLabelDensityEnabled: lineChartLabelDensityEnabled,
+            }));
+            // Area Chart
+            createPlugin(plugins, powerbi.visuals.plugins.areaChart, () => new CartesianChart({
+                chartType: CartesianChartType.Area,
+                tooltipsEnabled: tooltipsOnDashboard,
+                lineChartLabelDensityEnabled: lineChartLabelDensityEnabled,
+            }));
+            // Stacked Area Chart
+            createPlugin(plugins, powerbi.visuals.plugins.stackedAreaChart, () => new CartesianChart({
+                chartType: CartesianChartType.StackedArea,
+                tooltipsEnabled: tooltipsOnDashboard,
+                lineChartLabelDensityEnabled: lineChartLabelDensityEnabled,
+            }));
+            // Line Clustered Combo Chart
+            createPlugin(plugins, powerbi.visuals.plugins.lineClusteredColumnComboChart, () => new CartesianChart({
+                chartType: CartesianChartType.LineClusteredColumnCombo,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Line Stacked Combo Chart
+            createPlugin(plugins, powerbi.visuals.plugins.lineStackedColumnComboChart, () => new CartesianChart({
+                chartType: CartesianChartType.LineStackedColumnCombo,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Pie Chart
+            createPlugin(plugins, powerbi.visuals.plugins.pieChart, () => new DonutChart({
+                sliceWidthRatio: 0,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Scatter Chart
+            createPlugin(plugins, enablePivot(powerbi.visuals.plugins.scatterChart), () => new CartesianChart({
+                chartType: CartesianChartType.Scatter,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Treemap
+            createPlugin(plugins, powerbi.visuals.plugins.treemap, () => new Treemap({
+                isScrollable: false,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Waterfall Chart
+            createPlugin(plugins, powerbi.visuals.plugins.waterfallChart, () => new CartesianChart({
+                chartType: CartesianChartType.Waterfall,
+                tooltipsEnabled: tooltipsOnDashboard,
+            }));
+            // Map
+            createPlugin(plugins, powerbi.visuals.plugins.map, () => new Map({
+                tooltipsEnabled: tooltipsOnDashboard,
+                disableZooming: true,
+                disablePanning: true,
+            }));
+            // Filled Map
+            createPlugin(plugins, powerbi.visuals.plugins.filledMap, () => new Map({
+                filledMap: true,
+                tooltipsEnabled: tooltipsOnDashboard,
+                disableZooming: true,
+                disablePanning: true,
+            }));
+        }
+
         function createMinervaPlugins(plugins: jsCommon.IStringDictionary<IVisualPlugin>, featureSwitches?: MinervaVisualFeatureSwitches) {
             let categoricalPivotEnabled: boolean = featureSwitches ? featureSwitches.categoricalPivotEnabled : false;
             let seriesLabelFormattingEnabled: boolean = featureSwitches ? featureSwitches.seriesLabelFormattingEnabled : false;
             let scriptVisualEnabled: boolean = featureSwitches ? featureSwitches.scriptVisualEnabled : false;
             let isLabelInteractivityEnabled: boolean = featureSwitches ? featureSwitches.isLabelInteractivityEnabled : false;
+            let formattingPropertiesEnabled = featureSwitches ? featureSwitches.matrixFormattingEnabled : false;
+            let fillMapDataLabelsEnabled: boolean = featureSwitches ? featureSwitches.filledMapDataLabelsEnabled : false;
+            let referenceLinesEnabled: boolean = featureSwitches ? featureSwitches.referenceLinesEnabled : false;
+            let backgroundImageEnabled: boolean = featureSwitches ? featureSwitches.backgroundImageEnabled : false;
+            let lineChartLabelDensityEnabled: boolean = featureSwitches ? featureSwitches.lineChartLabelDensityEnabled : false;
 
             // Bar Chart
             createPlugin(plugins, powerbi.visuals.plugins.barChart, () => new CartesianChart({
                 chartType: CartesianChartType.StackedBar,
                 isScrollable: true, animator: new WebColumnChartAnimator(),
+                tooltipsEnabled: true,
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                backgroundImageEnabled: backgroundImageEnabled,
             }));
             // Card
             createPlugin(plugins, powerbi.visuals.plugins.card, () => new Card({
@@ -177,33 +324,43 @@ module powerbi.visuals {
             createPlugin(plugins, powerbi.visuals.plugins.clusteredBarChart, () => new CartesianChart({
                 chartType: CartesianChartType.ClusteredBar,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                backgroundImageEnabled: backgroundImageEnabled,
             }));
             // Clustered Column Chart
             createPlugin(plugins, powerbi.visuals.plugins.clusteredColumnChart, () => new CartesianChart({
                 chartType: CartesianChartType.ClusteredColumn,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                backgroundImageEnabled: backgroundImageEnabled,
             }));
             // Column Chart
             createPlugin(plugins, powerbi.visuals.plugins.columnChart, () => new CartesianChart({
                 chartType: CartesianChartType.StackedColumn,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                backgroundImageEnabled: backgroundImageEnabled,
             }));
             // Data Dot Clustered Combo Chart
             createPlugin(plugins, powerbi.visuals.plugins.dataDotClusteredColumnComboChart, () => new CartesianChart({
                 chartType: CartesianChartType.DataDotClusteredColumnCombo,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior(), new DataDotChartWebBehavior()]),
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
@@ -212,6 +369,7 @@ module powerbi.visuals {
             createPlugin(plugins, powerbi.visuals.plugins.dataDotStackedColumnComboChart, () => new CartesianChart({
                 chartType: CartesianChartType.DataDotStackedColumnCombo,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior(), new DataDotChartWebBehavior()]),
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
@@ -220,65 +378,84 @@ module powerbi.visuals {
             createPlugin(plugins, powerbi.visuals.plugins.donutChart, () => new DonutChart({
                 animator: new WebDonutChartAnimator(),
                 isScrollable: true,
+                tooltipsEnabled: true,
                 behavior: new DonutChartWebBehavior(),
             }));
             // Funnel Chart
             createPlugin(plugins, powerbi.visuals.plugins.funnel, () => new FunnelChart({
                 animator: new WebFunnelAnimator(),
                 behavior: new FunnelWebBehavior(),
+                tooltipsEnabled: true,
             }));
             // Gauge
             createPlugin(plugins, powerbi.visuals.plugins.gauge, () => new Gauge({
                 animator: new BaseAnimator(),
+                tooltipsEnabled: true,
             }));
             // Hundred Percent Stacked Bar Chart
             createPlugin(plugins, powerbi.visuals.plugins.hundredPercentStackedBarChart, () => new CartesianChart({
                 chartType: CartesianChartType.HundredPercentStackedBar,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                backgroundImageEnabled: backgroundImageEnabled,
             }));
             // Hundred Percent Stacked Column Chart
             createPlugin(plugins, powerbi.visuals.plugins.hundredPercentStackedColumnChart, () => new CartesianChart({
                 chartType: CartesianChartType.HundredPercentStackedColumn,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                backgroundImageEnabled: backgroundImageEnabled,
             }));
             // Line Chart
             createPlugin(plugins, powerbi.visuals.plugins.lineChart, () => new CartesianChart({
                 chartType: CartesianChartType.Line,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new BaseAnimator(),
                 behavior: new CartesianChartBehavior([new LineChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                backgroundImageEnabled: backgroundImageEnabled,
+                lineChartLabelDensityEnabled: lineChartLabelDensityEnabled,
             }));
             // Area Chart
             createPlugin(plugins, powerbi.visuals.plugins.areaChart, () => new CartesianChart({
                 chartType: CartesianChartType.Area,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new BaseAnimator(),
                 behavior: new CartesianChartBehavior([new LineChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                lineChartLabelDensityEnabled: lineChartLabelDensityEnabled,
             }));
             // Stacked Area Chart
             createPlugin(plugins, powerbi.visuals.plugins.stackedAreaChart, () => new CartesianChart({
                 chartType: CartesianChartType.StackedArea,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new BaseAnimator(),
                 behavior: new CartesianChartBehavior([new LineChartWebBehavior()]),
                 seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
+                lineChartLabelDensityEnabled: lineChartLabelDensityEnabled,
             }));
             // Line Clustered Combo Chart
             createPlugin(plugins, powerbi.visuals.plugins.lineClusteredColumnComboChart, () => new CartesianChart({
                 chartType: CartesianChartType.LineClusteredColumnCombo,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior(), new LineChartWebBehavior()]),
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
@@ -287,6 +464,7 @@ module powerbi.visuals {
             createPlugin(plugins, powerbi.visuals.plugins.lineStackedColumnComboChart, () => new CartesianChart({
                 chartType: CartesianChartType.LineStackedColumnCombo,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new WebColumnChartAnimator(),
                 behavior: new CartesianChartBehavior([new ColumnChartWebBehavior(), new LineChartWebBehavior()]),
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
@@ -296,42 +474,58 @@ module powerbi.visuals {
                 sliceWidthRatio: 0,
                 animator: new WebDonutChartAnimator(),
                 isScrollable: true,
+                tooltipsEnabled: true,
                 behavior: new DonutChartWebBehavior(),
             }));
             // Scatter Chart
             createPlugin(plugins, enablePivot(powerbi.visuals.plugins.scatterChart, categoricalPivotEnabled), () => new CartesianChart({
                 chartType: CartesianChartType.Scatter,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 animator: new BaseAnimator(),
                 behavior: new CartesianChartBehavior([new ScatterChartWebBehavior()]),
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
+                backgroundImageEnabled: backgroundImageEnabled,
             }));
             // Treemap
             createPlugin(plugins, powerbi.visuals.plugins.treemap, () => new Treemap({
                 animator: new WebTreemapAnimator,
                 isScrollable: true,
                 behavior: new TreemapWebBehavior(),
+                tooltipsEnabled: true,
             }));
             // Waterfall Chart
             createPlugin(plugins, powerbi.visuals.plugins.waterfallChart, () => new CartesianChart({
                 chartType: CartesianChartType.Waterfall,
                 isScrollable: true,
+                tooltipsEnabled: true,
                 behavior: new CartesianChartBehavior([new WaterfallChartWebBehavior()]),
                 isLabelInteractivityEnabled: isLabelInteractivityEnabled,
+                referenceLinesEnabled: referenceLinesEnabled,
             }));
             // Map
             createPlugin(plugins, powerbi.visuals.plugins.map, () => new Map({
                 behavior: new MapBehavior(),
+                tooltipsEnabled: true,
+                isLegendScrollable: true,
             }));
             // Filled Map
             createPlugin(plugins, powerbi.visuals.plugins.filledMap, () => new Map({
                 filledMap: true,
                 behavior: new MapBehavior,
+                tooltipsEnabled: true,
+                filledMapDataLabelsEnabled: fillMapDataLabelsEnabled,
+                isLegendScrollable: true,
             }));
             // Slicer
             createPlugin(plugins, powerbi.visuals.plugins.slicer, () => new Slicer({
                 behavior: new SlicerWebBehavior(),
             }));
+            // Matrix
+            createPlugin(plugins, powerbi.visuals.plugins.matrix, () => new Matrix(formattingPropertiesEnabled));
+            // Table
+            createPlugin(plugins, powerbi.visuals.plugins.table, () => new Table(formattingPropertiesEnabled));
             // Radar Chart
             createPlugin(plugins, powerbi.visuals.plugins.radarChart, () => new samples.RadarChart({
                 animator: new BaseAnimator()
@@ -348,13 +542,16 @@ module powerbi.visuals {
             createPlugin(plugins, powerbi.visuals.plugins.areaRangeChart, () => new samples.AreaRangeChart({
                 animator: new BaseAnimator()
             }));
-
+            // Tornado Chart
+            createPlugin(plugins, powerbi.visuals.plugins.tornadoChart, () => new samples.TornadoChart({
+                animator: new BaseAnimator()
+            }));
             if (scriptVisualEnabled) {
-            // Radar Chart
+                // R visual
                 createPlugin(
                     plugins,
                     powerbi.visuals.plugins.scriptVisual,
-                    () => new ScriptVisual());
+                    () => new ScriptVisual({ canRefresh: true }));
             }
         }
 
@@ -402,14 +599,12 @@ module powerbi.visuals {
         }
 
         export class MinervaVisualPluginService extends VisualPluginService {
-            private featureSwitches: MinervaVisualFeatureSwitches;
             private visualPlugins: jsCommon.IStringDictionary<IVisualPlugin>;
 
             public constructor(featureSwitches: MinervaVisualFeatureSwitches) {
-                super();
+                super(featureSwitches);
 
                 debug.assertValue(featureSwitches, 'featureSwitches');
-                this.featureSwitches = featureSwitches;
 
                 this.visualPlugins = {};
 
@@ -431,6 +626,7 @@ module powerbi.visuals {
                     powerbi.visuals.plugins.hundredPercentStackedColumnChart,
                     powerbi.visuals.plugins.lineChart,
                     powerbi.visuals.plugins.areaChart,
+                    powerbi.visuals.plugins.stackedAreaChart,
                     powerbi.visuals.plugins.lineStackedColumnComboChart,
                     powerbi.visuals.plugins.lineClusteredColumnComboChart,
                     powerbi.visuals.plugins.waterfallChart,
@@ -468,10 +664,10 @@ module powerbi.visuals {
                     convertibleVisualTypes.push(powerbi.visuals.plugins.dataDotClusteredColumnComboChart);
                     convertibleVisualTypes.push(powerbi.visuals.plugins.dataDotStackedColumnComboChart);
                 }
-
-                if (this.featureSwitches.stackedAreaEnabled) {
-                    convertibleVisualTypes.push(powerbi.visuals.plugins.stackedAreaChart);                    
-                }                
+                           
+                if (this.featureSwitches.sunburstVisualEnabled) {
+                    convertibleVisualTypes.push(powerbi.visuals.plugins.sunburst);
+                }
 
                 return convertibleVisualTypes;
             }
@@ -532,7 +728,7 @@ module powerbi.visuals {
             private visualPlugins: jsCommon.IStringDictionary<IVisualPlugin>;
 
             public constructor() {
-                super();
+                super(undefined);
 
                 this.visualPlugins = <any>powerbi.visuals.plugins;
 
@@ -571,18 +767,16 @@ module powerbi.visuals {
          * This plug-in service is used when displaying visuals on the dashboard.
          */
         export class DashboardPluginService extends VisualPluginService {
-            private featureSwitches: MinervaVisualFeatureSwitches;
             private visualPlugins: jsCommon.IStringDictionary<IVisualPlugin>;
 
             public constructor(featureSwitches: MinervaVisualFeatureSwitches) {
-                super();
+                super(featureSwitches);
 
                 debug.assertValue(featureSwitches, 'featureSwitches');
-                this.featureSwitches = featureSwitches;
 
                 this.visualPlugins = {};
 
-                // Although there are no plug-in modifications here, this service allows different parameters such as feature switches to be passed for dashboard visuals.
+                createDashboardPlugins(this.visualPlugins, this.featureSwitches);
             }
 
             public getPlugin(type: string): IVisualPlugin {
@@ -601,14 +795,12 @@ module powerbi.visuals {
 
         // This plug-in service is used when displaying visuals for insights.
         export class InsightsPluginService extends VisualPluginService {
-            private featureSwitches: MinervaVisualFeatureSwitches;
             private visualPlugins: jsCommon.IStringDictionary<IVisualPlugin>;
 
             public constructor(featureSwitches: MinervaVisualFeatureSwitches) {
-                super();
+                super(featureSwitches);
 
                 debug.assertValue(featureSwitches, 'featureSwitches');
-                this.featureSwitches = featureSwitches;
 
                 let seriesLabelFormattingEnabled: boolean = featureSwitches ? featureSwitches.seriesLabelFormattingEnabled : false;
                 this.visualPlugins = {};
@@ -617,7 +809,7 @@ module powerbi.visuals {
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.clusteredBarChart, () => new CartesianChart({
                     chartType: CartesianChartType.ClusteredBar,
                     animator: new WebColumnChartAnimator(),
-                    behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
+                    tooltipsEnabled: true,
                     seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 }));
 
@@ -625,21 +817,21 @@ module powerbi.visuals {
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.columnChart, () => new CartesianChart({
                     chartType: CartesianChartType.StackedColumn,
                     animator: new WebColumnChartAnimator(),
-                    behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
+                    tooltipsEnabled: true,
                     seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 }));
 
                 // Donut Chart
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.donutChart, () => new DonutChart({
                     animator: new WebDonutChartAnimator(),
-                    behavior: new DonutChartWebBehavior(),
+                    tooltipsEnabled: true,
                 }));
 
                 // Hundred Percent Stacked Bar Chart
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.hundredPercentStackedBarChart, () => new CartesianChart({
                     chartType: CartesianChartType.HundredPercentStackedBar,
                     animator: new WebColumnChartAnimator(),
-                    behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
+                    tooltipsEnabled: true,
                     seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 }));
 
@@ -647,7 +839,7 @@ module powerbi.visuals {
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.hundredPercentStackedColumnChart, () => new CartesianChart({
                     chartType: CartesianChartType.HundredPercentStackedColumn,
                     animator: new WebColumnChartAnimator(),
-                    behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
+                    tooltipsEnabled: true,
                     seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
                 }));
                 
@@ -655,28 +847,28 @@ module powerbi.visuals {
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineChart, () => new CartesianChart({
                     chartType: CartesianChartType.Line,
                     animator: new BaseAnimator(),
-                    behavior: new CartesianChartBehavior([new LineChartWebBehavior()])
+                    tooltipsEnabled: true,
                 }));
 
                 // Area Chart
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.areaChart, () => new CartesianChart({
                     chartType: CartesianChartType.Area,
                     animator: new BaseAnimator(),
-                    behavior: new CartesianChartBehavior([new LineChartWebBehavior()])
+                    tooltipsEnabled: true,
                 }));
 
                 // Pie Chart
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.pieChart, () => new DonutChart({
                     sliceWidthRatio: 0,
                     animator: new WebDonutChartAnimator(),
-                    behavior: new DonutChartWebBehavior(),
+                    tooltipsEnabled: true,
                 }));
 
                 // Scatter Chart
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.scatterChart, () => new CartesianChart({
                     chartType: CartesianChartType.Scatter,
                     animator: new BaseAnimator(),
-                    behavior: new CartesianChartBehavior([new ScatterChartWebBehavior()]),
+                    tooltipsEnabled: true,
                 }), undefined);
             }
 
@@ -703,7 +895,7 @@ module powerbi.visuals {
             public static MinHeightFunnelCategoryLabelsVisible = 80;
 
             public constructor(smallViewPortProperties?: SmallViewPortProperties) {
-                super();
+                super(undefined);
 
                 this.smallViewPortProperties = smallViewPortProperties || {
                     CartesianSmallViewPortProperties: {
@@ -732,7 +924,7 @@ module powerbi.visuals {
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineClusteredColumnComboChart, () => new CartesianChart({ chartType: CartesianChartType.LineClusteredColumnCombo, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineStackedColumnComboChart, () => new CartesianChart({ chartType: CartesianChartType.LineStackedColumnCombo, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.scatterChart, () => new CartesianChart({ chartType: CartesianChartType.Scatter, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties, behavior: new CartesianChartBehavior([new ScatterChartMobileBehavior()]) }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.gauge, () => new Gauge({ chartType: Gauge, gaugeSmallViewPortProperties: this.smallViewPortProperties.GaugeSmallViewPortProperties }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.gauge, () => new Gauge({ gaugeSmallViewPortProperties: this.smallViewPortProperties.GaugeSmallViewPortProperties }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.funnel, () => new FunnelChart({ animator: null, funnelSmallViewPortProperties: this.smallViewPortProperties.FunnelSmallViewPortProperties }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.donutChart, () => new DonutChart({ disableGeometricCulling: true }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.pieChart, () => new DonutChart({ sliceWidthRatio: 0, disableGeometricCulling: true }));
@@ -747,8 +939,13 @@ module powerbi.visuals {
             }
         }
 
+        // this function is called by tests
         export function create(): IVisualPluginService {
-            return new VisualPluginService();
+            return new VisualPluginService(undefined);
+        }
+
+        export function createVisualPluginService(featureSwitch: MinervaVisualFeatureSwitches): IVisualPluginService {
+            return new VisualPluginService(featureSwitch);
         }
 
         export function createMinerva(featureSwitches: MinervaVisualFeatureSwitches): IVisualPluginService {

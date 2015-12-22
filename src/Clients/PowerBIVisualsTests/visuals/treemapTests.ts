@@ -42,7 +42,6 @@ module powerbitests {
     import ValueType = powerbi.ValueType;
     import PrimitiveType = powerbi.PrimitiveType;
     import VisualObjectInstanceEnumerationObject = powerbi.VisualObjectInstanceEnumerationObject;
-    import PixelConverter = jsCommon.PixelConverter;
 
     const dataTypeNumber = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double);
     const dataTypeString = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Text);
@@ -425,6 +424,56 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
+        it("check default legend font size", (done) => {
+            let labelFontSize = powerbi.visuals.SVGLegend.DefaultFontSizeInPt;
+
+            let dataViewGradientMetadata: powerbi.DataViewMetadata = {
+                columns: [
+                    { displayName: 'col1' },
+                    { displayName: 'col2', isMeasure: true },
+                    { displayName: 'col3', isMeasure: true, roles: { 'Gradient': true } }
+                ],
+                objects: {
+                    legend:
+                    {
+                        titleText: 'my title text',
+                        show: true,
+                        showTitle: true,
+                    }
+                }
+            };
+
+            v.onDataChanged({
+                dataViews: [{
+                    metadata: dataViewGradientMetadata,
+                    categorical: {
+                        categories: [{
+                            source: dataViewGradientMetadata.columns[0],
+                            values: ['a', 'b', 'c'],
+                            identity: [mocks.dataViewScopeIdentity('a'), mocks.dataViewScopeIdentity('b'), mocks.dataViewScopeIdentity('c')],
+                            identityFields: [categoryColumnRef],
+                        }],
+                        values: DataViewTransform.createValueColumns([{
+                            source: dataViewGradientMetadata.columns[1],
+                            values: [5, 990, 5],
+                        }])
+                    }
+                }],
+            });
+
+            let legend = element.find('.legend');
+            let legendGroup = legend.find('#legendGroup');
+            let legendTitle = legendGroup.find('.legendTitle');
+            let legendText = legendGroup.find('.legendItem').find('.legendText');
+
+            setTimeout(() => {
+                helpers.assertFontSizeMatch(legendTitle.css('font-size'), labelFontSize);
+                helpers.assertFontSizeMatch(legendText.css('font-size'), labelFontSize);
+                
+                done();
+            }, DefaultWaitForRender);
+        });
+
         it("check color for legend title and legend items treemap chart", (done) => {
             let labelFontSize = 13;
 
@@ -469,8 +518,8 @@ module powerbitests {
             let legendText = legendGroup.find('.legendItem').find('.legendText');
 
             setTimeout(() => {
-                expect(Math.round(parseInt(legendTitle.css('font-size'), 10))).toBe(Math.round(parseInt(PixelConverter.fromPoint(labelFontSize), 10)));
-                expect(Math.round(parseInt(legendText.css('font-size'), 10))).toBe(Math.round(parseInt(PixelConverter.fromPoint(labelFontSize), 10)));
+                helpers.assertFontSizeMatch(legendTitle.css('font-size'), labelFontSize);
+                helpers.assertFontSizeMatch(legendText.css('font-size'), labelFontSize);
 
                 done();
             }, DefaultWaitForRender);
@@ -1990,6 +2039,7 @@ module powerbitests {
 
                 setTimeout(() => {
                     expect($('.legendItem')).toBeInDOM();
+                    
                     //change legend position
                     dataView.metadata.objects = { legend: { show: true } };
                     v.onDataChanged({
@@ -1998,6 +2048,7 @@ module powerbitests {
 
                     setTimeout(() => {
                         expect($('.legendItem')).toBeInDOM();
+                        
                         //change legend position
                         dataView.metadata.objects = { legend: { show: true, position: 'Right' } };
                         v.onDataChanged({
@@ -2431,6 +2482,7 @@ module powerbitests {
                         ]
                     });
                 (<any>$('.majorLabel')).first().d3Click(0, 0);
+                
                 // Select the first nested shape
                 (<any>$('.nodeGroup')).first().d3Click(0, 0);
                 expect(rootShape[0].style.fillOpacity).toBe(defaultOpacity);
@@ -2763,6 +2815,7 @@ module powerbitests {
                 v.onResizing({ width: 300, height: 300 });
 
                 setTimeout(() => {
+                    
                     // Select a major label
                     expect(rootShape[0].style.fillOpacity).toBe(defaultOpacity);
                     expect(shapes[0].style.fillOpacity).toBe(defaultOpacity);

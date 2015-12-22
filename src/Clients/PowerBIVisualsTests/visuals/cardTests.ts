@@ -188,6 +188,7 @@ module powerbitests {
 
             // Default values
             color = color ? color : Card.DefaultStyle.value.color;
+            
             // The default value for precision is undefined but in enumerateObject it is null
             precision = precision !== undefined ? precision : null;
             displayUnits = displayUnits ? displayUnits : defaultLabelSettings.displayUnits;
@@ -621,6 +622,7 @@ module powerbitests {
 
             setTimeout(() => {
                 expect($(".card .value")[0].textContent).toBe("10K");
+                
                 //display unit auto
                 cardBuilder.metadata = dataViewMetadata;
                 
@@ -659,6 +661,7 @@ module powerbitests {
             cardBuilder.onResizing(1000, 200);
 
             setTimeout(() => {
+                
                 // No word wrapping, category label should be cut
                 expect($('.card .label')[0].textContent).toContain('…');
                 expect($('.card .label tspan').length).toBe(0);
@@ -677,10 +680,10 @@ module powerbitests {
 
                 // Word wrapping is on, category label should be visible is several lines
                 let tspans = $('.card .label tspan');
-                expect(tspans.length).toBe(3);
-                expect(tspans[0].textContent).toBe('very very very');
-                expect(tspans[1].textContent).toBe('very long');
-                expect(tspans[2].textContent).toBe('category label');
+                
+                // To prevent this test from being fragile, we will only assert that there is more than 1
+                // tspan being created so the category label is split across several lines. 
+                expect(tspans.length).toBeGreaterThan(1);
                 done();
             }, DefaultWaitForRender);
         });
@@ -893,6 +896,7 @@ module powerbitests {
             cardBuilder.onDataChanged();
 
             setTimeout(() => {
+                
                 // Note: the exact text will be different depending on the environment in which the test is run, so we can"t do an exact match.
                 // Just check that the text is truncated with ellipses.
                 let labelText = $(".label").first().text();

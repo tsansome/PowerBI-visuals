@@ -50,6 +50,20 @@ module powerbitests {
 
             return options;
         };
+
+        export function buildInitOptions(element: JQuery, viewport: powerbi.IViewport, hostServices: powerbi.IVisualHostServices) {            
+            let options = {
+                element: $(element[0]),
+                host: hostServices,
+                style: powerbi.visuals.visualStyles.create(),
+                viewport: viewport,
+                animation: {
+                    transitionImmediate: true
+                },
+            };
+
+            return options;
+        }
     }
 
     describe("scriptVisual Tests", () => {
@@ -84,27 +98,18 @@ module powerbitests {
         describe('rendering', () => {
             let element: JQuery;
             let viewport: powerbi.IViewport;
-            let options: powerbi.VisualInitOptions;
             let scriptVisual: ScriptVisual;
 
             beforeEach(() => {
                 element = powerbitests.helpers.testDom('200', '300');
                 viewport = {
                     height: element.height(),
-                    width: element.width()
+                    width: element.width() 
                 };
-                options = {
-                    element: $(element[0]),
-                    host: mocks.createVisualHostServices(),
-                    style: powerbi.visuals.visualStyles.create(),
-                    viewport: viewport,
-                    animation: {
-                        transitionImmediate: true
-                    },
-                };
-
-                scriptVisual = new ScriptVisual();
-                scriptVisual.init(options);
+                let hostServices = mocks.createVisualHostServices();
+                let initOptions = ScriptVisualHelpers.buildInitOptions(element, viewport, hostServices);
+                scriptVisual = new ScriptVisual({ canRefresh: true });
+                scriptVisual.init(initOptions);
             });
 
             it('no visual configuration', () => {
@@ -144,6 +149,42 @@ module powerbitests {
                 expect(imageDiv.css('background-image')).toBe('url(data:image/svg+xml;base64,imageimageimage)');
                 expect(imageDiv.css('height')).toBe(viewport.height + 'px');
                 expect(imageDiv.css('width')).toBe(viewport.width + 'px');
+            });
+
+            it('visual with static image shows a warning', () => {
+                let warningSpy = jasmine.createSpy('setWarnings');
+                let hostServices = mocks.createVisualHostServices();
+                hostServices.setWarnings = warningSpy;
+
+                scriptVisual = new ScriptVisual({ canRefresh: false });
+                let visualInitOptions = ScriptVisualHelpers.buildInitOptions(element, viewport, hostServices);
+                scriptVisual.init(visualInitOptions);
+
+                let visualUpdateOptions = ScriptVisualHelpers.buildUpdateOptions(viewport, {
+                    lastSavedImage: { imageUrl: 'data:image/svg+xml;base64,datadatadata' }
+                }, 'imageimageimage');
+                scriptVisual.update(visualUpdateOptions);
+
+                expect(warningSpy).toHaveBeenCalled();
+                expect(warningSpy.calls.count()).toBe(1);
+                expect(warningSpy.calls.argsFor(0)[0][0].code).toBe('ScriptVisualNotRefreshed');
+            });
+
+            it('non-static visual should not show a warning', () => {
+                let warningSpy = jasmine.createSpy('setWarnings');
+                let hostServices = mocks.createVisualHostServices();
+                hostServices.setWarnings = warningSpy;
+
+                scriptVisual = new ScriptVisual({ canRefresh: true });
+                let visualInitOptions = ScriptVisualHelpers.buildInitOptions(element, viewport, hostServices);
+                scriptVisual.init(visualInitOptions);
+
+                let visualUpdateOptions = ScriptVisualHelpers.buildUpdateOptions(viewport, {
+                    lastSavedImage: { imageUrl: 'data:image/svg+xml;base64,datadatadata' }
+                }, 'imageimageimage');
+                scriptVisual.update(visualUpdateOptions);
+
+                expect(warningSpy).not.toHaveBeenCalled();
             });
         });
     });

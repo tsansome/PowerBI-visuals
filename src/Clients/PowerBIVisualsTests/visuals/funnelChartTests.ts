@@ -56,6 +56,7 @@ module powerbitests {
     import VisualBuilder = powerbitests.helpers.VisualBuilder;
     import Spy = jasmine.Spy;
     import VisualObjectInstanceEnumerationObject = powerbi.VisualObjectInstanceEnumerationObject;
+    import PixelConverter = jsCommon.PixelConverter;
 
     let minHeightFunnelCategoryLabelsVisible: number = visualPluginFactory.MobileVisualPluginService.MinHeightFunnelCategoryLabelsVisible;
     let categoryLabelsVisibleGreaterThanMinHeight: number = minHeightFunnelCategoryLabelsVisible + 1;
@@ -263,6 +264,7 @@ module powerbitests {
                 highlightsOverflow: false,
                 canShowDataLabels: true,
                 dataLabelsSettings: dataLabelUtils.getDefaultFunnelLabelSettings(),
+                percentBarLabelSettings: dataLabelUtils.getDefaultLabelSettings(true),
                 hasNegativeValues: false,
                 allValuesAreNegative: false,
             };
@@ -348,6 +350,7 @@ module powerbitests {
                 highlightsOverflow: false,
                 canShowDataLabels: true,
                 dataLabelsSettings: dataLabelUtils.getDefaultFunnelLabelSettings(),
+                percentBarLabelSettings: dataLabelUtils.getDefaultLabelSettings(true),
                 hasNegativeValues: false,
                 allValuesAreNegative: false,
             };
@@ -395,6 +398,7 @@ module powerbitests {
             //first tooltip is regular because highlighted value is 0
             expect(actualData.slices[0].tooltipInfo).toEqual([{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }, { displayName: "Percent of first", value: "100.00 %" }]);
             expect(actualData.slices[1].tooltipInfo).toEqual([{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }]);
+            
             //tooltips with highlighted value
             expect(actualData.slices[2].tooltipInfo).toEqual([{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "200" }, { displayName: powerbi.visuals.ToolTipComponent.localizationOptions.highlightedValueDisplayName, value: "140" }, { displayName: "Percent of first", value: "200.00 %" }, { displayName: "Percent of previous", value: "200.00 %" }]);
             expect(actualData.slices[3].tooltipInfo).toEqual([{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "200" }, { displayName: powerbi.visuals.ToolTipComponent.localizationOptions.highlightedValueDisplayName, value: "140" }]);
@@ -459,6 +463,7 @@ module powerbitests {
                 highlightsOverflow: false,
                 canShowDataLabels: true,
                 dataLabelsSettings: dataLabelUtils.getDefaultFunnelLabelSettings(),
+                percentBarLabelSettings: dataLabelUtils.getDefaultLabelSettings(true),
                 hasNegativeValues: false,
                 allValuesAreNegative: false,
             };
@@ -554,6 +559,7 @@ module powerbitests {
                 highlightsOverflow: false,
                 canShowDataLabels: true,
                 dataLabelsSettings: dataLabelUtils.getDefaultFunnelLabelSettings(),
+                percentBarLabelSettings: dataLabelUtils.getDefaultLabelSettings(true),
                 hasNegativeValues: false,
                 allValuesAreNegative: false,
             };
@@ -1345,6 +1351,7 @@ module powerbitests {
             
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
             setTimeout(() => {
+                
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -1714,6 +1721,94 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
+        it("Ensure percent bars hide when settings are off", (done) => {
+            let categoryValues: any[] = [
+                "John Domo",
+                "Delta Force",
+                "Bugs Bunny",
+                "Mickey Mouse",
+                "Donald Duck",
+                "VRM Jones"
+            ];
+
+            let percentBarOffMetadata: DataViewMetadata = powerbi.Prototype.inherit(dataViewMetadata);
+            percentBarOffMetadata.objects = { percentBarLabel: { show: false } };
+            
+            dataViewBuilder.setMetadata(percentBarOffMetadata);
+
+            dataViewBuilder.categoryBuilder()
+                .setSource(percentBarOffMetadata.columns[0])
+                .setValues(categoryValues)
+                .setIdentity(categoryValues.map((value: any) => {
+                    return mocks.dataViewScopeIdentity(value);
+                }))
+                .setIdentityFields([categoryColumnRef])
+                .buildCategory();
+
+            dataViewBuilder.valueColumnsBuilder()
+                .newValueBuilder()
+                .setSource(percentBarOffMetadata.columns[1])
+                .setValues([50, 200, 300, 400, 500, 600])
+                .setSubtotal(2000)
+                .buildNewValue()
+                .buildValueColumns();
+
+            let dataView: DataView = dataViewBuilder.build();
+
+            visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
+            setTimeout(() => {
+                FunnelChartHelpers.validatePercentBars(false, dataView);
+                expect($(".funnelChart g").length).toBe(10);
+                expect($(".funnelChart .axis").find("text").length).toBe(6);
+                expect($(".funnelChart .labels text").length).toBe(6);
+
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it("Ensure percent bars font size", (done) => {
+            let fontSize = 15;
+            let categoryValues: any[] = [
+                "John Domo",
+                "Delta Force",
+                "Bugs Bunny",
+                "Mickey Mouse",
+                "Donald Duck",
+                "VRM Jones"
+            ];
+
+            let percentBarOnMetadata: DataViewMetadata = powerbi.Prototype.inherit(dataViewMetadata);
+            percentBarOnMetadata.objects = { percentBarLabel: { show: true, fontSize: fontSize  } };
+
+            dataViewBuilder.setMetadata(percentBarOnMetadata);
+
+            dataViewBuilder.categoryBuilder()
+                .setSource(percentBarOnMetadata.columns[0])
+                .setValues(categoryValues)
+                .setIdentity(categoryValues.map((value: any) => {
+                    return mocks.dataViewScopeIdentity(value);
+                }))
+                .setIdentityFields([categoryColumnRef])
+                .buildCategory();
+
+            dataViewBuilder.valueColumnsBuilder()
+                .newValueBuilder()
+                .setSource(percentBarOnMetadata.columns[1])
+                .setValues([50, 200, 300, 400, 500, 600])
+                .setSubtotal(2000)
+                .buildNewValue()
+                .buildValueColumns();
+
+            let dataView: DataView = dataViewBuilder.build();
+
+            visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
+            setTimeout(() => {
+                FunnelChartHelpers.validatePercentBars(true, dataView, fontSize);
+
+                done();
+            }, DefaultWaitForRender);
+        });
+
         it("Default labels validation", (done) => {
             let metadataWithDisplayUnits: DataViewMetadata = $.extend(true, {}, dataViewMetadata);
             metadataWithDisplayUnits.objects = { labels: { labelDisplayUnits: 1000 } };
@@ -1749,6 +1844,7 @@ module powerbitests {
             
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
             setTimeout(() => {
+                
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -1851,6 +1947,7 @@ module powerbitests {
             
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
             setTimeout(() => {
+                
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -1859,8 +1956,10 @@ module powerbitests {
                 expect(labels.length).toBe(3);
                 expect($(labels[2]).text()).toEqual("$0K");
                 helpers.assertColorsMatch($(labels[0]).css("fill"), defaultInsideLabelColor);
+                
                 //last value is 0, should be default color 
                 helpers.assertColorsMatch($(labels[2]).css("fill"), labelColor);
+                
                 // Check that all labels are centering 
                 expect($(labels[2]).attr("x")).toEqual($(labels[0]).attr("x"));
                 expect($(labels[2]).attr("x")).toEqual($(labels[1]).attr("x"));
@@ -1899,6 +1998,7 @@ module powerbitests {
             
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
             setTimeout(() => {
+                
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -1916,6 +2016,7 @@ module powerbitests {
                 // The third label should be the same as the fill color and should be outside the bar.
                 let thirdBarY: number = +$(".funnelChart").find(".funnelBar").eq(2).attr("y");
                 let thirdBarHeight: number = +$(".funnelChart").find(".funnelBar").eq(2).attr("height");
+                
                 //Data labels precision = 0
                 expect($(labels[2]).text()).toEqual("$0K");
                 helpers.assertColorsMatch($(labels[2]).css("fill"), labelColor);
@@ -1968,6 +2069,7 @@ module powerbitests {
                 helpers.assertColorsMatch($(labels[0]).css("fill"), defaultInsideLabelColor);
                 helpers.assertColorsMatch($(labels[1]).css("fill"), defaultInsideLabelColor);
                 helpers.assertColorsMatch($(labels[2]).css("fill"), defaultInsideLabelColor);
+                
                 //Check that the labels position is inside
                 expect($(labels[0]).attr("x")).toBeGreaterThan(firstBarTranslated);
                 expect($(labels[0]).attr("x")).toBeLessThan(firstBar);
@@ -2016,9 +2118,11 @@ module powerbitests {
             setTimeout(() => {
                 let labels: JQuery = $(".funnelChart .labels text");
                 expect(labels.length).toBe(3);
+                
                 //inside labels are white
                 helpers.assertColorsMatch($(labels[0]).css("fill"), defaultInsideLabelColor);
                 helpers.assertColorsMatch($(labels[1]).css("fill"), defaultInsideLabelColor);
+                
                 //outside labels are changed
                 helpers.assertColorsMatch($(labels[2]).css("fill"), color);
                 done();
@@ -2358,6 +2462,7 @@ module powerbitests {
             dataView.categorical.values[0].source["objects"]["general"]["formatString"] = "$0.00";
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
             setTimeout(() => {
+                
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -3231,13 +3336,16 @@ module powerbitests {
     export module FunnelChartHelpers {
         let PercentBarValueFormatRegex: RegExp = /^[0-9\,]+(\.[0-9]{1})?%$/gi;
 
-        function validatePercentValues(dataView: DataView): void {
+        function validatePercentValues(dataView: DataView, fontSize?: number): void {
             let values: any[] = dataView.categorical.values[0].values;
             let highlights: any[] = dataView.categorical.values[0].highlights;
             let hasHighlights: boolean = !!highlights;
             
-            let topPercent: string = $(FunnelChart.Selectors.percentBar.text.selector)[0].textContent;
-            let bottomPercent: string = $(FunnelChart.Selectors.percentBar.text.selector)[1].textContent;
+            let topElement = $(FunnelChart.Selectors.percentBar.text.selector).first();
+            let bottomElement = $(FunnelChart.Selectors.percentBar.text.selector).last();
+
+            let topPercent: string = topElement.text();
+            let bottomPercent: string = bottomElement.text();
 
             [topPercent, bottomPercent].map((percent: string) => {
                 let validFormat = !!percent.match(PercentBarValueFormatRegex);
@@ -3253,6 +3361,11 @@ module powerbitests {
 
                 expect(topPercent).toBe("100%");
                 expect(bottomPercent).toBe(bottomPercentText);
+
+                if (fontSize) {
+                    expect(topElement.css('font-size')).toBe(PixelConverter.fromPoint(fontSize));
+                    expect(bottomElement.css('font-size')).toBe(PixelConverter.fromPoint(fontSize));
+                }
             });
         }
 
@@ -3265,11 +3378,11 @@ module powerbitests {
             expect($(FunnelChart.Selectors.percentBar.text.selector).length).toBe(count);
         }
 
-        export function validatePercentBars(shown: boolean, dataView: DataView): void {
+        export function validatePercentBars(shown: boolean, dataView: DataView, fontSize?: number): void {
             validatePercentBarComponents(shown);
 
             if (shown) {
-                validatePercentValues(dataView);
+                validatePercentValues(dataView, fontSize);
             }
         }
 

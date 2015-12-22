@@ -46,14 +46,27 @@ module powerbi.visuals {
         imageFormat: string;
     }
     
+    export interface ScriptVisualOptions {
+        canRefresh: boolean;
+    }
+
     export class ScriptVisual implements IVisual {
         private element: JQuery;
         private imageBackgroundElement: JQuery;
         private hostServices: IVisualHostServices;
+        private canRefresh: boolean;
+
+        public constructor(options: ScriptVisualOptions) {
+            this.canRefresh = options.canRefresh;
+        }
 
         public init(options: VisualInitOptions): void {
             this.element = options.element;
             this.hostServices = options.host;
+
+            if (!this.canRefresh) {
+                this.hostServices.setWarnings([new ScriptVisualRefreshWarning()]);
+            }
         }
 
         public update(options: VisualUpdateOptions): void {

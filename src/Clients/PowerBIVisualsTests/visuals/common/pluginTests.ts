@@ -74,6 +74,7 @@ module powerbitests {
         }
 
         function setData(v: powerbi.IVisual, objectDescs: DataViewObjectDescriptors): void {
+            
             // full
             changeData(v, objectDescs, [{
                 metadata: dataViewMetadataTwoColumn,
@@ -220,7 +221,6 @@ module powerbitests {
                 if (visualPlugin.name !== "categoricalFilter" &&
                     visualPlugin.name !== "consoleWriter" && 
                     visualPlugin.name !== "streamGraph" &&
-                    visualPlugin.name !== "timeline" &&
                     visualPlugin.capabilities &&
                     visualPlugin.capabilities.dataViewMappings &&
                     visualPlugin.capabilities.dataViewMappings.length > 0 &&

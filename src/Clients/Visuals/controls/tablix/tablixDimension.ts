@@ -49,7 +49,7 @@ module powerbi.visuals.controls {
         constructor(tablixControl: TablixControl) {
             this._owner = tablixControl;
             this._hierarchyNavigator = tablixControl.hierarchyNavigator;
-            this._binder = tablixControl.binder;
+            this._binder = tablixControl.getBinder();
             this._tablixLayoutManager = tablixControl.layoutManager;
             this.scrollOffset = 0;
         }

@@ -64,6 +64,7 @@ module powerbitests {
         });
 
         it("getPivotedCategories empty categories", () => {
+            
             // Empty the categories array
             dataView.categories = [];
 
@@ -72,6 +73,7 @@ module powerbitests {
         });
 
         it("getPivotedCategories empty category values", () => {
+            
             // Empty the category values array
             dataView.categories[0].values = [];
 
@@ -81,6 +83,7 @@ module powerbitests {
         });
 
         function validateEmptyCategoryInfo(categoryInfo: powerbi.visuals.PivotedCategoryInfo): void {
+            
             // Note: Since the result includes a function property we can"t perform a toEqual directly on the result, so check each part individually.
             expect(categoryInfo.categories).toEqual([null]);
             expect(categoryInfo.categoryIdentities).toBeUndefined();

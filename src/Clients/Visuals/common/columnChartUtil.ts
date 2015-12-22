@@ -389,8 +389,8 @@ module powerbi.visuals {
             let valueDomainNorm = [normalizedRange.min, normalizedRange.max];
             let axisType = ValueType.fromDescriptor({ numeric: true });
 
-            let combinedDomain = AxisHelper.combineDomain(forcedYDomain, valueDomainNorm);  
-            let isLogScaleAllowed = AxisHelper.isLogScalePossible(combinedDomain, axisType);                                  
+            let combinedDomain = AxisHelper.combineDomain(forcedYDomain, valueDomainNorm);
+            let isLogScaleAllowed = AxisHelper.isLogScalePossible(combinedDomain, axisType);
             let useLogScale = axisScaleType && axisScaleType === axisScale.log && isLogScaleAllowed;
 
             let scale = useLogScale ? d3.scale.log() : d3.scale.linear();
@@ -425,7 +425,7 @@ module powerbi.visuals {
                 axisPrecision);
             d3Axis.tickFormat(yFormatter.format);
 
-            let values = yTickValues.map((d: ColumnChartDataPoint) => yFormatter.format(d));            
+            let values = yTickValues.map((d: ColumnChartDataPoint) => yFormatter.format(d));
 
             return {
                 axis: d3Axis,
@@ -444,7 +444,13 @@ module powerbi.visuals {
             // TODO: Passing 0 in createFormatter below is a temporary workaround. As long as we fix createFormatter
             // to pass scaleInterval parameter instead min and max, we can remove it.
             if (is100Pct)
-                return valueFormatter.create({ format: constants.percentFormat, value: interval, value2: /* temporary workaround */ 0, allowFormatBeautification: true, precision: axisPrecision });
+                return valueFormatter.create({
+                    format: constants.percentFormat,
+                    value: interval,
+                    value2: /* temporary workaround */ 0,
+                    allowFormatBeautification: true,
+                    precision: axisPrecision,
+                });
 
             // Default to apply formatting from the first measure.
             return valueFormatter.create({

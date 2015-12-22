@@ -88,11 +88,13 @@ module powerbi.visuals.capabilities {
 
     export let slicer = powerbi.visuals.slicerCapabilities;
 
-    export let textbox = powerbi.visuals.richTextboxCapabilities;
+    export let textbox = powerbi.visuals.textboxCapabilities;
 
     export let waterfallChart = powerbi.visuals.waterfallChartCapabilities;
 
     export let cheerMeter = powerbi.visuals.cheerMeterCapabilities;
+
+	export let sunburst = powerbi.visuals.sunburstCapabilities;
 
     export let scriptVisual = powerbi.visuals.scriptVisualCapabilities;
 }

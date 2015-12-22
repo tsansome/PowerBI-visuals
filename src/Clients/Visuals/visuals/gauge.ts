@@ -110,6 +110,7 @@ module powerbi.visuals {
     export interface GaugeConstructorOptions {
         gaugeSmallViewPortProperties?: GaugeSmallViewPortProperties;
         animator?: IGenericAnimator;
+        tooltipsEnabled?: boolean;
     }
 
     export interface GaugeDataViewObjects extends DataViewObjects {
@@ -209,6 +210,8 @@ module powerbi.visuals {
         private gaugeSmallViewPortProperties: GaugeSmallViewPortProperties;
         private showTargetLabel: boolean;
 
+        private tooltipsEnabled: boolean; 
+
         private hostService: IVisualHostServices;
 
         // TODO: Remove this once all visuals have implemented update.
@@ -222,6 +225,7 @@ module powerbi.visuals {
                     this.gaugeSmallViewPortProperties = options.gaugeSmallViewPortProperties;
                 }
                 this.animator = options.animator;
+                this.tooltipsEnabled = options.tooltipsEnabled;
             }
         }
 
@@ -831,8 +835,8 @@ module powerbi.visuals {
             this.appendTextAlongArc(ticks, radius, height, width, margin);
             this.updateVisualConfigurations();
             this.updateVisualStyles();
-
-            TooltipManager.addTooltip(this.foregroundArcPath, (tooltipEvent: TooltipEvent) => data.tooltipInfo);
+            if (this.tooltipsEnabled)
+                TooltipManager.addTooltip(this.foregroundArcPath, (tooltipEvent: TooltipEvent) => data.tooltipInfo);
         }
 
         private updateVisualStyles() {

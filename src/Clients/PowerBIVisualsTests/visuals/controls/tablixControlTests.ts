@@ -75,6 +75,7 @@ module powerbitests {
             gridPresenter["_owner"] = grid;
             grid["_owner"] = control;
             let layoutManager = control.layoutManager;
+            
             // Mock setting of property to false
             let columnLayoutManager = layoutManager.columnLayoutManager;
             layoutManager.onStartRenderingIteration(false);
@@ -102,7 +103,7 @@ module powerbitests {
             expect(gridSpy).toHaveBeenCalledWith(true);
         });
 
-        it('RowLayoutManager getRealizedItemsCount noItems',() => {
+        it('RowLayoutManager getRealizedItemsCount noItems', () => {
             let tableBinder = createMockBinder();
             let layoutManager = InternalControls.CanvasTablixLayoutManager.createLayoutManager(tableBinder, createMockColumnWidthManager());
             let rowLayoutManager = layoutManager.rowLayoutManager;
@@ -111,7 +112,7 @@ module powerbitests {
             expect(count).toBe(0);
         });
 
-        it('ColumnLayoutManager getRealizedItemsCount noItems',() => {
+        it('ColumnLayoutManager getRealizedItemsCount noItems', () => {
             let tableBinder = createMockBinder();
             let layoutManager = InternalControls.CanvasTablixLayoutManager.createLayoutManager(tableBinder, createMockColumnWidthManager());
             let columnLayoutManager = layoutManager.columnLayoutManager;
@@ -120,7 +121,7 @@ module powerbitests {
             expect(count).toBe(0);
         });
 
-        it('DimensionLayoutManager getRealizedItemsCount',() => {
+        it('DimensionLayoutManager getRealizedItemsCount', () => {
             let tableBinder = createMockBinder();
             let layoutManager = InternalControls.CanvasTablixLayoutManager.createLayoutManager(tableBinder, createMockColumnWidthManager());
             let rowLayoutManager = layoutManager.rowLayoutManager;
@@ -277,6 +278,8 @@ module powerbitests {
             unbindEmptySpaceHeaderCell: (cell: Controls.ITablixCell) => { },
             bindEmptySpaceFooterCell: (cell: Controls.ITablixCell) => { },
             unbindEmptySpaceFooterCell: (cell: Controls.ITablixCell) => { },
+            setTablixColumnSeparator: (cell: Controls.ITablixCell) => { },
+            setTablixRegionStyle: (cell: Controls.ITablixCell, fontColor: string, backgroundColor, outline: string, outlineWeight: number, outlineColor: string) => { },
             getHeaderLabel: (item: any): string => { return "label"; },
             getCellContent: (item: any): string => { return "label"; },
             hasRowGroups: () => true

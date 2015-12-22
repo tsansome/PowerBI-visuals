@@ -26,6 +26,7 @@
 
 // TODO: this file should be removed.
 module powerbi.data {
+    
     /** Represents a simplified table aggregate/column/column aggregate reference within a SQ. */
     export interface SQFieldDef {
         schema: string;

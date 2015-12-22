@@ -57,6 +57,7 @@ module powerbitests {
             storage.setData('key', 'value');
 
             setTimeout(() => {
+                
                 // cache should be cleared by now
                 let value = storage.getData('key');
                 expect(value == null).toBeTruthy();
