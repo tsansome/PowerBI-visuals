@@ -765,6 +765,9 @@ module powerbi.visuals {
                     startYPy += rowIncrementPx;
                 }
 
+                //need to reset for the +1 effect from the loop
+                startYPy -= rowIncrementPx;
+
                 tooltip.attr("y2", startYPy);
 
                 //we need to append scroll bars if it went past
@@ -773,7 +776,7 @@ module powerbi.visuals {
                     this.root.attr("height", startYPy + rowIncrementPx); //just add an extra rowIncrement as a buffer
                 } else {
                     $("#OpinionNodeContainer").css("overflow-y", "hidden");
-                }
+                }                
 
                 //our tool tip content and animations triggered
                 d3.selectAll(this.circleNodesCollectionD3).on("mouseover", function () {
@@ -801,6 +804,7 @@ module powerbi.visuals {
                     return tooltip.style("visibility", "hidden");
                 });
 
+                //now we need to do the click animation
                 var self = this;
                 d3.selectAll(this.rectNodesCollectionD3).on("click", function (d: StatementResponseV2) {
                     self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {                        
