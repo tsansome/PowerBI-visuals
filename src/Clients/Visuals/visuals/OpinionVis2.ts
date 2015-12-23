@@ -206,6 +206,11 @@ module powerbi.visuals {
                             description: "Specify the default color for the gap bar.",
                             type: { fill: { solid: { color: true } } },
                             displayName: "Default Color"
+                        },
+                        colorByCategory: {
+                            description: "Color the bars by each statement",
+                            type: { bool: true },
+                            displayName: "Color by Statement"
                         }
                     }
                 },
@@ -833,6 +838,7 @@ module powerbi.visuals {
 
         static statementDefaultFontSize = 11;
         static statementDefaultFontColor = "#777";
+        static statementColorByStatement = false;
 
         static gapBarDefaultColor = "rgb(1, 184, 170)";
         static gapLabelDefaultColorOnBar = "white";
@@ -848,8 +854,8 @@ module powerbi.visuals {
 
         static statementSortOrderDefault = "asc";
        
-        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] {
-            var instances: VisualObjectInstance[] = [];
+        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+            var enumeration = new ObjectEnumerationBuilder();
             var dV = this.dataView[0];
             switch (options.objectName) {
                 case 'statementproperties':
@@ -863,7 +869,7 @@ module powerbi.visuals {
                             defaultFontColor: this.GetPropertyColor(dV, objectname, "defaultFontColor", OpinionVis2.statementDefaultFontColor)
                         }
                     };
-                    instances.push(statementproperties);
+                    enumeration.pushInstance(statementproperties);
                     break;
                 case 'statementsortproperties':
                     var objectname = 'statementsortproperties';
@@ -875,7 +881,7 @@ module powerbi.visuals {
                             statementSortOrderDefault: this.GetProperty(dV, objectname, "statementSortOrderDefault", OpinionVis2.statementSortOrderDefault)
                         }
                     };
-                    instances.push(statementproperties);
+                    enumeration.pushInstance(statementproperties);
                     break;
                 case 'groupnodeproperties':
                     var objectname = 'groupnodeproperties';
@@ -887,7 +893,7 @@ module powerbi.visuals {
                             defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.groupNodeDefaultColor)
                         }
                     };
-                    instances.push(groupnodeproperties);
+                    enumeration.pushInstance(groupnodeproperties);
                     break;
                 case 'groupnodedatalabelproperties':
                     var objectname = 'groupnodedatalabelproperties';
@@ -901,7 +907,7 @@ module powerbi.visuals {
                             defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize)
                         }
                     };
-                    instances.push(gapbarproperties);
+                    enumeration.pushInstance(gapbarproperties);
                     break;
                 case 'gapbarproperties':
                     var objectname = 'gapbarproperties';
@@ -910,10 +916,23 @@ module powerbi.visuals {
                         displayName: 'Gap Bar',
                         selector: null,
                         properties: {
-                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.gapBarDefaultColor)
+                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.gapBarDefaultColor),
+                            colorByCategory: this.GetProperty(dV, objectname, "colorByCategory", OpinionVis2.statementColorByStatement)
                         }
                     };
-                    instances.push(gapbarproperties);
+                    enumeration.pushInstance(gapbarproperties);
+                    for (var i = 0; i < dV.categorical.categories[0].values.length; i++) {
+                        enumeration.pushInstance({
+                            objectName: objectname,
+                            selector: null,
+                            displayName: dV.categorical.categories[0].values[i],
+                            properties: {
+                                fill: {
+                                    solid: { color: this.colors.getColorByIndex(i).value }
+                                }
+                            },
+                        });
+                    }                    
                     break;
                 case 'gaplabelproperties':
                     var objectname = 'gaplabelproperties';
@@ -928,11 +947,11 @@ module powerbi.visuals {
                             defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize)
                         }
                     };
-                    instances.push(gaplabelproperties);
+                    enumeration.pushInstance(gaplabelproperties);
                     break;
             }
 
-            return instances;
+            return enumeration.complete();
         }
 
         private GetPropertyColor(dataView: DataView, groupPropertyValue: string, propertyValue: string, defaultValue: string) {
