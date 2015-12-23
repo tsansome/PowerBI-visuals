@@ -386,9 +386,13 @@ module powerbi.visuals.samples {
 
             data = histogramLayout.frequency(settings.frequency)(numericalValues);
 
-            data.forEach((bin: D3.Layout.Bin) => {
-                let filteredValues: HistogramValue[] = values.slice(shiftByValues, shiftByValues + bin.length),
+            data.forEach((bin: D3.Layout.Bin, index: number) => {
+                let filteredValues: HistogramValue[],
                     frequency: number;
+
+                filteredValues = values.filter((value: HistogramValue) => {
+                    return this.isValueContainedInRange(value, bin, index);
+                });
 
                 frequency = filteredValues.reduce((previousValue: number, currentValue: HistogramValue): number => {
                     return previousValue + currentValue.frequency;
@@ -419,7 +423,7 @@ module powerbi.visuals.samples {
                 format: ValueFormatter.getFormatString(
                     dataView.categorical.categories[0].source, Histogram.Properties["general"]["formatString"]),
                 value: values[0].value,
-                value2: values[values.length - 1],
+                value2: values[values.length - 1].value,
                 precision: settings.precision
             });
 
@@ -503,13 +507,16 @@ module powerbi.visuals.samples {
             let selectionIds: SelectionId[] = [];
 
             values.forEach((value: HistogramValue) => {
-                if (((index === 0 && value.value >= bin.x) || (value.value > bin.x)) &&
-                        value.value <= bin.x + bin.dx) {
+                if (this.isValueContainedInRange(value, bin, index)) {
                     selectionIds.push(value.selectionId);
                 }
             });
 
             return selectionIds;
+        }
+
+        private isValueContainedInRange(value: HistogramValue, bin: D3.Layout.Bin, index: number): boolean {
+            return ((index === 0 && value.value >= bin.x) || (value.value > bin.x)) && value.value <= bin.x + bin.dx;
         }
 
         private parseSettings(dataView: DataView): HistogramSettings {
@@ -672,6 +679,10 @@ module powerbi.visuals.samples {
 
             widthOfColumn = (this.viewport.width - this.AxisSize - this.LegendSize) / countOfValues - this.ColumnPadding;
 
+            if (widthOfColumn < 0) {
+                widthOfColumn = 0;
+            }
+
             columnsSelection = columnElements.data(data);
 
             columnsSelection
@@ -823,6 +834,8 @@ module powerbi.visuals.samples {
         }
 
         private bindSelectionHandler(columnsSelection: D3.UpdateSelection): void {
+            this.setSelection(columnsSelection);
+
             columnsSelection.on("click", (data: HistogramData) => {
                 this.selectionManager.clear();
 

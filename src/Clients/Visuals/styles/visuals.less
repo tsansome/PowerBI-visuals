@@ -1809,16 +1809,20 @@ div.ql-toolbar {
 }
 
 .streamGraph {
+    @streamGraphFontSize: 11px;
+
+    font-family: @regularFontFamily;
+    font-size: @streamGraphFontSize;
+
     .axis {
         path, line {
             fill: none;
-            stroke: black;
+            stroke: #666;
             shape-rendering: @defaultShapeRendering;
         }
 
         text {
-            font-family: sans-serif;
-            font-size: 11px;
+            font-size: @streamGraphFontSize;
         }
     }
 }
