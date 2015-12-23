@@ -211,6 +211,10 @@ module powerbi.visuals {
                             description: "Color the bars by each statement",
                             type: { bool: true },
                             displayName: "Color by Statement"
+                        },
+                        fill: {
+                            displayName: "Color for the bars",
+                            type: { fill: { solid: { color: true } } }
                         }
                     }
                 },
@@ -922,13 +926,15 @@ module powerbi.visuals {
                     };
                     enumeration.pushInstance(gapbarproperties);
                     for (var i = 0; i < dV.categorical.categories[0].values.length; i++) {
+                        var label = dV.categorical.categories[0].values[i];
+                        var colorStr = this.colors.getColorByIndex(i).value;
                         enumeration.pushInstance({
                             objectName: objectname,
+                            displayName: label,
                             selector: null,
-                            displayName: dV.categorical.categories[0].values[i],
                             properties: {
                                 fill: {
-                                    solid: { color: this.colors.getColorByIndex(i).value }
+                                    solid: { color: colorStr }
                                 }
                             },
                         });
