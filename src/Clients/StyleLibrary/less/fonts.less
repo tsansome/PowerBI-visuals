@@ -24,46 +24,11 @@
  *  THE SOFTWARE.
  */
 
-@font: ~'Tahoma,Verdana,Geneva,sans-serif';
+/* BUG 6439234: CSS embedded fonts are loading once per stylesheet
+   ===============================================================
+   The following line causes fonts to load once per stylesheet, and needs to be removed. 
+   The Style Library CSS should be the only place where these get loaded. There are currently tests dependencies on this CSS.
+*/
+@import "fontImports.less";
 
-@lightFontFamily: @font;
-@semilightFontFamily: @font;
-@regularFontFamily: @font;
-@semiboldFontFamily: @font;
-@boldFontFamily: @font;
-
-@lightSecondaryFontFamily: @font;
-@regularSecondaryFontFamily: @font;
-@boldSecondaryFontFamily: @font;
-
-body{
-    -webkit-font-smoothing: antialiased;
-}
-
-.secondaryFont{
-    font-family: @regularSecondaryFontFamily;
-}
-
-.secondaryBoldFont{
-    font-family: @boldSecondaryFontFamily;
-}
-
-.lightFont{
-    font-family: @lightFontFamily;
-}
-
-.semilightFont{
-    font-family: @semilightFontFamily;
-}
-
-.regularFont{
-    font-family: @regularFontFamily;
-}
-
-.semiboldFont{
-    font-family: @semiboldFontFamily;
-}
-
-.boldFontFamily{
-    font-family: @boldFontFamily;
-}
+@import "fontVariables.less";

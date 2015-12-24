@@ -57,6 +57,14 @@ module powerbi.data {
         execute(options: QueryGeneratorOptions): QueryGeneratorResult;
     }
 
+    export interface IFederatedConceptualSchemaReader {
+        /** Executes a request for conceptual schema with a promise of completion. */
+        execute(options: FederatedConceptualSchemaReaderOptions): IPromise<FederatedConceptualSchemaResponse>;
+
+        /** Transforms the given data into a FederatedConceptualSchema. */
+        transform(obj: FederatedConceptualSchemaResponse): SchemaReaderTransformResult;
+    }
+
     /** Represents a custom data reader plugin, to be registered in the powerbi.data.plugins object. */
     export interface IDataReaderPlugin {
         /** The name of this plugin. */
@@ -67,6 +75,9 @@ module powerbi.data {
 
         /** Factory method for the IQueryGenerator. */
         queryGenerator?(): IQueryGenerator;
+
+        /** Factory method for the IFederatedConceptualSchemaReader. */
+        schemaReader?(hostServices: IDataReaderHostServices): IFederatedConceptualSchemaReader;
     }
 
     export interface QueryGeneratorOptions {
@@ -127,6 +138,37 @@ module powerbi.data {
         command: DataReaderCommand;
         allowCache?: boolean;
         cacheResponseOnServer?: boolean;
+    }
+
+    export interface FederatedConceptualSchemaReaderOptions {
+        dataSources: ConceptualSchemaReaderDataSource[];
+    }
+
+    export interface ConceptualSchemaReaderDataSource {
+        id: number;
+
+        /** Specifies the name used in Semantic Queries to reference this DataSource. */
+        name: string;
+    }
+
+    export interface FederatedConceptualSchemaResponse {
+        data: FederatedConceptualSchemaData;
+    }
+
+    export interface FederatedConceptualSchemaData {
+        // This interface is intentionally empty, as plugins define their own data structure.
+    }
+
+    export interface SchemaReaderTransformResult {
+        schema: FederatedConceptualSchema;
+        error?: SchemaReaderError;
+    }
+
+    // Defect 5858607, consider removing serviceError and only have IClientError to be more consistent with IDataProxy.
+    export interface SchemaReaderError {
+        requestId?: string;
+        serviceError?: ServiceError;
+        clientError: IClientError;
     }
 
     export interface IDataReaderHostServices {

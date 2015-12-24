@@ -41,7 +41,7 @@ module jsCommon {
             return hexString(rotatedRgb);
         }
 
-        export function normalizeToHexString(color: string) {
+        export function normalizeToHexString(color: string): string {
             let rgb = parseColorString(color);
             return hexString(rgb);
         }

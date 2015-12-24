@@ -1479,6 +1479,10 @@ module powerbi.visuals {
             return hasSeries || !hasGradientRole;
         }
 
+        public static shouldEnumerateCategoryLabels(enableGeoShaping: boolean, filledMapDataLabelsEnabled: boolean): boolean {
+            return (!enableGeoShaping || filledMapDataLabelsEnabled);
+        }
+
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
             let enumeration = new ObjectEnumerationBuilder();
             switch (options.objectName) {
@@ -1495,7 +1499,7 @@ module powerbi.visuals {
                     }
                     break;
                 case 'categoryLabels':
-                    if (!this.enableGeoShaping || this.filledMapDataLabelsEnabled) {
+                    if (Map.shouldEnumerateCategoryLabels(this.enableGeoShaping, this.filledMapDataLabelsEnabled)) {
                         dataLabelUtils.enumerateCategoryLabels(enumeration, this.dataLabelsSettings, true, true);
                     }
                     break;

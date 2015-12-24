@@ -50,9 +50,55 @@ module powerbi.visuals {
             export const SelectAll = 'Slicer_SelectAll';
         }
 
+        /** Helper class for slicer settings  */
+        export module SettingsHelper {
+            export function areSettingsDefined(data: SlicerData): boolean {
+                return data != null && data.slicerSettings != null;
+            }
+        }
+
+        /** Helper class for handling slicer default value  */
+        export module DefaultValueHandler {
+            export function getDefaultValue(dataView: DataView): data.SQConstantExpr {
+                let dataViewDefaultValue = DataConversion.getDataViewDefaultValue(dataView);
+                if (dataViewDefaultValue)
+                    return dataViewDefaultValue.value;
+            }
+
+            export function getIdentityFields(dataView: DataView): data.SQExpr[] {
+                if (!dataView) {
+                    return;
+                }
+
+                let dataViewCategorical = dataView.categorical;
+                if (!dataViewCategorical || _.isEmpty(dataViewCategorical.categories))
+                    return;
+
+                return dataViewCategorical.categories[0].identityFields;
+            }
+        }
+
+        // Compare the sqExpr of the scopeId with sqExprs of the retained values. 
+        // If match found, remove the item from the retainedValues list, and return true, 
+        // otherwise return false.
+        export function tryRemoveValueFromRetainedList(value: DataViewScopeIdentity, selectedScopeIds: DataViewScopeIdentity[], caseInsensitive?: boolean): boolean {
+            if (!value || _.isEmpty(selectedScopeIds))
+                return false;
+
+            for (let i = 0, len = selectedScopeIds.length; i < len; i++) {
+                let retainedValueScopeId = selectedScopeIds[i];
+                if (DataViewScopeIdentity.equals(value, retainedValueScopeId, caseInsensitive)) {
+                    selectedScopeIds.splice(i, 1);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /** Helper class for creating and measuring slicer DOM elements  */
-        export module DOMHelper {
-            export function createSlicerHeader(hostServices: IVisualHostServices): HTMLElement {
+        export class DOMHelper {
+            public createSlicerHeader(hostServices: IVisualHostServices): HTMLElement {
                 let slicerHeaderDiv = document.createElement('div');
                 slicerHeaderDiv.className = Selectors.Header.class;
 
@@ -65,7 +111,7 @@ module powerbi.visuals {
                 return slicerHeaderDiv;
             }
 
-            export function getHeaderTextProperties(settings: SlicerSettings): TextProperties {
+            public getHeaderTextProperties(settings: SlicerSettings): TextProperties {
                 let headerTextProperties: TextProperties = {
                     fontFamily: 'wf_segoe-ui_normal',
                     fontSize: '10px'
@@ -76,8 +122,8 @@ module powerbi.visuals {
                 return headerTextProperties;
             }
 
-            export function getSlicerBodyViewport(currentViewport: IViewport, settings: SlicerSettings, headerTextProperties: TextProperties): IViewport {
-                let headerHeight = (settings.header.show) ? getHeaderHeight(settings, headerTextProperties) : 0;
+            public getSlicerBodyViewport(currentViewport: IViewport, settings: SlicerSettings, headerTextProperties: TextProperties): IViewport {
+                let headerHeight = (settings.header.show) ? this.getHeaderHeight(settings, headerTextProperties) : 0;
                 let slicerBodyHeight = currentViewport.height - (headerHeight + settings.header.borderBottomWidth);
                 return {
                     height: slicerBodyHeight,
@@ -85,78 +131,47 @@ module powerbi.visuals {
                 };
             }
 
-            export function updateSlicerBodyDimensions(currentViewport: IViewport, slicerBody: D3.Selection, settings: SlicerSettings): void {
-                let slicerViewport = getSlicerBodyViewport(currentViewport, settings, getHeaderTextProperties(settings));
+            public updateSlicerBodyDimensions(currentViewport: IViewport, slicerBody: D3.Selection, settings: SlicerSettings): void {
+                let slicerViewport = this.getSlicerBodyViewport(currentViewport, settings, this.getHeaderTextProperties(settings));
                 slicerBody.style({
                     'height': PixelConverter.toString(slicerViewport.height),
                     'width': PixelConverter.toString(slicerViewport.width),
                 });
             }
 
-            export function getHeaderHeight(settings: SlicerSettings, textProperties: TextProperties): number {
-                return TextMeasurementService.estimateSvgTextHeight(getTextProperties(settings.header.textSize, textProperties)) + settings.general.outlineWeight;
+            public getHeaderHeight(settings: SlicerSettings, textProperties: TextProperties): number {
+                return TextMeasurementService.estimateSvgTextHeight(this.getTextProperties(settings.header.textSize, textProperties)) + settings.general.outlineWeight;
             }
 
-            export function getRowHeight(settings: SlicerSettings, textProperties: TextProperties): number {
-                return TextMeasurementService.estimateSvgTextHeight(getTextProperties(settings.slicerText.textSize, textProperties)) + getRowsOutlineWidth(settings.slicerText.outline, settings.general.outlineWeight);
+            public getRowHeight(settings: SlicerSettings, textProperties: TextProperties): number {
+                return TextMeasurementService.estimateSvgTextHeight(this.getTextProperties(settings.slicerText.textSize, textProperties)) + this.getRowsOutlineWidth(settings.slicerText.outline, settings.general.outlineWeight);
             }
 
-            export function styleSlicerHeader(slicerHeader: D3.Selection, settings: SlicerSettings, headerText: string): void {
+            public styleSlicerHeader(slicerHeader: D3.Selection, settings: SlicerSettings, headerText: string): void {
                 if (settings.header.show) {
                     slicerHeader.style('display', 'block');
                     let headerTextElement = slicerHeader.select(Selectors.HeaderText.selector)
                         .text(headerText);
-                    setSlicerHeaderTextStyle(headerTextElement, settings);
+                    this.setSlicerHeaderTextStyle(headerTextElement, settings);
                 }
                 else {
                     slicerHeader.style('display', 'none');
                 }
             }
 
-            export function setSlicerTextStyle(slicerText: D3.Selection, settings: SlicerSettings): void {
+            public setSlicerTextStyle(slicerText: D3.Selection, settings: SlicerSettings): void {
                 slicerText
                     .style({
                         'color': settings.slicerText.color,
                         'background-color': settings.slicerText.background,
-                        'border-style': getBorderStyle(settings.slicerText.outline),
+                        'border-style': VisualBorderUtil.getBorderStyle(settings.slicerText.outline),
                         'border-color': settings.general.outlineColor,
-                        'border-width': getBorderWidth(settings.slicerText.outline, settings.general.outlineWeight),
+                        'border-width': VisualBorderUtil.getBorderWidth(settings.slicerText.outline, settings.general.outlineWeight),
                         'font-size': PixelConverter.fromPoint(settings.slicerText.textSize),
                     });
             }
 
-            export function getBorderStyle(outlineElement: string): string {
-                return outlineElement === '0px' ? 'none' : 'solid';
-            }
-
-            export function getBorderStyleWithWeight(outlineType: string, outlineWeight: number): string {
-                return (outlineType === 'None' || outlineWeight === 0) ? 'none' : 'solid';
-            }
-
-            export function getBorderWidth(outlineElement: string, outlineWeight: number): string {
-                switch (outlineElement) {
-                    case 'None':
-                        return '0px';
-                    case 'BottomOnly':
-                        return '0px 0px ' + outlineWeight + 'px 0px';
-                    case 'TopOnly':
-                        return outlineWeight + 'px 0px 0px 0px';
-                    case 'LeftOnly':
-                        return '0px 0px 0px ' + outlineWeight + 'px';
-                    case 'RightOnly':
-                        return '0px ' + outlineWeight + 'px 0px 0px';
-                    case 'TopBottom':
-                        return outlineWeight + 'px 0px ' + outlineWeight + 'px 0px';
-                    case 'LeftRight':
-                        return '0px ' + outlineWeight + 'px 0px ' + outlineWeight + 'px';
-                    case 'Frame':
-                        return outlineWeight + 'px';
-                    default:
-                        return outlineElement.replace("1", outlineWeight.toString());
-                }
-            }
-
-            export function getRowsOutlineWidth(outlineElement: string, outlineWeight: number): number {
+            public getRowsOutlineWidth(outlineElement: string, outlineWeight: number): number {
                 switch (outlineElement) {
                     case 'None':
                     case 'LeftRight':
@@ -172,28 +187,21 @@ module powerbi.visuals {
                 }
             }
 
-            function setSlicerHeaderTextStyle(slicerHeader: D3.Selection, settings: SlicerSettings): void {
+            private setSlicerHeaderTextStyle(slicerHeader: D3.Selection, settings: SlicerSettings): void {
                 slicerHeader
                     .style({
-                        'border-style': getBorderStyle(settings.header.outline),
+                        'border-style': VisualBorderUtil.getBorderStyle(settings.header.outline),
                         'border-color': settings.general.outlineColor,
-                        'border-width': getBorderWidth(settings.header.outline, settings.general.outlineWeight),
+                        'border-width': VisualBorderUtil.getBorderWidth(settings.header.outline, settings.general.outlineWeight),
                         'color': settings.header.fontColor,
                         'background-color': settings.header.background,
                         'font-size': PixelConverter.fromPoint(settings.header.textSize),
                     });
             }
 
-            function getTextProperties(textSize: number, textProperties: TextProperties): TextProperties {
+            private getTextProperties(textSize: number, textProperties: TextProperties): TextProperties {
                 textProperties.fontSize = PixelConverter.fromPoint(textSize);
                 return textProperties;
-            }
-        }
-
-        /** Helper class for slicer settings  */
-        export module SettingsHelper {
-            export function areSettingsDefined(data: SlicerData): boolean {
-                return data != null && data.slicerSettings != null;
             }
         }
     }

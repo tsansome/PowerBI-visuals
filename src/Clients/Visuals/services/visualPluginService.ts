@@ -59,6 +59,8 @@ module powerbi.visuals {
 
         sandboxVisualsEnabled?: boolean;
 
+        kpiVisualEnabled?: boolean;
+        
         /** Pivot operator when categorical mapping wants data reduction across both hierarchies */
         categoricalPivotEnabled?: boolean;
 
@@ -494,7 +496,7 @@ module powerbi.visuals {
                 isScrollable: true,
                 behavior: new TreemapWebBehavior(),
                 tooltipsEnabled: true,
-            }));
+            }));            
             // Waterfall Chart
             createPlugin(plugins, powerbi.visuals.plugins.waterfallChart, () => new CartesianChart({
                 chartType: CartesianChartType.Waterfall,
@@ -521,9 +523,11 @@ module powerbi.visuals {
             // Slicer
             createPlugin(plugins, powerbi.visuals.plugins.slicer, () => new Slicer({
                 behavior: new SlicerWebBehavior(),
-            }));
+            }));           
+
             // Matrix
             createPlugin(plugins, powerbi.visuals.plugins.matrix, () => new Matrix(formattingPropertiesEnabled));
+
             // Table
             createPlugin(plugins, powerbi.visuals.plugins.table, () => new Table(formattingPropertiesEnabled));
             // Radar Chart
@@ -542,8 +546,18 @@ module powerbi.visuals {
             createPlugin(plugins, powerbi.visuals.plugins.areaRangeChart, () => new samples.AreaRangeChart({
                 animator: new BaseAnimator()
             }));
+            // Chiclet Slicer
+            createPlugin(plugins, powerbi.visuals.plugins.chicletSlicer, () => new samples.ChicletSlicer({
+                behavior: new samples.ChicletSlicerWebBehavior()
+            }));
             // Tornado Chart
             createPlugin(plugins, powerbi.visuals.plugins.tornadoChart, () => new samples.TornadoChart({
+                animator: new BaseAnimator()
+            }));
+            // Sankey Diagram
+            createPlugin(plugins, powerbi.visuals.plugins.sankeyDiagram, () => new samples.SankeyDiagram());
+            // Word Cloud
+            createPlugin(plugins, powerbi.visuals.plugins.wordCloud, () => new samples.WordCloud({
                 animator: new BaseAnimator()
             }));
             if (scriptVisualEnabled) {
@@ -642,7 +656,7 @@ module powerbi.visuals {
                     powerbi.visuals.plugins.multiRowCard,
                     powerbi.visuals.plugins.card,
                     powerbi.visuals.plugins.slicer,
-                    powerbi.visuals.plugins.donutChart,
+                    powerbi.visuals.plugins.donutChart,                    
                 ];
 
                 if (this.featureSwitches.scriptVisualEnabled) {
@@ -669,6 +683,10 @@ module powerbi.visuals {
                     convertibleVisualTypes.push(powerbi.visuals.plugins.sunburst);
                 }
 
+                if (this.featureSwitches.kpiVisualEnabled) {
+                    convertibleVisualTypes.push(powerbi.visuals.plugins.kpi);
+                }
+                    
                 return convertibleVisualTypes;
             }
 
@@ -928,7 +946,6 @@ module powerbi.visuals {
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.funnel, () => new FunnelChart({ animator: null, funnelSmallViewPortProperties: this.smallViewPortProperties.FunnelSmallViewPortProperties }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.donutChart, () => new DonutChart({ disableGeometricCulling: true }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.pieChart, () => new DonutChart({ sliceWidthRatio: 0, disableGeometricCulling: true }));
-
             }
 
             public getPlugin(type: string): IVisualPlugin {

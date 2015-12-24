@@ -453,18 +453,12 @@ module powerbi.visuals {
 
         private static lookupXValue(data: WaterfallChartData, index: number, type: ValueType): any {
             let dataPoints: WaterfallChartDataPoint[] = data.series[0].data;
-            let point = dataPoints[index];
 
-            if (point && point.categoryValue) {
-                if (index === dataPoints.length - 1)
-                    return point.categoryValue;
-                else if (AxisHelper.isDateTime(type))
-                    return new Date(point.categoryValue);
-                else
-                    return point.categoryValue;
-            }
-
-            return index;
+            if (index === dataPoints.length - 1)
+                // Total
+                return dataPoints[index].categoryValue;
+            else
+                return CartesianHelper.lookupXValue(data, index, type, false);
         }
 
         public static getXAxisCreationOptions(data: WaterfallChartData, width: number, layout: CategoryLayout, options: CalculateScaleAndDomainOptions): CreateAxisOptions {
@@ -482,7 +476,7 @@ module powerbi.visuals {
                 pixelSpan: width,
                 dataDomain: domain,
                 metaDataColumn: data.categoryMetadata,
-                formatStringProp: WaterfallChart.formatStringProp,
+                formatString: valueFormatter.getFormatString(data.categoryMetadata, WaterfallChart.formatStringProp),
                 isScalar: false,
                 outerPadding: outerPadding,
                 categoryThickness: categoryThickness,
@@ -506,7 +500,7 @@ module powerbi.visuals {
                 isScalar: true,
                 isVertical: true,
                 metaDataColumn: data.valuesMetadata,
-                formatStringProp: WaterfallChart.formatStringProp,
+                formatString: valueFormatter.getFormatString(data.valuesMetadata, WaterfallChart.formatStringProp),
                 outerPadding: 0,
                 forcedTickCount: options.forcedTickCount,
                 useTickIntervalForDisplayUnits: true,

@@ -38,11 +38,12 @@ module powerbitests {
     import buildSelector = powerbitests.helpers.buildSelectorForColumn;
     import VisualObjectInstanceEnumerationObject = powerbi.VisualObjectInstanceEnumerationObject;
     import PixelConverter = jsCommon.PixelConverter;
+    import LabelStyle = powerbi.visuals.labelStyle;
 
     let donutColors = powerbi.visuals.visualStyles.create().colorPalette.dataColors;
 
     const labelsElement = '.donutChart .label';
-    const fontFamily = 'wf_standard-font';
+    const fontFamily = 'Tahoma';
 
     powerbitests.mocks.setLocale();
 
@@ -171,8 +172,10 @@ module powerbitests {
             function getOptionsForValueWarning(values: number[]) {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true },
-                    categoryLabels: { show: true }
+                    labels: {
+                        show: true,
+                        labelStyle: LabelStyle.both
+                    },
                 };
 
                 let options = {
@@ -272,8 +275,7 @@ module powerbitests {
             it('Layout - with labels and without',(done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, labelPrecision: 0 },
-                    categoryLabels: { show: false }
+                    labels: { show: true, labelPrecision: 0, labelStyle: LabelStyle.data },
                 };
 
                 let dataViews = [{
@@ -298,8 +300,8 @@ module powerbitests {
 
                 setTimeout(() => {
                     let dataLabelsWidth = v['radius'];
-                    dataViewMetadataWithLabels.objects['labels']['show'] = false;
-                    dataViewMetadataWithLabels.objects['categoryLabels']['show'] = true;
+                    dataViewMetadataWithLabels.objects['labels']['show'] = true;
+                    dataViewMetadataWithLabels.objects['labels']['labelStyle'] = LabelStyle.category;
                     dataViews[0].metadata = dataViewMetadataWithLabels;
                     v.onDataChanged({
                         dataViews: dataViews,
@@ -307,7 +309,6 @@ module powerbitests {
                     setTimeout(() => {
                         let categoryLabelsWidth = v['radius'];
                         dataViewMetadataWithLabels.objects['labels']['show'] = false;
-                        dataViewMetadataWithLabels.objects['categoryLabels']['show'] = false;
                         dataViews[0].metadata = dataViewMetadataWithLabels;
                         v.onDataChanged({
                             dataViews: dataViews,
@@ -326,8 +327,7 @@ module powerbitests {
 
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, labelPrecision: 0 },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelPrecision: 0, labelStyle: LabelStyle.both },
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -360,8 +360,7 @@ module powerbitests {
 
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelStyle: LabelStyle.both },
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -394,8 +393,7 @@ module powerbitests {
 
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, labelDisplayUnits: 1000, labelPrecision: 0 },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelDisplayUnits: 1000, labelPrecision: 0, labelStyle: LabelStyle.both },
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -428,8 +426,7 @@ module powerbitests {
 
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, labelDisplayUnits: 1000000, labelPrecision: 3 },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelDisplayUnits: 1000000, labelPrecision: 3, labelStyle: LabelStyle.both },
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -461,8 +458,7 @@ module powerbitests {
             it('Show the correct text - measure', (done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, labelPrecision: 0, },
-                    categoryLabels: { show: false }
+                    labels: { show: true, labelPrecision: 0, labelStyle: LabelStyle.data },
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -494,8 +490,7 @@ module powerbitests {
             it('Show the correct text - category', (done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: false },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelStyle: LabelStyle.category },
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -528,7 +523,6 @@ module powerbitests {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
                     labels: { show: false },
-                    categoryLabels: { show: false }
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -557,8 +551,7 @@ module powerbitests {
             it('Verify data labels - default style', (done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true },
-                    categoryLabels: { show: false }
+                    labels: { show: true, labelStyle: LabelStyle.data },
                 };
 
                 let labelColor = powerbi.visuals.dataLabelUtils.defaultLabelColor;
@@ -594,8 +587,7 @@ module powerbitests {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
 
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true },
-                    categoryLabels: { show: false },
+                    labels: { show: true, labelStyle: LabelStyle.data },
                     legend: {
                         titleText: 'my title text',
                         show: true,
@@ -636,8 +628,7 @@ module powerbitests {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
 
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true },
-                    categoryLabels: { show: false },
+                    labels: { show: true, labelStyle: LabelStyle.data },
                     legend: {
                         titleText: 'my title text',
                         show: true,
@@ -677,8 +668,7 @@ module powerbitests {
                 let color = { solid: { color: "rgb(255, 0, 0)" } }; // Red
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, color: color },
-                    categoryLabels: { show: false }
+                    labels: { show: true, color: color, labelStyle: LabelStyle.data },
                 };
                 
                 v.onDataChanged({
@@ -710,8 +700,7 @@ module powerbitests {
                 let color = { solid: { color: "rgb(255, 0, 0)" } }; // Red
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: false, color: color },
-                    categoryLabels: { show: true }
+                    labels: { show: true, color: color, labelStyle: LabelStyle.category },
                 };
 
                 v.onDataChanged({
@@ -742,8 +731,7 @@ module powerbitests {
             it('Long data labels - big viewport', (done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: false },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelStyle: LabelStyle.category },
                 };
 
                 v.onResizing({ height: 600, width: 1000 });
@@ -784,8 +772,7 @@ module powerbitests {
             it('Long data labels - small viewport', (done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: false },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelStyle: LabelStyle.category },
                 };
                 v.onResizing({ height: 600, width:600 });
                 v.onDataChanged({
@@ -824,8 +811,7 @@ module powerbitests {
             it('data labels visibility after resizing', (done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, labelPrecision: 0 },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelPrecision: 0, labelStyle: LabelStyle.both },
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -862,8 +848,7 @@ module powerbitests {
             it('Data lables with null', (done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: false },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelStyle: LabelStyle.category },
                 };
 
                 v.onDataChanged({
@@ -893,8 +878,7 @@ module powerbitests {
             it('Verify font size', (done) => {
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, fontSize: 15, },
-                    categoryLabels: { show: true }
+                    labels: { show: true, fontSize: 15, labelStyle: LabelStyle.both },
                 };
 
                 v.onDataChanged({
@@ -957,8 +941,7 @@ module powerbitests {
                             format: '#,0'
                         }],
                     objects: {
-                        labels: { show: true, labelPrecision: 0, labelDisplayUnits: null },
-                        categoryLabels: { show: false }
+                        labels: { show: true, labelPrecision: 0, labelDisplayUnits: null, labelStyle: LabelStyle.data },
                     }
                 };
 
@@ -994,8 +977,7 @@ module powerbitests {
 
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
-                    labels: { show: true, },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelStyle: LabelStyle.both },
                 };
                 v.onDataChanged({
                     dataViews: [{
@@ -2285,8 +2267,7 @@ module powerbitests {
 
                 //data labels are on
                 dataViewMetadata1Category2Measure.objects = {
-                    labels: { show: true },
-                    categoryLabels: { show: false }
+                    labels: { show: true, labelStyle: LabelStyle.data },
                 };
                 actualData = DonutChart.converter(dataView, donutColors);
                 expect(actualData.dataPoints[0].data.tooltipInfo).toEqual(tooltipInfo1);
@@ -2295,8 +2276,7 @@ module powerbitests {
 
                 //data labels and category labels are on
                 dataViewMetadata1Category2Measure.objects = {
-                    labels: { show: true },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelStyle: LabelStyle.both },
                 };
                 actualData = DonutChart.converter(dataView, donutColors);
                 expect(actualData.dataPoints[0].data.tooltipInfo).toEqual(tooltipInfo1);
@@ -2305,15 +2285,14 @@ module powerbitests {
 
                 //data labels off and category labels are on
                 dataViewMetadata1Category2Measure.objects = {
-                    labels: { show: false },
-                    categoryLabels: { show: true }
+                    labels: { show: true, labelStyle: LabelStyle.category },
                 };
                 actualData = DonutChart.converter(dataView, donutColors);
                 expect(actualData.dataPoints[0].data.tooltipInfo).toEqual(tooltipInfo1);
                 expect(actualData.dataPoints[1].data.tooltipInfo).toEqual(tooltipInfo2);
                 expect(actualData.dataPoints[2].data.tooltipInfo).toEqual(tooltipInfo3);
             });
-
+     
             it('with highlights that overflow', () => {
                 
                 // categorical, no slicing - with OverFlow
@@ -2619,7 +2598,11 @@ module powerbitests {
             dataViewMetadataTwoColumn.objects = { legend: { show: true } };
         }
         else {
-            dataViewMetadataTwoColumn.objects = undefined;
+            dataViewMetadataTwoColumn.objects = {
+                labels: {
+                    show: true, labelStyle: LabelStyle.category
+                }
+            };
         }
 
         let dataViewMetadata1Category2Measure: powerbi.DataViewMetadata = {
@@ -2932,7 +2915,7 @@ module powerbitests {
 
             //make sure category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
-            dataViewMetadataTwoColumnLabels.objects = { categoryLabels: { show: true }, labels: { show: false } };
+            dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.category } };
 
             v.onResizing({ height: 600, width: 400 });
             v.onDataChanged({
@@ -3003,8 +2986,7 @@ module powerbitests {
 
         it('pie chart opacity validation with overlapping slices', (done) => {
             dataViewMetadataTwoColumn.objects = {
-                labels: { show: false },
-                categoryLabels: { show: true }
+                labels: { show: true, labelStyle: LabelStyle.category },
             };
             v.onDataChanged({
                 dataViews: [{
@@ -3565,7 +3547,7 @@ module powerbitests {
             
             //category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
-            dataViewMetadataTwoColumnLabels.objects = { categoryLabels: { show: false }, labels: { show: true } };
+            dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.data } };
             v.onResizing({ height: 600, width: 600 });
             v.onDataChanged({
                 dataViews: [{
@@ -3592,7 +3574,7 @@ module powerbitests {
                 let labelsBeforeY3 = $(labelsBefore[2]).attr('y');
                 
                 //add data labels 
-                dataViewMetadataTwoColumnLabels.objects = { categoryLabels: { show: true }, labels: { show: true } };
+                dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.both } };
                 v.onDataChanged({
                     dataViews: [{
                         metadata: dataViewMetadataTwoColumnLabels,
@@ -3632,7 +3614,7 @@ module powerbitests {
             
             //category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
-            dataViewMetadataTwoColumnLabels.objects = { categoryLabels: { show: false }, labels: { show: true } };
+            dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.data } };
             v.onResizing({ height: 600, width: 600 });
             v.onDataChanged({
                 dataViews: [{
@@ -3667,7 +3649,7 @@ module powerbitests {
             
             //category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
-            dataViewMetadataTwoColumnLabels.objects = { categoryLabels: { show: true }, labels: { show: false } };
+            dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.category } };
             v.onResizing({ height: 600, width: 600 });
             v.onDataChanged({
                 dataViews: [{
@@ -3706,11 +3688,11 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        xit('pie chart labels visibility - validate font-family', (done) => {
+        it('pie chart labels visibility - validate font-family', (done) => {
             
             //category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
-            dataViewMetadataTwoColumnLabels.objects = { categoryLabels: { show: true }, labels: { show: false } };
+            dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.category } };
             v.onResizing({ height: 600, width: 600 });
             v.onDataChanged({
                 dataViews: [{
@@ -3973,7 +3955,7 @@ module powerbitests {
             });
 
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
-            dataViewMetadataTwoColumnLabels.objects = { categoryLabels: { show: true }, labels: { show: false }, legend: { show: true, position: 'Top' } };
+            dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.category }, legend: { show: true, position: 'Top' } };
             let categoryColumnRef = powerbi.data.SQExprBuilder.fieldDef({ schema: 's', entity: 'e', column: 'p' });
 
             v.onDataChanged({
@@ -4164,8 +4146,7 @@ module powerbitests {
 
         it('Check enumeration for categorical', (done) => {
             dataViewMetadataTwoColumn.objects = {
-                labels: { show: false },
-                categoryLabels: { show: true }
+                labels: { show: true, labelStyle: LabelStyle.category },
             };
             let dataChangedOptions = {
                 dataViews: [{

@@ -27,136 +27,143 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
+    import SQExprConverter = powerbi.data.SQExprConverter;
 
     /** Helper module for converting a DataView into SlicerData. */
     export module DataConversion {
-        export function convert(dataView: DataView, localizedSelectAllText: string, interactivityService: IInteractivityService, hostServices?: IVisualHostServices): SlicerData {
-            let slicerData: SlicerData;
-            if (!dataView) {
-                return;
+        export function convert(dataView: DataView, localizedSelectAllText: string, interactivityService: IInteractivityService | ISelectionHandler, hostServices: IVisualHostServices): IPromise<SlicerData> {
+            debug.assertValue(hostServices, 'hostServices');
+            if (!dataView || !dataView.categorical || _.isEmpty(dataView.categorical.categories))
+                return hostServices.promiseFactory().reject();
+
+            let category = dataView.categorical.categories[0];
+            let identityFields = category.identityFields;
+            if (!identityFields)
+                return hostServices.promiseFactory().reject();
+
+            let filter: data.SemanticFilter = <data.SemanticFilter>(
+                dataView.metadata &&
+                dataView.metadata.objects &&
+                DataViewObjects.getValue(dataView.metadata.objects, visuals.slicerProps.filterPropertyIdentifier));
+
+            let analyzer = hostServices.filterAnalyzer(filter, identityFields);
+            if (!analyzer)
+                return hostServices.promiseFactory().reject();
+
+            if (filter) {
+                let slicerData = getSlicerData(filter, analyzer, dataView.metadata, category, localizedSelectAllText, <IInteractivityService>interactivityService, hostServices);
+                return hostServices.promiseFactory().resolve<SlicerData>(slicerData);
             }
 
-            let dataViewCategorical = dataView.categorical;
-            if (dataViewCategorical == null || dataViewCategorical.categories == null || dataViewCategorical.categories.length === 0)
-                return;
+            return analyzer.hasDefaultFilterOverride()
+                .then((result) => {
+                    if (result === true)
+                        (<ISelectionHandler>interactivityService).handleClearSelection();
 
-            let isInvertedSelectionMode = undefined;
-            let objects = dataView.metadata ? <any> dataView.metadata.objects : undefined;
-            let categories = dataViewCategorical.categories[0];
-
-            let numberOfScopeIds: number;
-            let filter: data.SemanticFilter;
-            if (objects && objects.general && objects.general.filter) {
-                let identityFields = categories.identityFields;
-                if (!identityFields)
-                    return;
-                filter = <data.SemanticFilter>objects.general.filter;
-                let scopeIds = powerbi.data.SQExprConverter.asScopeIdsContainer(filter, identityFields);
-                if (scopeIds) {
-                    isInvertedSelectionMode = scopeIds.isNot;
-                    numberOfScopeIds = scopeIds.scopeIds ? scopeIds.scopeIds.length : 0;
-                }
-                else {
-                    isInvertedSelectionMode = false;
-                }
-            }
-
-            let defaultValueScopeIdentity = getDefaultValueScopeIdentityAndUpdateFilter(dataView, filter, interactivityService, categories.identityFields, hostServices);
-
-            if (interactivityService) {
-                if (isInvertedSelectionMode === undefined) {
-                    // The selection state is read from the Interactivity service in case of SelectAll or Clear when query doesn't update the visual
-                    isInvertedSelectionMode = interactivityService.isSelectionModeInverted();
-                }
-                else {
-                    interactivityService.setSelectionModeInverted(isInvertedSelectionMode);
-                }
-            }
-
-            let categoryValuesLen = categories && categories.values ? categories.values.length : 0;
-            let slicerDataPoints: SlicerDataPoint[] = [];                
-                                     
-            // Pass over the values to see if there's a positive or negative selection
-            let hasSelection: boolean = undefined;
-
-            let formatString = valueFormatter.getFormatString(categories.source, slicerProps.formatString);
-
-            for (let idx = 0; idx < categoryValuesLen; idx++) {
-                let selected = isCategoryColumnSelected(slicerProps.selectedPropertyIdentifier, categories, idx);
-                if (selected != null) {
-                    hasSelection = selected;
-                    break;
-                }
-            }
-
-            let numberOfCategoriesSelectedInData = 0;
-            for (let idx = 0; idx < categoryValuesLen; idx++) {
-                let categoryIdentity = categories.identity ? categories.identity[idx] : null;
-                let categoryIsSelected = isCategoryColumnSelected(slicerProps.selectedPropertyIdentifier, categories, idx);
-                if (defaultValueScopeIdentity && DataViewScopeIdentity.equals(categoryIdentity, defaultValueScopeIdentity))
-                    categoryIsSelected = true;
-
-                if (hasSelection != null) {
-                    // If the visual is in InvertedSelectionMode, all the categories should be selected by default unless they are not selected
-                    // If the visual is not in InvertedSelectionMode, we set all the categories to be false except the selected category                         
-                    if (isInvertedSelectionMode) {
-                        if (categories.objects == null)
-                            categoryIsSelected = undefined;
-
-                        if (categoryIsSelected != null) {
-                            categoryIsSelected = hasSelection;
-                        }
-                        else if (categoryIsSelected == null)
-                            categoryIsSelected = !hasSelection;
-                    }
-                    else {
-                        if (categoryIsSelected == null) {
-                            categoryIsSelected = !hasSelection;
-                        }
-                    }
-                }
-
-                if (categoryIsSelected)
-                    numberOfCategoriesSelectedInData++;
-
-                let categoryValue = valueFormatter.format(categories.values[idx], formatString);
-                slicerDataPoints.push({
-                    value: categoryValue,
-                    tooltip: categoryValue,
-                    identity: SelectionId.createWithId(categoryIdentity),
-                    selected: categoryIsSelected
+                    let slicerData = getSlicerData(filter, analyzer, dataView.metadata, category, localizedSelectAllText, <IInteractivityService>interactivityService, hostServices);
+                    return slicerData;
                 });
+        }
+
+        function getSlicerData(
+            filter: data.SemanticFilter,
+            analyzer: IFilterAnalyzer,
+            dataViewMetadata: DataViewMetadata,
+            category: DataViewCategoryColumn,
+            localizedSelectAllText: string, interactivityService: IInteractivityService, hostServices: IVisualHostServices): SlicerData {
+            let isInvertedSelectionMode: boolean = interactivityService && interactivityService.isSelectionModeInverted();
+            let hasSelectionOverride: boolean = false;
+            let selectedScopeIds = analyzer.selectedIdentities();
+            hasSelectionOverride = !_.isEmpty(selectedScopeIds);
+            if (filter)
+                isInvertedSelectionMode = analyzer.isNotFilter();
+
+            if (interactivityService)
+                interactivityService.setSelectionModeInverted(isInvertedSelectionMode);
+
+            let categoryValuesLen: number = category && category.values ? category.values.length : 0;
+            let slicerDataPoints: SlicerDataPoint[] = [];
+            let formatString = valueFormatter.getFormatString(category.source, slicerProps.formatString);
+            let numOfSelected: number = 0;
+            for (let i = 0; i < categoryValuesLen; i++) {
+                let scopeId = category.identity && category.identity[i];
+                let value = category.values && category.values[i];
+
+                if (value) {
+                    let isRetained = hasSelectionOverride ? SlicerUtil.tryRemoveValueFromRetainedList(scopeId, selectedScopeIds) : false;
+                    let label: string = valueFormatter.format(value, formatString);
+                    // TODO: need to add count as well
+                    let slicerData: SlicerDataPoint = {
+                        value: label,
+                        tooltip: label,
+                        identity: SelectionId.createWithId(scopeId),
+                        selected: isRetained,
+                    };
+
+                    slicerDataPoints.push(slicerData);
+                    if (slicerData.selected)
+                        numOfSelected++;
+                }
             }
 
-            let defaultSettings = createDefaultSettings(dataView);
+            // Add retained values that are not in the returned dataview to the value list.
+            if (hasSelectionOverride) {
+                //TODO: To support group on keys, we need ask hostService for the matching label which should be cached
+                for (let scopeId of selectedScopeIds) {
+                    let label = getLabel(scopeId, formatString);
 
+                    let slicerData: SlicerDataPoint = {
+                        value: label,
+                        tooltip: label,
+                        identity: SelectionId.createWithId(scopeId),
+                        selected: true,
+                    };
+
+                    slicerDataPoints.push(slicerData);
+                    numOfSelected++;
+                }
+            }
+
+            //When all the items are selected and there is no more data to request, then unselect all and toggle the invertedSelectionMode
+            if (numOfSelected > 0 && !dataViewMetadata.segment && numOfSelected === slicerDataPoints.length) {
+                isInvertedSelectionMode = !isInvertedSelectionMode;
+                interactivityService.setSelectionModeInverted(isInvertedSelectionMode);
+                for (let item of slicerDataPoints) {
+                    item.selected = false;
+                }
+                hasSelectionOverride = false;
+                numOfSelected = 0;
+            }
+
+            let defaultSettings = createDefaultSettings(dataViewMetadata);
             if (defaultSettings.selection.selectAllCheckboxEnabled) {
                 slicerDataPoints.unshift({
                     value: localizedSelectAllText,
                     tooltip: localizedSelectAllText,
                     identity: SelectionId.createWithMeasure(localizedSelectAllText),
-                    selected: !!isInvertedSelectionMode,
+                    selected: !!isInvertedSelectionMode && numOfSelected === 0,
                     isSelectAllDataPoint: true
                 });
             }
 
-            slicerData = {
-                categorySourceName: categories.source.displayName,
+            let slicerData: SlicerData = {
+                categorySourceName: category.source.displayName,
                 slicerSettings: defaultSettings,
                 slicerDataPoints: slicerDataPoints,
+                hasSelectionOverride: hasSelectionOverride,
             };
-
-            // Override hasSelection if a objects contained more scopeIds than selections we found in the data
-            if (numberOfScopeIds && numberOfScopeIds > numberOfCategoriesSelectedInData) {
-                slicerData.hasSelectionOverride = true;
-            }
 
             return slicerData;
         }
 
-        function createDefaultSettings(dataView: DataView): SlicerSettings {
+        function getLabel(scopeId: DataViewScopeIdentity, formatString: string): string {
+            let label = SQExprConverter.getFirstComparandValue(scopeId);
+            return valueFormatter.format(label, formatString);
+        }
+
+        function createDefaultSettings(dataViewMetadata: DataViewMetadata): SlicerSettings {
             let defaultSettings = Slicer.DefaultStyleProperties();
-            let objects = dataView.metadata.objects;
+            let objects = dataViewMetadata.objects;
 
             if (objects) {
                 defaultSettings.general.outlineColor = DataViewObjects.getFillColor(objects, slicerProps.general.outlineColor, defaultSettings.general.outlineColor);
@@ -186,55 +193,10 @@ module powerbi.visuals {
             return defaultSettings;
         }
 
-        function createPropertiesWithDefaultFilter(fieldsExpr: data.SQExpr[]): VisualObjectInstancesToPersist {
-            debug.assertValue(fieldsExpr, 'fieldsExpr');
-
-            let filterPropertyIdentifier = slicerProps.filterPropertyIdentifier;
-            let properties: { [propertyName: string]: DataViewPropertyValue } = {};
-
-            let filter = powerbi.data.SemanticFilter.getDefaultValueFilter(fieldsExpr);
-            properties[filterPropertyIdentifier.propertyName] = filter;
-            let instance = {
-                objectName: filterPropertyIdentifier.objectName,
-                selector: undefined,
-                properties: properties
-            };
-
-            return <VisualObjectInstancesToPersist> {
-                merge: [instance]
-            };
-        }
-
-        function getDefaultValueScopeIdentityAndUpdateFilter(
-            dataView: DataView,
-            filter: data.SemanticFilter,
-            interactivityService: IInteractivityService | ISelectionHandler,
-            identityFields: data.SQExpr[],
-            hostServices: IVisualHostServices): DataViewScopeIdentity {
-            let defaultValueScopeIdentity: DataViewScopeIdentity;
-            let defaultValues = getDataViewDefaultValue(dataView);
-            if (defaultValues && defaultValues.value && interactivityService && !_.isEmpty(identityFields)) {
-                if (!filter || data.SemanticFilter.isDefaultFilter(filter)) {
-                    defaultValueScopeIdentity = data.createDataViewScopeIdentity(data.SQExprUtils.getDataViewScopeIdentityComparisonExpr(identityFields, defaultValues.identityFieldsValues));
-
-                    // update filter if this is the first time loaded slicer
-                    if ((<IInteractivityService>interactivityService).isDefaultValueEnabled() === undefined) {
-                        (<IInteractivityService>interactivityService).setDefaultValueMode(true);
-                        if (hostServices) {
-                            (<ISelectionHandler>interactivityService).handleClearSelection();
-                            hostServices.persistProperties(createPropertiesWithDefaultFilter(identityFields));
-                        }
-                    }
-                }
-            }
-            return defaultValueScopeIdentity;
-        }
-
         export function getDataViewDefaultValue(dataView: DataView): DefaultValueDefinition {
             if (dataView && dataView.metadata && !_.isEmpty(dataView.metadata.columns)) {
                 return DataViewObjects.getValue<DefaultValueDefinition>(dataView.metadata.columns[0].objects, slicerProps.defaultValue);
             }
         }
     }
-
 }

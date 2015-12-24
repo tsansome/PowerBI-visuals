@@ -192,7 +192,6 @@ module powerbi.visuals {
             // Bind to the behavior
             this.behavior = behavior;
             behavior.bindEvents(behaviorOptions, this);
-
             // Sync data points with current selection state
             this.syncSelectionState();
         }
@@ -224,7 +223,7 @@ module powerbi.visuals {
          * Checks whether there is at least one item selected.
          */
         public hasSelection(): boolean {
-            return this.hasSelectionOverride != null ? this.hasSelectionOverride : this.selectedIds.length > 0;
+            return this.selectedIds.length > 0;
         }
 
         public legendHasSelection(): boolean {
@@ -260,11 +259,11 @@ module powerbi.visuals {
 
         public toggleSelectionModeInversion(): boolean {
             this.useDefaultValue = false;
-            let wasInInvertedMode = this.isInvertedSelectionMode;
-            this.clearSelection();
+            this.isInvertedSelectionMode = !this.isInvertedSelectionMode;
+            ArrayExtensions.clear(this.selectedIds);
+            this.applyToAllSelectableDataPoints((dataPoint: SelectableDataPoint) => dataPoint.selected = false);
             this.sendSelectionToHost();
-            this.isInvertedSelectionMode = !wasInInvertedMode;
-            this.syncSelectionState();
+            this.isInvertedSelectionMode ? this.syncSelectionStateInverted() : this.syncSelectionState();
             this.renderAll();
             return this.isInvertedSelectionMode;
         }
@@ -340,12 +339,10 @@ module powerbi.visuals {
             // the current datapoint state has to be inverted
             d.selected = !wasSelected;
 
-            if (wasSelected) {
-                this.selectedIds.push(id);
-            }
-            else {
+            if (wasSelected)
                 this.removeId(id);
-            }
+            else              
+                this.selectedIds.push(id);
 
             this.syncSelectionStateInverted();
         }
@@ -426,11 +423,9 @@ module powerbi.visuals {
             // Replace the existing selectedIds rather than merging.
             ArrayExtensions.clear(selectedIds);
 
-            let targetSelectedValue = !this.isInvertedSelectionMode;
             for (let dataPoint of dataPoints) {
-                if (targetSelectedValue === !!dataPoint.selected) {
+                if (dataPoint.selected)
                     selectedIds.push(dataPoint.identity);
-                }
             }
         }
 
@@ -472,9 +467,8 @@ module powerbi.visuals {
                 let labelsDataPoint: SelectableDataPoint;
                 for (let i = 0, ilen = selectableLabelsDataPoints.length; i < ilen; i++) {
                     labelsDataPoint = selectableLabelsDataPoints[i];
-                    if (selectedIds.some((value: SelectionId) => value.includes(labelsDataPoint.identity))) {
+                    if (selectedIds.some((value: SelectionId) => value.includes(labelsDataPoint.identity)))
                         labelsDataPoint.selected = true;
-                    }
                     else
                         labelsDataPoint.selected = false;
                 }
@@ -494,12 +488,15 @@ module powerbi.visuals {
 
             if (selectedIds.length === 0) {
                 for (let dataPoint of selectableDataPoints) {
-                    dataPoint.selected = true;
+                    dataPoint.selected = false;
                 }
             }
             else {
                 for (var dataPoint of selectableDataPoints) {
-                    dataPoint.selected = !InteractivityService.checkDatapointAgainstSelectedIds(dataPoint, selectedIds);
+                    if (selectedIds.some((value: SelectionId) => value.includes(dataPoint.identity)))
+                        dataPoint.selected = true;
+                    else if (dataPoint.selected)
+                        dataPoint.selected = false;
                 }
             }
         }

@@ -877,7 +877,7 @@ module powerbi.visuals {
                     .css('display', 'none');
 
                 let $buttons = list.map((option) => {
-                    let $button = formatButton(getTooltip(option.label, localizationProvider))
+                    let $button = formatButton(getTooltip(option.label, localizationProvider), 'align' + option.value)
                         .attr('data-value', option.value)
                         .click((e) => setSelectValue($select, option.value));
                     return $button;
@@ -933,8 +933,10 @@ module powerbi.visuals {
                 if (tooltip != null)
                     $button.attr('title', tooltip);
 
-                if (format != null)
+                if (format != null) {
                     $button.addClass('ql-' + format);
+                    $button.addClass('powervisuals-glyph ' + format);
+                }
 
                 return $button;
             }

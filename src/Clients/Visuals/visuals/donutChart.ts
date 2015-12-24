@@ -408,11 +408,9 @@ module powerbi.visuals {
                         displayUnits: true,
                         precision: true,
                         fontSize: true,
+                        labelStyle: true,
                     };
                     dataLabelUtils.enumerateDataLabels(labelSettingOptions);
-                    break;
-                case 'categoryLabels':
-                    dataLabelUtils.enumerateCategoryLabels(enumeration, dataLabelsSettings, false /* withFill */, true /* isShowCategory */);
                     break;
             }
             return enumeration.complete();
@@ -508,7 +506,7 @@ module powerbi.visuals {
 
         private calculateRadius(): number {
             let viewport = this.currentViewport;
-            if (!this.isInteractive && this.data && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory)) {
+            if (!this.isInteractive && this.data && this.data.dataLabelsSettings.show) {
                 // if we have category or data labels, use a sigmoid to blend the desired denominator from 2 to 3.
                 // if we are taller than we are wide, we need to use a larger denominator to leave horizontal room for the labels.
                 let hw = viewport.height / viewport.width;
@@ -600,7 +598,7 @@ module powerbi.visuals {
                 let highlightShapes: D3.UpdateSelection;
                 let labelSettings = data.dataLabelsSettings;
                 let labels: Label[] = [];
-                if (labelSettings && (labelSettings.show || labelSettings.showCategory)) {
+                if (labelSettings && labelSettings.show) {
                     labels = this.createLabels();
                 }
                 if (!suppressAnimations) {
@@ -686,61 +684,50 @@ module powerbi.visuals {
             let spaceAvailableForLabels = viewport.width / 2 - Math.abs(labelX) - NewDataLabelUtils.maxLabelOffset;
             let properties: TextProperties;
             let labelWidth: number;
-            let labelHeight: number;
             let isTruncated = false;
             /*When both category and data labels are turned on*/
-            if (labelSettings.show && labelSettings.showCategory) {
-                //categoty label
-                properties = {
-                    text: d.data.label,
-                    fontFamily: NewDataLabelUtils.LabelTextProperties.fontFamily,
-                    fontSize: PixelConverter.fromPoint(labelSettings.fontSize),
-                    fontWeight: NewDataLabelUtils.LabelTextProperties.fontWeight,
-                };
-                labelWidth = TextMeasurementService.measureSvgTextWidth(properties);
-                if (labelWidth > spaceAvailableForLabels / 2)
-                    isTruncated = true;
-                //data label
-                let dataProperties = {
-                    text: " (" + measureFormatter.format(d.data.measure) + ")",
-                    fontFamily: NewDataLabelUtils.LabelTextProperties.fontFamily,
-                    fontSize: PixelConverter.fromPoint(labelSettings.fontSize),
-                    fontWeight: NewDataLabelUtils.LabelTextProperties.fontWeight,
-                };
-                let dataLabelWidth = TextMeasurementService.measureSvgTextWidth(dataProperties);
-                labelHeight = TextMeasurementService.estimateSvgTextHeight(dataProperties);
-                // label width = category width + data width
-                labelWidth += dataLabelWidth;
-                if (dataLabelWidth > spaceAvailableForLabels /2)
-                    isTruncated = true;
-            }
-            else {
-                /*data labels are turned on*/
-                if (labelSettings.show) {
-                    properties = {
-                        text: measureFormatter.format(d.data.measure),
-                        fontFamily: NewDataLabelUtils.LabelTextProperties.fontFamily,
-                        fontSize: PixelConverter.fromPoint(labelSettings.fontSize),
-                        fontWeight: NewDataLabelUtils.LabelTextProperties.fontWeight,
-                    };
-                    labelWidth = TextMeasurementService.measureSvgTextWidth(properties);
-                    labelHeight = TextMeasurementService.estimateSvgTextHeight(properties);
-                    if (labelWidth > spaceAvailableForLabels)
-                        isTruncated = true;
+            if (labelSettings.show) {
+                switch (labelSettings.labelStyle) {
+                    case labelStyle.both: {
+                        //categoty label
+                        properties = {
+                            text: d.data.label,
+                            fontFamily: NewDataLabelUtils.LabelTextProperties.fontFamily,
+                            fontSize: PixelConverter.fromPoint(labelSettings.fontSize),
+                            fontWeight: NewDataLabelUtils.LabelTextProperties.fontWeight,
+                        };
+                        labelWidth = TextMeasurementService.measureSvgTextWidth(properties);
+                        if (labelWidth > spaceAvailableForLabels / 2)
+                            isTruncated = true;
+                        //data label
+                        let dataProperties = {
+                            text: " (" + measureFormatter.format(d.data.measure) + ")",
+                            fontFamily: NewDataLabelUtils.LabelTextProperties.fontFamily,
+                            fontSize: PixelConverter.fromPoint(labelSettings.fontSize),
+                            fontWeight: NewDataLabelUtils.LabelTextProperties.fontWeight,
+                        };
+                        let dataLabelWidth = TextMeasurementService.measureSvgTextWidth(dataProperties);
+                        // label width = category width + data width
+                        labelWidth += dataLabelWidth;
+                        if (dataLabelWidth > spaceAvailableForLabels / 2)
+                            isTruncated = true;
+                        break;
+                    }
+                    case labelStyle.category:
+                    case labelStyle.data: {
+                        properties = {
+                            text: labelSettings.labelStyle === labelStyle.category ? d.data.label : measureFormatter.format(d.data.measure),
+                            fontFamily: NewDataLabelUtils.LabelTextProperties.fontFamily,
+                            fontSize: PixelConverter.fromPoint(labelSettings.fontSize),
+                            fontWeight: NewDataLabelUtils.LabelTextProperties.fontWeight,
+                        };
+                        labelWidth = TextMeasurementService.measureSvgTextWidth(properties);
+                        if (labelWidth > spaceAvailableForLabels)
+                            isTruncated = true;
+
+                        break;
+                    }
                 }
-                /*category labels are turned on*/
-                else {
-                    properties = {
-                        text: d.data.label,
-                        fontFamily: NewDataLabelUtils.LabelTextProperties.fontFamily,
-                        fontSize: PixelConverter.fromPoint(labelSettings.fontSize),
-                        fontWeight: NewDataLabelUtils.LabelTextProperties.fontWeight,
-                    };
-                }
-                labelHeight = TextMeasurementService.estimateSvgTextHeight(properties);
-                labelWidth = TextMeasurementService.measureSvgTextWidth(properties);
-                if (labelWidth > spaceAvailableForLabels)
-                    isTruncated = true;
             }
             let text = NewDataLabelUtils.setLabelTextDonutChart(d, labelX, viewport, labelSettings, alternativeScale);
             properties = {
@@ -1077,7 +1064,7 @@ module powerbi.visuals {
             if (!this.isInteractive) {
                 let labelSettings = data.dataLabelsSettings;
                 let labels: Label[] = [];
-                if (labelSettings && (labelSettings.show || labelSettings.showCategory)) {
+                if (labelSettings && labelSettings.show) {
                     labels = this.createLabels();
                 }
                 NewDataLabelUtils.drawDefaultLabels(this.labelGraphicsContext, labels, false);
@@ -2031,14 +2018,6 @@ module powerbi.visuals {
                         let labelsObj = <DataLabelObject>objects['labels'];
                         if (labelsObj) {
                             dataLabelUtils.updateLabelSettingsFromLabelsObject(labelsObj, dataLabelsSettings);
-                        }
-
-                        let categoryLabelsObject = objects['categoryLabels'];
-                        if (categoryLabelsObject) {
-                            // Update category label visibility
-                            let category = <boolean>categoryLabelsObject['show'];
-                            if (category !== undefined)
-                                dataLabelsSettings.showCategory = category;
                         }
                     }
                 }

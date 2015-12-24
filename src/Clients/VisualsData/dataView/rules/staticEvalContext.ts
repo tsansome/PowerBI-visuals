@@ -27,17 +27,35 @@
 /// <reference path="../../_references.ts"/>
 
 module powerbi.data {
-    export function createStaticEvalContext(dataView?: DataView): IEvalContext {
-        return new StaticEvalContext(dataView || { metadata: { columns: [] } });
+    import SQExpr = powerbi.data.SQExpr;
+
+    export function createStaticEvalContext(): IEvalContext;
+    export function createStaticEvalContext(dataView: DataView, selectTransforms: DataViewSelectTransform[]): IEvalContext;
+    export function createStaticEvalContext(dataView?: DataView, selectTransforms?: DataViewSelectTransform[]): IEvalContext {
+        return new StaticEvalContext(dataView || { metadata: { columns: [] } }, selectTransforms);
     }
 
+    /**
+     * Represents an eval context over a potentially empty DataView.  Only static repetition data view objects
+     * are supported.
+     */
     class StaticEvalContext implements IEvalContext {
         private dataView: DataView;
+        private selectTransforms: DataViewSelectTransform[];
 
-        constructor(dataView: DataView) {
+        constructor(dataView: DataView, selectTransforms: DataViewSelectTransform[]) {
             debug.assertValue(dataView, 'dataView');
+            debug.assertAnyValue(selectTransforms, 'selectTransforms');
 
             this.dataView = dataView;
+            this.selectTransforms = selectTransforms;
+        }
+
+        public getExprValue(expr: SQExpr): PrimitiveValue {
+            let dataView = this.dataView,
+                selectTransforms = this.selectTransforms;
+            if (dataView && dataView.table && selectTransforms)
+                return getExprValue(expr, selectTransforms, dataView.table);
         }
 
         public getCurrentIdentity(): DataViewScopeIdentity {
@@ -47,5 +65,30 @@ module powerbi.data {
         public getRoleValue(roleName: string): PrimitiveValue {
             return;
         }
+    }
+
+    function getExprValue(expr: SQExpr, selectTransforms: DataViewSelectTransform[], table: DataViewTable): PrimitiveValue {
+        debug.assertValue(expr, 'expr');
+        debug.assertValue(selectTransforms, 'selectTransforms');
+        debug.assertValue(table, 'table');
+
+        let rows = table.rows;
+        if (rows && rows.length !== 1)
+            return;
+
+        let cols = table.columns;
+        for (let selectIdx = 0, selectLen = selectTransforms.length; selectIdx < selectLen; selectIdx++) {
+            let selectTransform = selectTransforms[selectIdx];
+            if (!SQExpr.equals(selectTransform.expr, expr) || !selectTransform.queryName)
+                continue;
+
+            for (let colIdx = 0, colLen = cols.length; colIdx < colLen; colIdx++) {
+                if (selectIdx !== cols[colIdx].index)
+                    continue;
+
+                return rows[0][colIdx];
+            }
+        }
+
     }
 }

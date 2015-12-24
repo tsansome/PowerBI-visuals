@@ -123,8 +123,6 @@ module powerbi.visuals {
             let viewport = options.viewport;
             let classAndSelector = options.classAndSelector;
 
-            graphicContext.selectAll(classAndSelector.selector).remove();
-
             let xScale = axes.x.scale;
             let yScale = axes.y1.scale;
 
@@ -134,7 +132,18 @@ module powerbi.visuals {
             let style = DataViewObject.getValue(referenceLineProperties, referenceLineProps.style, lineStyle.dashed);
             let position = DataViewObject.getValue(referenceLineProperties, referenceLineProps.position, referenceLinePosition.back);
 
-            let refLine = (position === referenceLinePosition.back) ? graphicContext.insert('line', ":first-child") : graphicContext.append('line');
+            let refLine = graphicContext.select(classAndSelector.selector);
+                       
+            let index = $(refLine[0]).index();
+            let currentPosition = index > 1 ? referenceLinePosition.front : referenceLinePosition.back;
+            let isRefLineExists = index !== -1; 
+            let isPositionChanged = currentPosition !== position;
+
+            if (isRefLineExists && isPositionChanged) 
+                refLine.remove();
+            
+            if (!isRefLineExists || isPositionChanged) 
+                refLine = (position === referenceLinePosition.back) ? graphicContext.insert('line', ":first-child") : graphicContext.append('line');            
 
             let refLineX1 = isHorizontal ? 0 : xScale(refValue);
             let refLineY1 = isHorizontal ? yScale(refValue) : 0;
@@ -152,18 +161,22 @@ module powerbi.visuals {
                     'stroke': lineColor.solid.color,
                 });
 
-            if (transparency != null) {
-                refLine.style('stroke-opacity', ((100 - transparency) / 100));
-            }
+            if (transparency != null) 
+                refLine.style('stroke-opacity', ((100 - transparency) / 100));            
 
             if (style === lineStyle.dashed) {
-                refLine.style( 'stroke-dasharray', ("5, 5") );
+                refLine.style('stroke-dasharray', ("5, 5"));
             }
-
-            if (style === lineStyle.dotted) {
+            else if (style === lineStyle.dotted) {
                 refLine.style({
                     'stroke-dasharray': ("1, 5"),
                     'stroke-linecap': "round"
+                });
+            }
+            else if (style === lineStyle.solid) {
+                refLine.style({
+                    'stroke-dasharray': null,
+                    'stroke-linecap': null
                 });
             }
         }

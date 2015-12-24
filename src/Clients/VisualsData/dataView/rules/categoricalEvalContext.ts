@@ -60,6 +60,10 @@ module powerbi.data {
                 return identities[index];
         }
 
+        public getExprValue(expr: SQExpr): PrimitiveValue {
+            return;
+        }
+
         public getRoleValue(roleName: string): PrimitiveValue {
             let columnsByRole = this.columnsByRole;
             let column = columnsByRole[roleName];

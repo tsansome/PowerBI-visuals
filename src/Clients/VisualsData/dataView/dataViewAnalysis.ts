@@ -43,7 +43,7 @@ module powerbi {
         /** Reshapes the data view to match the provided schema if possible. If not, returns null */
         export function validateAndReshape(dataView: DataView, dataViewMappings: DataViewMapping[]): ValidateAndReshapeResult {
             if (!dataViewMappings || dataViewMappings.length === 0)
-                return { dataView: dataView, isValid: true };            
+                return { dataView: dataView, isValid: true };
 
             if (dataView) {
                 for (let dataViewMapping of dataViewMappings) {
@@ -346,7 +346,7 @@ module powerbi {
         }
 
         /** Determines the appropriate DataViewMappings for the projections. */
-        export function chooseDataViewMappings(projections: QueryProjectionsByRole, mappings: DataViewMapping[], roleKindByQueryRef: RoleKindByQueryRef): DataViewMapping[]{
+        export function chooseDataViewMappings(projections: QueryProjectionsByRole, mappings: DataViewMapping[], roleKindByQueryRef: RoleKindByQueryRef): DataViewMapping[] {
             debug.assertValue(projections, 'projections');
             debug.assertValue(mappings, 'mappings');
 
@@ -469,7 +469,7 @@ module powerbi {
         }
 
         /* Returns true if the metadata columns at the same positions in the array are equivalent. */
-        export function isMetadataEquivalent(metadata1: DataViewMetadata, metadata2: DataViewMetadata) {
+        export function isMetadataEquivalent(metadata1: DataViewMetadata, metadata2: DataViewMetadata): boolean {
             if (!metadata1 && !metadata2)
                 return true;
 

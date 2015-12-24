@@ -43,6 +43,41 @@ module powerbitests {
                 expect(enumeration.complete()).toBeUndefined();
             });
 
+            it('default background', () => {
+                let enumeration = new ObjectEnumerationBuilder();
+
+                let instance: VisualObjectInstance = {
+                    selector: null,
+                    properties: {
+                        image: undefined,
+                        transparency: visualBackgroundHelper.getDefaultTransparency(),
+                    },
+                    objectName: 'plotArea',
+                };
+                visualBackgroundHelper.enumeratePlot(enumeration, /* background */ undefined, true);
+                expect(enumeration.complete()).toEqual({
+                    instances: [instance],
+                });
+            });
+
+            it('default background image', () => {
+                let enumeration = new ObjectEnumerationBuilder();
+                let background: visuals.VisualBackground = { };
+
+                let instance: VisualObjectInstance = {
+                    selector: null,
+                    properties: {
+                        image: undefined,
+                        transparency: visualBackgroundHelper.getDefaultTransparency(),
+                    },
+                    objectName: 'plotArea',
+                };
+                visualBackgroundHelper.enumeratePlot(enumeration, background, true);
+                expect(enumeration.complete()).toEqual({
+                    instances: [instance],
+                });
+            });
+
             it('image', () => {
                 let enumeration = new ObjectEnumerationBuilder();
                 let background: visuals.VisualBackground = {
@@ -78,6 +113,7 @@ module powerbitests {
                 let instance: VisualObjectInstance = {
                     selector: null,
                     properties: {
+                        image: undefined,
                         transparency: 20,
                     },
                     objectName: 'plotArea',
@@ -145,7 +181,15 @@ module powerbitests {
         });
 
         describe("renderBackgroundImage", () => {
+            const plotArea: powerbi.visuals.IRect = {
+                top: 0,
+                left: 0,
+                width: 100,
+                height: 100,
+            };
+
             let element: JQuery;
+
             beforeEach(() => {
                 element = $('<div class="visual-element"></div>');
             });
@@ -162,7 +206,7 @@ module powerbitests {
                 visualBackgroundHelper.renderBackgroundImage(
                     backgroundData,
                     element,
-                    0, 0, 0, 0);
+                    plotArea);
 
                 expect(element.children('.background-image').length).toBe(1);
 
@@ -170,14 +214,14 @@ module powerbitests {
                 visualBackgroundHelper.renderBackgroundImage(
                     backgroundData,
                     element,
-                    0, 0, 0, 0);
+                    plotArea);
                 expect(element.children('.background-image').length).toBe(1);
 
                 // Remove element
                 visualBackgroundHelper.renderBackgroundImage(
                     {},
                     element,
-                    0, 0, 0, 0);
+                    plotArea);
                 expect(element.children('.background-image').length).toBe(0);
             });
 
@@ -191,7 +235,7 @@ module powerbitests {
                 visualBackgroundHelper.renderBackgroundImage(
                     backgroundData,
                     element,
-                    0, 0, 0, 0);
+                    plotArea);
 
                 let resultElement = element.children('.background-image');
                 expect(resultElement.css('background-image')).toBe('url(data:image/gif;base64,R0lGO)');
@@ -212,7 +256,7 @@ module powerbitests {
                 visualBackgroundHelper.renderBackgroundImage(
                     backgroundData,
                     element,
-                    0, 0, 0, 0);
+                    plotArea);
 
                 let resultElement = element.children('.background-image');
                 expect(resultElement.css('background-image')).toBe('url(data:image/gif;base64,R0lGO)');
@@ -233,7 +277,7 @@ module powerbitests {
                 visualBackgroundHelper.renderBackgroundImage(
                     backgroundData,
                     element,
-                    0, 0, 0, 0);
+                    plotArea);
 
                 let resultElement = element.children('.background-image');
                 expect(resultElement.css('background-image')).toBe('url(data:image/gif;base64,R0lGO)');
@@ -257,7 +301,7 @@ module powerbitests {
                 visualBackgroundHelper.renderBackgroundImage(
                     backgroundData,
                     element,
-                    0, 0, 0, 0);
+                    plotArea);
 
                 let resultElement = element.children('.background-image');
                 expect(resultElement.css('background-image')).toBe('url(data:image/gif;base64,R0lGO)');
@@ -278,7 +322,7 @@ module powerbitests {
                 visualBackgroundHelper.renderBackgroundImage(
                     backgroundData,
                     element,
-                    0, 0, 0, 0);
+                    plotArea);
 
                 let resultElement = element.children('.background-image');
                 expect(resultElement.css('background-image')).toBe('url(data:image/gif;base64,R0lGO)');
@@ -297,13 +341,18 @@ module powerbitests {
                 visualBackgroundHelper.renderBackgroundImage(
                     backgroundData,
                     element,
-                    20, 30, 40, 50);
+                    {
+                        top: 20,
+                        left: 30,
+                        width: 40,
+                        height: 50,
+                    });
 
                 let resultElement = element.children('.background-image');
-                expect(resultElement.css('width')).toBe('20px');
-                expect(resultElement.css('height')).toBe('30px');
-                expect(resultElement.css('left')).toBe('40px');
-                expect(resultElement.css('bottom')).toBe('50px');
+                expect(resultElement.css('margin-top')).toBe('20px');
+                expect(resultElement.css('margin-left')).toBe('30px');
+                expect(resultElement.css('width')).toBe('40px');
+                expect(resultElement.css('height')).toBe('50px');
             });
         });
     });

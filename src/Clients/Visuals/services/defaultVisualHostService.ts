@@ -153,7 +153,16 @@ module powerbi.visuals {
         public setToolbar($toolbar: JQuery): void { }
         public shouldRetainSelection(): boolean { return false; }
         public geocoder(): IGeocoder { return services.createGeocoder(); }
-
+        public promiseFactory(): IPromiseFactory { return createJQueryPromiseFactory(); }
+        public filterAnalyzer(filter: data.SemanticFilter, fieldSQExprs: data.SQExpr[]): IFilterAnalyzer {
+            return {
+                isNotFilter: ()=> false,
+                selectedIdentities: () => [],
+                hasDefaultFilterOverride: () => {
+                    return this.promiseFactory().resolve<boolean>(false);
+                }
+            };
+        }
         private static beautify(format: string): string {
             let key = BeautifiedFormat[format];
             if (key)

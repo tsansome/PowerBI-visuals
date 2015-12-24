@@ -222,7 +222,7 @@ module powerbi.visuals {
                 pixelSpan: height,
                 dataDomain: combinedDomain,
                 metaDataColumn: yMetaDataColumn,
-                formatStringProp: DataDotChart.formatStringProp,
+                formatString: valueFormatter.getFormatString(yMetaDataColumn, DataDotChart.formatStringProp),
                 outerPadding: 0,
                 isScalar: true,
                 isVertical: true,
@@ -237,7 +237,7 @@ module powerbi.visuals {
                 pixelSpan: width,
                 dataDomain: xDomain,
                 metaDataColumn: xMetaDataColumn,
-                formatStringProp: DataDotChart.formatStringProp,
+                formatString: valueFormatter.getFormatString(xMetaDataColumn, DataDotChart.formatStringProp),
                 outerPadding: outerPadding,
                 isScalar: false,
                 isVertical: false,
@@ -251,7 +251,7 @@ module powerbi.visuals {
             return [this.xAxisProperties, this.yAxisProperties];
         }
 
-        private static createClippedDataIfOverflowed(data: DataDotChartData, categoryCount: number): DataDotChartData {                                                
+        private static createClippedDataIfOverflowed(data: DataDotChartData, categoryCount: number): DataDotChartData {
 
             // If there are highlights, then the series is 2x in length and highlights are interwoven.
             let requiredLength = data.hasHighlights ? Math.min(data.series.data.length, categoryCount * 2) : Math.min(data.series.data.length, categoryCount);

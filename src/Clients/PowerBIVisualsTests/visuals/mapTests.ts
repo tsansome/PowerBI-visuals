@@ -777,7 +777,7 @@ module powerbitests {
         });
             });
 
-            describe('bubble map', () => {
+        describe('bubble map', () => {
                 it('no series, with gradient role', () => {
                     let dataView = new MapDataBuilder().build(false, false, true);
             expect(Map.shouldEnumerateDataPoints(dataView, /*usesSizeForGradient*/ false)).toBe(false);
@@ -792,6 +792,24 @@ module powerbitests {
                     let dataView = new MapDataBuilder().buildWithSeries(false, false, false);
                     expect(Map.shouldEnumerateDataPoints(dataView, /*usesSizeForGradient*/ false)).toBe(true);
                 });
+            });
+        });
+
+        describe('Regression test for Defect 6414910: should Enumerate Category Labels', () => {
+            it('filled Map with filled map feature switch on', () => {
+                expect(Map.shouldEnumerateCategoryLabels(/*enableGeoShaping*/ true, /*filledMapDataLabelsEnabled*/ true)).toBe(true);
+            });
+
+            it('filled Map with filled map feature switch off', () => {
+                expect(Map.shouldEnumerateCategoryLabels(/*enableGeoShaping*/ true, /*filledMapDataLabelsEnabled*/ false)).toBe(false);
+            });
+
+            it('Bubble Map with filled map feature switch on', () => {
+                expect(Map.shouldEnumerateCategoryLabels(/*enableGeoShaping*/ false, /*filledMapDataLabelsEnabled*/ true)).toBe(true);
+            });
+
+            it('Bubble Map with filled map feature switch off', () => {
+                expect(Map.shouldEnumerateCategoryLabels(/*enableGeoShaping*/ false, /*filledMapDataLabelsEnabled*/ false)).toBe(true);
             });
         });
 

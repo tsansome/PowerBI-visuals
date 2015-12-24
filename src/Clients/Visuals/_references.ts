@@ -39,7 +39,9 @@
 /// <reference path="types/basicShapeType.ts"/>
 /// <reference path="types/imageScalingType.ts"/>
 /// <reference path="types/labelPosition.ts"/>
+/// <reference path="types/labelStyle.ts"/>
 /// <reference path="types/legendPosition.ts"/>
+/// <reference path="types/kpi_direction_type.ts"/>
 /// <reference path="types/lineStyle.ts"/>
 /// <reference path="types/outline.ts"/>
 /// <reference path="types/referenceLinePosition.ts"/>
@@ -79,6 +81,7 @@
 /// <reference path="capabilities/nodeLink.capabilities.ts"/>
 /// <reference path="capabilities/waterfallChart.capabilities.ts"/>
 /// <reference path="capabilities/sunburst.capabilities.ts"/>
+/// <reference path="capabilities/kpiStatusWithHistory.capabilities.ts"/>
 /// <reference path="pluginsCapabilities.ts"/>
 
 /// <reference path="behaviours/columnChartBehaviors.ts"/>
@@ -174,6 +177,7 @@
 /// <reference path="visuals/funnelChart.ts"/>
 /// <reference path="visuals/gauge.ts"/>
 /// <reference path="visuals/imageVisual.ts"/>
+/// <reference path="visuals/kpiStatusWithHistory.ts"/>
 /// <reference path="iVisualStyle.ts"/>
 
 /// <reference path="cartesian/lineChart.ts"/>
@@ -198,6 +202,8 @@
 /// <reference path="visuals/samples/dotPlot.ts"/>
 /// <reference path="visuals/samples/timeline.ts"/>
 /// <reference path="visuals/samples/areaRangeChart.ts"/>
+/// <reference path="visuals/samples/chicletSlicer.ts"/>
+
 /// <reference path="warnings/visualWarnings.ts"/>
 /// <reference path="cartesian/waterfallChart.ts"/>
 
@@ -213,4 +219,6 @@
 
 /// <reference path="visuals/scriptVisual.ts"/>
 
+/// <reference path="visuals/samples/sankeyDiagram.ts"/>
+/// <reference path="visuals/samples/wordCloud.ts"/>
 /// <reference path="plugins.ts"/>

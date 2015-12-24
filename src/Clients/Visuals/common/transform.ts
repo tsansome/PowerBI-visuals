@@ -138,7 +138,7 @@ module powerbi.visuals {
             }
         }
 
-        public add(other: Transform) {
+        public add(other: Transform): void {
             if (other) {
                 this.matrix = multiplyMatrices(this.matrix, other.matrix);
                 this._inverse = null;

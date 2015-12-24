@@ -55,19 +55,17 @@ module powerbi.visuals {
 
         export function enumeratePlot(enumeration: ObjectEnumerationBuilder, background: VisualBackground, backgroundImageEnabled: boolean): void {
             // featureSwitch
-            if (!background || !backgroundImageEnabled)
+            if (!backgroundImageEnabled)
                 return;
 
             let backgroundObject: VisualObjectInstance = {
                 selector: null,
                 properties: {
-                    transparency: background.transparency || getDefaultTransparency(),
+                    transparency: (background && background.transparency) || getDefaultTransparency(),
+                    image: (background && background.image)
                 },
                 objectName: 'plotArea',
             };
-
-            if (background.image)
-                backgroundObject.properties['image'] = background.image;
 
             enumeration.pushInstance(backgroundObject);
         }
@@ -75,10 +73,7 @@ module powerbi.visuals {
         export function renderBackgroundImage(
             background: VisualBackground,
             visualElement: JQuery,
-            availableWidth: number,
-            availableHeight: number,
-            marginLeft: number,
-            marginBottom: number): void {
+            layout: Rect): void {
             let image = background && background.image;
             let imageUrl = image && image.url;
             let imageFit = image && image.scaling;
@@ -104,10 +99,10 @@ module powerbi.visuals {
 
             // Get the size and margins from the visual for the div will placed inside the plot area
             backgroundImage.css({
-                'width': availableWidth,
-                'height': availableHeight,
-                'left': marginLeft,
-                'bottom': marginBottom,
+                'width': layout.width,
+                'height': layout.height,
+                'margin-left': layout.left,
+                'margin-top': layout.top,
             });
 
             // Background properties

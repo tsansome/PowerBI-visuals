@@ -40,7 +40,7 @@ module jsCommon {
         const SPACE = ' ';
         const BREAKERS_REGEX = /[\s\n]+/g;
 
-        function search(index: number, content: string, backward: boolean) {
+        function search(index: number, content: string, backward: boolean): number {
             if (backward) {
                 for (let i = index - 1; i > -1; i--) {
                     if (hasBreakers(content[i]))

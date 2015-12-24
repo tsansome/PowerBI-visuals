@@ -421,4 +421,33 @@ module powerbitests.mocks {
             return selections;
         }
     }
+
+    export class FilterAnalyzerMock implements powerbi.IFilterAnalyzer {
+        private promiseFactory: powerbi.IPromiseFactory;
+        private filter: powerbi.data.SemanticFilter;
+        private fieldSQExprs: powerbi.data.SQExpr[];
+        private container: powerbi.data.FilterValueScopeIdsContainer;
+        public constructor(filter: powerbi.data.SemanticFilter, fieldSQExprs: powerbi.data.SQExpr[]) {
+            this.promiseFactory = powerbi.createJQueryPromiseFactory();
+            this.filter = filter;
+            this.fieldSQExprs = fieldSQExprs;
+
+            if (this.filter)
+                this.container = powerbi.data.SQExprConverter.asScopeIdsContainer(this.filter, this.fieldSQExprs);
+            else
+                this.container = { isNot: false, scopeIds: [] };
+        }
+
+        public isNotFilter(): boolean {
+            return this.container && this.container.isNot;
+        }
+
+        public selectedIdentities(): powerbi.DataViewScopeIdentity[] {
+            return this.container && this.container.scopeIds;
+        }
+
+        public hasDefaultFilterOverride(): powerbi.IPromise<boolean> {
+            return this.promiseFactory.resolve<boolean>(false);
+        }
+    }
 }

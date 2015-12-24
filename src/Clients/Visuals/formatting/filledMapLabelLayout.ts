@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Power BI Visualizations
  *
  *  Copyright (c) Microsoft Corporation
@@ -339,7 +339,7 @@ module powerbi {
         private columnCount: number;
         private rowCount: number;
 
-        /** 
+        /**
          * A multiplier applied to the largest width height to attempt to balance # of
          * polygons in each cell and number of cells each polygon belongs to
          */

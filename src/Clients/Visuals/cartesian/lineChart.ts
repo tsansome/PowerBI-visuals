@@ -125,6 +125,7 @@ module powerbi.visuals {
         private static LineElementName = 'line';
         private static RectOverlayName = 'rect';
         private static NumberOfPreferredLabels = 4;
+        private static ScalarOuterPadding = 10;
         public static AreaFillOpacity = 0.4;
         public static DimmedAreaFillOpacity = 0.2;
 
@@ -228,7 +229,8 @@ module powerbi.visuals {
             colors: IDataColorPalette,
             isScalar: boolean,
             interactivityService?: IInteractivityService,
-            shouldCalculateStacked?: boolean): LineChartData {
+            shouldCalculateStacked?: boolean,
+            isComboChart?: boolean): LineChartData {
             let categorical = dataView.categorical;
             let category = categorical.categories && categorical.categories.length > 0
                 ? categorical.categories[0]
@@ -251,7 +253,7 @@ module powerbi.visuals {
             let seriesLen = categorical.values ? categorical.values.length : 0;
             let hasDynamicSeries = !!(categorical.values && categorical.values.source);
             let values = categorical.values;
-            let defaultLabelSettings: LineChartDataLabelsSettings = dataLabelUtils.getDefaultLineChartLabelSettings();
+            let defaultLabelSettings: LineChartDataLabelsSettings = dataLabelUtils.getDefaultLineChartLabelSettings(isComboChart);
             let defaultSeriesColor: string;
 
             if (dataView.metadata && dataView.metadata.objects) {
@@ -279,9 +281,9 @@ module powerbi.visuals {
                 let valuesMetadata = column.source;
                 let dataPoints: LineChartDataPoint[] = [];
                 let groupedIdentity = grouped[seriesIndex];
-                let identity = hasDynamicSeries && groupedIdentity ?
-                    SelectionId.createWithIdAndMeasure(groupedIdentity.identity, column.source.queryName) :
-                    SelectionId.createWithMeasure(column.source.queryName);
+                let identity = hasDynamicSeries && groupedIdentity
+                    ? SelectionId.createWithIdAndMeasure(groupedIdentity.identity, column.source.queryName)
+                    : SelectionId.createWithMeasure(column.source.queryName);
                 let key = identity.getKey();
                 let color = this.getColor(colorHelper, hasDynamicSeries, values, grouped, seriesIndex, groupedIdentity);
                 let seriesLabelSettings: LineChartDataLabelsSettings;
@@ -518,7 +520,7 @@ module powerbi.visuals {
         public setData(dataViews: DataView[]): void {
             this.data = {
                 series: [],
-                dataLabelsSettings: dataLabelUtils.getDefaultLineChartLabelSettings(),
+                dataLabelsSettings: dataLabelUtils.getDefaultLineChartLabelSettings(this.isComboChart),
                 axesLabels: { x: null, y: null },
                 hasDynamicSeries: false,
                 categories: [],
@@ -543,7 +545,8 @@ module powerbi.visuals {
                             this.cartesianVisualHost.getSharedColors(),
                             CartesianChart.getIsScalar(dataView.metadata ? dataView.metadata.objects : null, lineChartProps.categoryAxis.axisType, categoryType),
                             this.interactivityService,
-                            EnumExtensions.hasFlag(this.lineType, LineChartType.stackedArea));
+                            EnumExtensions.hasFlag(this.lineType, LineChartType.stackedArea),
+                            this.isComboChart);
                         this.data = convertedData;
                     }
                 }
@@ -612,7 +615,7 @@ module powerbi.visuals {
                 pixelSpan: preferredPlotArea.height,
                 dataDomain: combinedDomain,
                 metaDataColumn: yMetaDataColumn,
-                formatStringProp: lineChartProps.general.formatString,
+                formatString: valueFormatter.getFormatString(yMetaDataColumn, lineChartProps.general.formatString),
                 outerPadding: 0,
                 isScalar: true,
                 isVertical: true,
@@ -630,13 +633,13 @@ module powerbi.visuals {
                 pixelSpan: preferredPlotArea.width,
                 dataDomain: xDomain,
                 metaDataColumn: xMetaDataColumn,
-                formatStringProp: lineChartProps.general.formatString,
-                outerPadding: 0,
+                formatString: valueFormatter.getFormatString(xMetaDataColumn, lineChartProps.general.formatString),
+                outerPadding: this.data.isScalar ? LineChart.ScalarOuterPadding : 0,
                 isScalar: this.data.isScalar,
                 isVertical: false,
                 forcedTickCount: options.forcedTickCount,
                 useTickIntervalForDisplayUnits: true,
-                getValueFn: (index, type) => this.lookupXValue(index, type),
+                getValueFn: (index, type) => CartesianHelper.lookupXValue(this.data, index, type, this.data.isScalar),
                 categoryThickness: CartesianChart.getCategoryThickness(data.series, origCatgSize, this.getAvailableWidth(), xDomain, isScalar),
                 isCategoryAxis: true,
                 scaleType: options.categoryAxisScaleType,
@@ -1199,7 +1202,7 @@ module powerbi.visuals {
             return tooltipinfo;
         }
 
-        public getTooltipInfoByPathPointX(tooltipEvent: TooltipEvent, pointX: number): TooltipDataItem[]{
+        public getTooltipInfoByPathPointX(tooltipEvent: TooltipEvent, pointX: number): TooltipDataItem[] {
             let pointData = tooltipEvent.data;
             let svgPathElement = <SVGPathElement>(<any>tooltipEvent.context);
             if (svgPathElement && svgPathElement.pathSegList && svgPathElement.pathSegList.getItem(0)
@@ -1207,7 +1210,10 @@ module powerbi.visuals {
                 pointX += (<SVGPathSegMovetoAbs>svgPathElement.pathSegList.getItem(0)).x;
             }
             let index: number = this.findIndex(pointX);
-            return pointData.data[index].tooltipInfo;
+            let dataPoint = _.find(pointData.data, (dp: LineChartDataPoint) => dp.categoryIndex === index);
+            if (dataPoint)
+                return dataPoint.tooltipInfo;
+            // return undefined so we don't show an empty tooltip
         }
 
         public getVisualCategoryAxisIsScalar(): boolean {
@@ -1278,31 +1284,6 @@ module powerbi.visuals {
                     return true;
             }
             return false;
-        }
-
-        private lookupXValue(index: number, type: ValueType): any {
-            debug.assertValue(this.data, 'this.data');
-
-            let isDateTime = AxisHelper.isDateTime(type);
-            if (isDateTime && this.data.isScalar)
-                return new Date(index);
-
-            if (this.data && this.data.series && this.data.series.length > 0) {
-                let firstSeries = this.data.series[0];
-                if (firstSeries) {
-                    let data = firstSeries.data;
-                    if (data) {
-                        let dataAtIndex = data[index];
-                        if (dataAtIndex) {
-                            if (isDateTime)
-                                return new Date(dataAtIndex.categoryValue);
-                            return dataAtIndex.categoryValue;
-                        }
-                    }
-                }
-            }
-
-            return index;
         }
 
         private getXValue(d: LineChartDataPoint): any {
@@ -1420,21 +1401,19 @@ module powerbi.visuals {
                 });
         }
 
-        private getChartX(columnIndex: number) {
+        private getChartX(columnIndex: number): number {
             let x: number = 0;
-            if (this.data.isScalar && columnIndex >= 0 && columnIndex < this.data.categoryData.length) {
-                x = Math.max(0, this.xAxisProperties.scale(this.data.categoryData[columnIndex].categoryValue));
+            if (this.data.isScalar) {
+                if (columnIndex >= 0 && columnIndex < this.data.categoryData.length)
+                    x = Math.max(0, this.xAxisProperties.scale(this.data.categoryData[columnIndex].categoryValue));
             } else {
                 x = Math.max(0, this.xAxisProperties.scale(columnIndex));
             }
 
             let rangeEnd = powerbi.visuals.AxisHelper.extent(this.xAxisProperties.scale)[1];
-
             x = Math.min(x, rangeEnd);
-            if (isNaN(x)) {
-                return;
-            }
-            return x;
+            if (!isNaN(x))
+                return x;
         }
 
         /**
@@ -1486,14 +1465,14 @@ module powerbi.visuals {
             let categoryDataPoint: LineChartDataPoint = data.categoryData[columnIndex];
             if (this.data.isScalar) {
                 if (AxisHelper.isDateTime(this.xAxisProperties.axisType)) {
-                    category = this.lookupXValue(categoryDataPoint.categoryValue, this.xAxisProperties.axisType);
+                    category = CartesianHelper.lookupXValue(this.data, categoryDataPoint.categoryValue, this.xAxisProperties.axisType, this.data.isScalar);
                 }
                 else {
                     category = categoryDataPoint.categoryValue;
                 }
             }
             else {
-                category = this.lookupXValue(columnIndex, this.xAxisProperties.axisType);
+                category = CartesianHelper.lookupXValue(this.data, columnIndex, this.xAxisProperties.axisType, this.data.isScalar);
             }
 
             let formatStringProp = lineChartProps.general.formatString;
@@ -1508,7 +1487,7 @@ module powerbi.visuals {
                 }
 
                 let value = lineDataPoint && lineDataPoint.value;
-                if (value) {
+                if (value != null) {
                     let label = converterHelper.getFormattedLegendLabel(series.yCol, this.dataViewCat.values, formatStringProp);
                     dataPoints.push({
                         color: series.color,
@@ -1541,7 +1520,7 @@ module powerbi.visuals {
                         category = new Date(category);
                 }
                 else {
-                    category = this.lookupXValue(columnIndex, this.xAxisProperties.axisType);
+                    category = CartesianHelper.lookupXValue(this.data, columnIndex, this.xAxisProperties.axisType, this.data.isScalar);
                 }
             }
 
@@ -1557,17 +1536,20 @@ module powerbi.visuals {
                 if (this.isInteractiveChart) {
                     let lineDataPoint;
                     if (this.data.isScalar) {
-                        // TODO: search for matching x-value
-                        let targetCategoryValue = categoryDataPoint.categoryValue;
-                        for (let i = 0; i < lineData.length; i++) {
-                            if (lineData[i].categoryValue === targetCategoryValue) {
-                                lineDataPoint = lineData[i];
-                                break;
+                        // Scalar series skip null values, and therefore do not share the same category index
+                        // Search this series for the categoryValue - it may not exist
+                        if (categoryDataPoint) {
+                            let targetCategoryValue = categoryDataPoint.categoryValue;
+                            for (let i = 0; i < lineData.length; i++) {
+                                if (lineData[i].categoryValue === targetCategoryValue) {
+                                    lineDataPoint = lineData[i];
+                                    break;
+                                }
                             }
                         }
                     }
                     else {
-                        // ordinal series share x-indicies
+                        // ordinal series all share the same x-indicies
                         lineDataPoint = lineData[columnIndex];
                     }
                     measure = lineDataPoint && lineDataPoint.value;

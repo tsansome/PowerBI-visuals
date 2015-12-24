@@ -499,8 +499,8 @@ module powerbi.visuals {
             if (backgroundColor)
                 cell.extension.setBackgroundColor(backgroundColor);
 
-            let borderStyle = SlicerUtil.DOMHelper.getBorderStyleWithWeight(outline, outlineWeight);
-            let borderWeight = SlicerUtil.DOMHelper.getBorderWidth(outline, outlineWeight);
+            let borderStyle = VisualBorderUtil.getBorderStyleWithWeight(outline, outlineWeight);
+            let borderWeight = VisualBorderUtil.getBorderWidth(outline, outlineWeight);
             cell.extension.setOutline(borderStyle, outlineColor, borderWeight);
         }
 

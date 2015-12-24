@@ -41,14 +41,6 @@
     color: @kpiRed;
 }
 
-@font-face {
-    font-family: 'PowerVisuals';
-    src: ~"url('../fonts/PowerVisuals.eot?#iefix') format('embedded-opentype'),url('../fonts/PowerVisuals.woff') format('woff'),url('../fonts/PowerVisuals.ttf') format('truetype'),url('../fonts/PowerVisuals.svg') format('svg')";
-    font-weight: normal;
-    font-style: normal;
-}
-
-
 .powervisuals-glyph {
     font-family: PowerVisuals;
     font-size: 12px;
@@ -229,6 +221,34 @@
     
     &.circle-one-quarter::before {
         content: '\E738';
+    }
+
+    &.link::before {
+        content: '\E8B5';
+    }
+
+    &.bold::before {
+        content: '\E8DD';
+    }
+
+    &.italic::before {
+        content: '\E8DB';
+    }
+
+    &.underline::before {
+        content: '\E8DC';
+    }
+
+    &.alignleft::before {
+        content: '\E8E4';
+    }
+
+    &.aligncenter::before {
+        content: '\E8E3';
+    }
+
+    &.alignright::before {
+        content: '\E8E2';
     }
 
     //stacked boxes

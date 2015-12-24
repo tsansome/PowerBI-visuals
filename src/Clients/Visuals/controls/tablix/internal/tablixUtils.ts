@@ -115,27 +115,27 @@ module powerbi.visuals.controls.internal {
         export const TablixOutlineColorProp: DataViewObjectPropertyIdentifier = { objectName: 'general', propertyName: 'outlineColor' };
         export const TablixOutlineWeightProp: DataViewObjectPropertyIdentifier = { objectName: 'general', propertyName: 'outlineWeight' };
 
-        export const ColumnSeparatorColorProp: DataViewObjectPropertyIdentifier = { objectName: 'columns', propertyName: 'columnSeparatorWeight' };
+        export const ColumnSeparatorColorProp: DataViewObjectPropertyIdentifier = { objectName: 'columns', propertyName: 'separatorColor' };
         export const ColumnSeparatorShowProp: DataViewObjectPropertyIdentifier = { objectName: 'columns', propertyName: 'showSeparators' };
-        export const ColumnSeparatorWeightProp: DataViewObjectPropertyIdentifier = { objectName: 'columns', propertyName: 'separatorWeight' };
+        export const ColumnSeparatorWeightProp: DataViewObjectPropertyIdentifier = { objectName: 'columns', propertyName: 'columnSeparatorWeight' };
 
         export const ColumnHeaderFontColorProp: DataViewObjectPropertyIdentifier = { objectName: 'header', propertyName: 'fontColor' };
         export const ColumnHeaderBackgroundColorProp: DataViewObjectPropertyIdentifier = { objectName: 'header', propertyName: 'backgroundColor' };
         export const ColumnHeaderOutlineProp: DataViewObjectPropertyIdentifier = { objectName: 'header', propertyName: 'outline' };
 
-        export const RowHeaderSeparatorProp: DataViewObjectPropertyIdentifier = { objectName: 'rows', propertyName: 'showSeparators' };
+        export const RowSeparatorProp: DataViewObjectPropertyIdentifier = { objectName: 'rows', propertyName: 'showSeparators' };
         export const RowHeaderFontColorProp: DataViewObjectPropertyIdentifier = { objectName: 'rows', propertyName: 'fontColor' };
         export const RowHeaderBackgroundColorProp: DataViewObjectPropertyIdentifier = { objectName: 'rows', propertyName: 'backgroundColor' };
-        export const RowHeaderOutlineStyle: DataViewObjectPropertyIdentifier = { objectName: 'rows', propertyName: 'outline' };
+        export const RowHeaderOutlineStyleProp: DataViewObjectPropertyIdentifier = { objectName: 'rows', propertyName: 'outline' };
 
         export const ValuesFontColorProp: DataViewObjectPropertyIdentifier = { objectName: 'values', propertyName: 'fontColor' };
         export const ValuesBackgroundColorProp: DataViewObjectPropertyIdentifier = { objectName: 'values', propertyName: 'backgroundColor' };
         export const ValuesOutlineProp: DataViewObjectPropertyIdentifier = { objectName: 'values', propertyName: 'outline' };
 
-        export const TotalsFontColorProp: DataViewObjectPropertyIdentifier = { objectName: 'totals', propertyName: 'fontColor' };
-        export const TotalsBackgroundColor: DataViewObjectPropertyIdentifier = { objectName: 'totals', propertyName: 'backgroundColor' };
-        export const TotalsOutlineProp: DataViewObjectPropertyIdentifier = { objectName: 'totals', propertyName: 'outline' };
-        export const TotalsLeadingSpaceProp: DataViewObjectPropertyIdentifier = { objectName: 'totals', propertyName: 'leadingSpace' };
+        export const RowTotalsFontColorProp: DataViewObjectPropertyIdentifier = { objectName: 'totals', propertyName: 'fontColor' };
+        export const RowTotalsBackgroundColor: DataViewObjectPropertyIdentifier = { objectName: 'totals', propertyName: 'backgroundColor' };
+        export const RowTotalsOutlineProp: DataViewObjectPropertyIdentifier = { objectName: 'totals', propertyName: 'outline' };
+        export const RowTotalsLeadingSpaceProp: DataViewObjectPropertyIdentifier = { objectName: 'totals', propertyName: 'leadingSpace' };
 
         export const DefaultColumnSeparatorShow: boolean = false;
         export const DefaultColumnSeparatorColor: string = "#E8E8E8";
@@ -150,8 +150,8 @@ module powerbi.visuals.controls.internal {
         export const DefaultOutlineColumnHeader: string = "BottomOnly";
         export const DefaultOutlineRowHeader: string = "None";
         export const DefaultOutlineValues: string = "LeftOnly";
-        export const DefaultOutlineTotals: string = "TopOnly";
-        export const DefaultLeadingSpace: number = 0;
+        export const DefaultOutlineRowTotals: string = "TopOnly";
+        export const DefaultRowLeadingSpace: number = 0;
         export const UnitOfMeasurement: string = 'px';
         export const DefaultColumnSeparatorStyle: string = "solid";
         export const DefaultRowSeparatorStyle: string = 'solid';
@@ -354,7 +354,7 @@ module powerbi.visuals.controls.internal {
                 properties: {
                     showSeparators: showSeparators,
                     separatorColor: showSeparators ? TablixUtils.getColumnSeparatorColor(objects) : TablixUtils.DefaultColumnSeparatorColor,
-                    separatorWeight: showSeparators ? TablixUtils.getColumnSeparatorWeight(objects) : TablixUtils.DefaultColumnSeparatorWeight
+                    columnSeparatorWeight: showSeparators ? TablixUtils.getColumnSeparatorWeight(objects) : TablixUtils.DefaultColumnSeparatorWeight
                 }
             });
         }
@@ -376,7 +376,7 @@ module powerbi.visuals.controls.internal {
                 selector: null,
                 objectName: 'rows',
                 properties: {
-                    showSeparators: TablixUtils.getRowHeaderSeparatorShow(objects),
+                    showSeparators: TablixUtils.getRowSeparatorShow(objects),
                     fontColor: TablixUtils.getRowHeaderFontColor(objects),
                     backgroundColor: TablixUtils.getRowHeaderBackgroundColor(objects),
                     outline: TablixUtils.getRowHeaderOutlineStyle(objects),
@@ -401,10 +401,10 @@ module powerbi.visuals.controls.internal {
                 selector: null,
                 objectName: 'totals',
                 properties: {
-                    fontColor: TablixUtils.getTotalsFontColor(objects),
-                    backgroundColor: TablixUtils.getTotalsBackgroundColor(objects),
-                    outline: TablixUtils.getTotalsOutlineType(objects),
-                    leadingSpace: TablixUtils.getTotalsLeadingSpace(objects)
+                    fontColor: TablixUtils.getRowTotalsFontColor(objects),
+                    backgroundColor: TablixUtils.getRowTotalsBackgroundColor(objects),
+                    outline: TablixUtils.getRowTotalsOutlineType(objects),
+                    leadingSpace: TablixUtils.getRowTotalsLeadingSpace(objects)
                 }
             });
         }
@@ -433,22 +433,22 @@ module powerbi.visuals.controls.internal {
                     header:
                     {
                         fontColor: TablixUtils.getColumnHeaderFontColor(tablixFormattingProperties),
-                        backgroundColor: TablixUtils.getColumnHeaderOutlineType(tablixFormattingProperties),
+                        backgroundColor: TablixUtils.getColumnHeaderBackgroundColor(tablixFormattingProperties),
                         outline: TablixUtils.getColumnHeaderOutlineType(tablixFormattingProperties)
                     },
                     rows:
                     {
-                        showSeparators: TablixUtils.getRowHeaderSeparatorShow(tablixFormattingProperties),
+                        showSeparators: TablixUtils.getRowSeparatorShow(tablixFormattingProperties),
                         fontColor: TablixUtils.getRowHeaderFontColor(tablixFormattingProperties),
                         backgroundColor: TablixUtils.getRowHeaderBackgroundColor(tablixFormattingProperties),
                         outline: TablixUtils.getRowHeaderOutlineStyle(tablixFormattingProperties)
                     },
                     totals:
                     {
-                        fontColor: TablixUtils.getTotalsFontColor(tablixFormattingProperties),
-                        backgroundColor: TablixUtils.getTotalsBackgroundColor(tablixFormattingProperties),
-                        outline: TablixUtils.getTotalsOutlineType(tablixFormattingProperties),
-                        leadingSpace: TablixUtils.getTotalsLeadingSpace(tablixFormattingProperties)
+                        fontColor: TablixUtils.getRowTotalsFontColor(tablixFormattingProperties),
+                        backgroundColor: TablixUtils.getRowTotalsBackgroundColor(tablixFormattingProperties),
+                        outline: TablixUtils.getRowTotalsOutlineType(tablixFormattingProperties),
+                        leadingSpace: TablixUtils.getRowTotalsLeadingSpace(tablixFormattingProperties)
                     }
                 };
             }
@@ -481,12 +481,12 @@ module powerbi.visuals.controls.internal {
                     header:
                     {
                         fontColor: TablixUtils.getColumnHeaderFontColor(tablixFormattingProperties),
-                        backgroundColor: TablixUtils.getColumnHeaderOutlineType(tablixFormattingProperties),
+                        backgroundColor: TablixUtils.getColumnHeaderBackgroundColor(tablixFormattingProperties),
                         outline: TablixUtils.getColumnHeaderOutlineType(tablixFormattingProperties)
                     },
                     rows:
                     {
-                        showSeparators: TablixUtils.getRowHeaderSeparatorShow(tablixFormattingProperties),
+                        showSeparators: TablixUtils.getRowSeparatorShow(tablixFormattingProperties),
                         fontColor: TablixUtils.getRowHeaderFontColor(tablixFormattingProperties),
                         backgroundColor: TablixUtils.getRowHeaderBackgroundColor(tablixFormattingProperties),
                         outline: TablixUtils.getRowHeaderOutlineStyle(tablixFormattingProperties)
@@ -499,10 +499,10 @@ module powerbi.visuals.controls.internal {
                     },
                     totals:
                     {
-                        fontColor: TablixUtils.getTotalsFontColor(tablixFormattingProperties),
-                        backgroundColor: TablixUtils.getTotalsBackgroundColor(tablixFormattingProperties),
-                        outline: TablixUtils.getTotalsOutlineType(tablixFormattingProperties),
-                        leadingSpace: TablixUtils.getTotalsLeadingSpace(tablixFormattingProperties)
+                        fontColor: TablixUtils.getRowTotalsFontColor(tablixFormattingProperties),
+                        backgroundColor: TablixUtils.getRowTotalsBackgroundColor(tablixFormattingProperties),
+                        outline: TablixUtils.getRowTotalsOutlineType(tablixFormattingProperties),
+                        leadingSpace: TablixUtils.getRowTotalsLeadingSpace(tablixFormattingProperties)
                     }
                 };
             }
@@ -575,8 +575,8 @@ module powerbi.visuals.controls.internal {
             return DataViewObjects.getValue<string>(objects, TablixUtils.ColumnHeaderOutlineProp, TablixUtils.DefaultOutlineColumnHeader);
         }
 
-        export function getRowHeaderSeparatorShow(objects: DataViewObjects): boolean {
-            return DataViewObjects.getValue<boolean>(objects, TablixUtils.RowHeaderSeparatorProp, TablixUtils.DefaultRowSeparatorShow);
+        export function getRowSeparatorShow(objects: DataViewObjects): boolean {
+            return DataViewObjects.getValue<boolean>(objects, TablixUtils.RowSeparatorProp, TablixUtils.DefaultRowSeparatorShow);
         }
 
         export function getRowHeaderFontColor(objects: DataViewObjects): string {
@@ -587,7 +587,7 @@ module powerbi.visuals.controls.internal {
         }
 
         export function getRowHeaderOutlineStyle(objects: DataViewObjects): string {
-            return DataViewObjects.getValue<string>(objects, TablixUtils.RowHeaderOutlineStyle, TablixUtils.DefaultOutlineRowHeader);
+            return DataViewObjects.getValue<string>(objects, TablixUtils.RowHeaderOutlineStyleProp, TablixUtils.DefaultOutlineRowHeader);
         }
 
         export function getValuesFontColor(objects: DataViewObjects): string {
@@ -602,20 +602,20 @@ module powerbi.visuals.controls.internal {
             return DataViewObjects.getValue<string>(objects, TablixUtils.ValuesOutlineProp, TablixUtils.DefaultOutlineValues);
         }
 
-        export function getTotalsFontColor(objects: DataViewObjects): string {
-            return DataViewObjects.getFillColor(objects, TablixUtils.TotalsFontColorProp, TablixUtils.DefaultFontColor);
+        export function getRowTotalsFontColor(objects: DataViewObjects): string {
+            return DataViewObjects.getFillColor(objects, TablixUtils.RowTotalsFontColorProp, TablixUtils.DefaultFontColor);
         }
 
-        export function getTotalsBackgroundColor(objects: DataViewObjects): string {
-            return DataViewObjects.getFillColor(objects, TablixUtils.TotalsBackgroundColor, TablixUtils.DefaultBackgroundColor);
+        export function getRowTotalsBackgroundColor(objects: DataViewObjects): string {
+            return DataViewObjects.getFillColor(objects, TablixUtils.RowTotalsBackgroundColor, TablixUtils.DefaultBackgroundColor);
         }
 
-        export function getTotalsOutlineType(objects: DataViewObjects): string {
-            return DataViewObjects.getValue<string>(objects, TablixUtils.TotalsOutlineProp, TablixUtils.DefaultOutlineTotals);
+        export function getRowTotalsOutlineType(objects: DataViewObjects): string {
+            return DataViewObjects.getValue<string>(objects, TablixUtils.RowTotalsOutlineProp, TablixUtils.DefaultOutlineRowTotals);
         }
 
-        export function getTotalsLeadingSpace(objects: DataViewObjects): number {
-            return DataViewObjects.getValue<number>(objects, TablixUtils.TotalsLeadingSpaceProp, TablixUtils.DefaultLeadingSpace);
+        export function getRowTotalsLeadingSpace(objects: DataViewObjects): number {
+            return DataViewObjects.getValue<number>(objects, TablixUtils.RowTotalsLeadingSpaceProp, TablixUtils.DefaultRowLeadingSpace);
         }
 
         export function reverseSort(sortDirection: SortDirection): SortDirection {

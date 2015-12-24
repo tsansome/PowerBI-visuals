@@ -374,6 +374,12 @@ module powerbi.visuals.plugins {
         create: () => new samples.AreaRangeChart()
     };
 
+    export var chicletSlicer: IVisualPlugin = {
+        name: 'chicletSlicer',
+        capabilities: samples.ChicletSlicer.capabilities,
+        create: () => new samples.ChicletSlicer()
+    };
+
     export var timeline: IVisualPlugin = {
         name: 'timeline',
         capabilities: samples.Timeline.capabilities,
@@ -384,5 +390,24 @@ module powerbi.visuals.plugins {
         name: "tornadoChart",
         capabilities: samples.TornadoChart.capabilities,
         create: () => new samples.TornadoChart()
+    };
+
+    export let kpi: IVisualPlugin = {
+        name: 'kpi',
+        watermarkKey: 'kpi',
+        capabilities: capabilities.kpi,
+        create: () => new KPIStatusWithHistory()
+    };
+
+    export var sankeyDiagram: IVisualPlugin = {
+        name: "sankeyDiagram",
+        capabilities: samples.SankeyDiagram.capabilities,
+        create: () => new samples.SankeyDiagram()
+    };
+
+    export var wordCloud: IVisualPlugin = {
+        name: "wordCloud",
+        capabilities: samples.WordCloud.capabilities,
+        create: () => new samples.WordCloud()
     };
 }

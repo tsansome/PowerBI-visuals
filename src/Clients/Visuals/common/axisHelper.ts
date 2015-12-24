@@ -115,11 +115,11 @@ module powerbi.visuals {
         /** 
          * The DataViewMetadataColumn will be used for dataType and tick value formatting.
          */
-        metaDataColumn: DataViewMetadataColumn;
+        metaDataColumn: DataViewMetadataColumn; //TODO: remove this, we should just be passing in the formatString and the ValueType, not this DataView-specific object
         /**
-         * Identifies the property for the format string.
+         * The format string.
          */
-        formatStringProp: DataViewObjectPropertyIdentifier;
+        formatString: string;
         /** 
          * outerPadding to be applied to the axis.
          */
@@ -162,6 +162,10 @@ module powerbi.visuals {
         axisDisplayUnits?: number;
         /** (optional) user selected precision */
         axisPrecision?: number;
+        /** (optional) for 100 percent stacked charts, causes formatString override and minTickInterval adjustments */
+        is100Pct?: boolean;
+        /** (optional) sets clamping on the D3 scale, useful for drawing column chart rectangles as it simplifies the math during layout */
+        shouldClamp?: boolean;
     }
 
     export interface CreateScaleResult {
@@ -586,6 +590,7 @@ module powerbi.visuals {
             return closestValueIndex;
         }
 
+        /** scale(value1) - scale(value2) with zero checking and min(+/-1, result) */
         export function diffScaled(
             scale: D3.Scale.GenericScale<any>,
             value1: any,
@@ -644,7 +649,7 @@ module powerbi.visuals {
             let pixelSpan = options.pixelSpan,
                 dataDomain = options.dataDomain,
                 metaDataColumn = options.metaDataColumn,
-                formatStringProp = options.formatStringProp,
+                formatString = options.formatString,
                 outerPadding = options.outerPadding || 0,
                 isCategoryAxis = !!options.isCategoryAxis,
                 isScalar = !!options.isScalar,
@@ -653,9 +658,9 @@ module powerbi.visuals {
                 getValueFn = options.getValueFn,
                 categoryThickness = options.categoryThickness,
                 axisDisplayUnits = options.axisDisplayUnits,
-                axisPrecision = options.axisPrecision;
+                axisPrecision = options.axisPrecision,
+                is100Pct = !!options.is100Pct;
 
-            let formatString = valueFormatter.getFormatString(metaDataColumn, formatStringProp);
             let dataType: ValueType = this.getCategoryValueType(metaDataColumn, isScalar);
 
             // Create the Scale
@@ -680,7 +685,7 @@ module powerbi.visuals {
                 tickValues = [dataDomain[0]];
             }
             else {
-                let minTickInterval = isScalar ? getMinTickValueInterval(formatString, dataType) : undefined;
+                let minTickInterval = isScalar ? getMinTickValueInterval(formatString, dataType, is100Pct) : undefined;
                 tickValues = getRecommendedTickValues(bestTickCount, scale, dataType, isScalar, minTickInterval);
             }
 
@@ -712,7 +717,7 @@ module powerbi.visuals {
 
             let formattedTickValues = [];
             if (metaDataColumn)
-                formattedTickValues = formatAxisTickValues(axis, tickValues, formatter, dataType, isScalar, getValueFn);
+                formattedTickValues = formatAxisTickValues(axis, tickValues, formatter, dataType, getValueFn);
 
             let xLabelMaxWidth;
             // Use category layout of labels if specified, otherwise use scalar layout of labels
@@ -752,7 +757,8 @@ module powerbi.visuals {
                 isScalar = !!options.isScalar,
                 isVertical = !!options.isVertical,
                 forcedTickCount = options.forcedTickCount,
-                categoryThickness = options.categoryThickness;
+                categoryThickness = options.categoryThickness,
+                shouldClamp = !!options.shouldClamp;
 
             let dataType: ValueType = this.getCategoryValueType(metaDataColumn, isScalar);
             let maxTicks = isVertical ? getRecommendedNumberOfTicksForYAxis(pixelSpan) : getRecommendedNumberOfTicksForXAxis(pixelSpan);
@@ -761,7 +767,6 @@ module powerbi.visuals {
             let scale: D3.Scale.GenericScale<any>;
             let usingDefaultDomain = false;
 
-            // using double-equals null intentionally, also checks undefined.
             if (dataDomain == null || (dataDomain.length === 2 && dataDomain[0] == null && dataDomain[1] == null) || (dataDomain.length !== 2 && isScalar)) {
                 usingDefaultDomain = true;
 
@@ -789,14 +794,14 @@ module powerbi.visuals {
                 }
 
                 if (isScalar && dataType.numeric && !dataType.dateTime) {
-                    scale = createNumericalScale(options.scaleType, pixelSpan, scalarDomain, dataType, outerPadding, bestTickCount);
+                    scale = createNumericalScale(options.scaleType, pixelSpan, scalarDomain, dataType, outerPadding, bestTickCount, shouldClamp);
                 }
                 else if (isScalar && dataType.dateTime) {
                     // Use of a linear scale, instead of a D3.time.scale, is intentional since we want
                     // to control the formatting of the time values, since d3's implementation isn't
                     // in accordance to our design.
                     //     scalarDomain: should already be in long-int time (via category.values[0].getTime())
-                    scale = createLinearScale(pixelSpan, scalarDomain, outerPadding, null); // DO NOT PASS TICKCOUNT
+                    scale = createLinearScale(pixelSpan, scalarDomain, outerPadding, null, shouldClamp); // DO NOT PASS TICKCOUNT
                 }
                 else if (dataType.text || dataType.dateTime || dataType.numeric || dataType.bool) {
                     scale = createOrdinalScale(pixelSpan, scalarDomain, categoryThickness ? outerPadding / categoryThickness : 0);
@@ -816,6 +821,7 @@ module powerbi.visuals {
             }
 
             ColumnUtil.normalizeInfinityInScale(scale);
+
             return {
                 scale: scale,
                 bestTickCount: bestTickCount,
@@ -823,7 +829,7 @@ module powerbi.visuals {
             };
         }
 
-        function createFormatter(
+        export function createFormatter(
             scaleDomain: any[],
             dataDomain: any[],
             dataType,
@@ -846,6 +852,7 @@ module powerbi.visuals {
                     // so formatting works correctly.
                     if (bestTickCount === 1)
                         value = value2 = new Date(dataDomain[0]);
+                    // this will ignore the formatString and create one based on the smallest non-zero portion of the values supplied.
                     formatter = valueFormatter.create({
                         format: formatString,
                         value: value,
@@ -854,17 +861,8 @@ module powerbi.visuals {
                     });
                 }
                 else {
-                    if (getValueFn == null) {
-                        debug.assertFail('getValueFn must be supplied for ordinal datetime tickValues');
-                    }
-                    let minDate: Date = getValueFn(0, dataType);
-                    let maxDate: Date = getValueFn(scaleDomain.length - 1, dataType);
-                    formatter = valueFormatter.create({
-                        format: formatString,
-                        value: minDate,
-                        value2: maxDate,
-                        tickCount: bestTickCount,
-                    });
+                    // Use the model formatString for ordinal datetime
+                    formatter = valueFormatter.createDefaultFormatter(formatString, true);
                 }
             }
             else {
@@ -872,12 +870,11 @@ module powerbi.visuals {
                     debug.assertFail('getValueFn must be supplied for ordinal tickValues');
                 }
                 if (useTickIntervalForDisplayUnits && isScalar && tickValues.length > 1) {
-                    let displayUnit = axisDisplayUnits ? axisDisplayUnits: tickValues[1] - tickValues[0];
-                    let domainMax = 0; //force tickInterval to be used with display units
+                    let value1 = axisDisplayUnits ? axisDisplayUnits : tickValues[1] - tickValues[0];
                     formatter = valueFormatter.create({
                         format: formatString,
-                        value: displayUnit,
-                        value2: domainMax,
+                        value: value1,
+                        value2: 0, //force tickInterval or display unit to be used
                         allowFormatBeautification: true,
                         precision: axisPrecision,
                     });
@@ -895,25 +892,21 @@ module powerbi.visuals {
         /**
          * Format the linear tick labels or the category labels.
          */
-        export function formatAxisTickValues(
+        function formatAxisTickValues(
             axis: D3.Svg.Axis,
             tickValues: any[],
             formatter: IValueFormatter,
             dataType: ValueType,
-            isScalar: boolean,
             getValueFn?: (index: number, type: ValueType) => any) {
 
             let formattedTickValues = [];
+
+            if (!getValueFn)
+                getValueFn = data => data;
+
             if (formatter) {
-                // getValueFn takes an ordinal axis index or builds DateTime from milliseconds, do not pass a numeric scalar value.
-                if (getValueFn && !(dataType.numeric && isScalar)) {
-                    axis.tickFormat(d => formatter.format(getValueFn(d, dataType)));
-                    formattedTickValues = tickValues.map(d => formatter.format(getValueFn(d, dataType)));
-                }
-                else {
-                    axis.tickFormat(d => formatter.format(d));
-                    formattedTickValues = tickValues.map((d) => formatter.format(d));
-                }
+                axis.tickFormat(d => formatter.format(getValueFn(d, dataType)));
+                formattedTickValues = tickValues.map(d => formatter.format(getValueFn(d, dataType)));
             }
             else {
                 formattedTickValues = tickValues.map((d) => getValueFn(d, dataType));
@@ -1011,7 +1004,7 @@ module powerbi.visuals {
                     : availableWidth / labels.length;
                 let maxRotatedLength = margin.bottom / DefaultRotation.sine;
                 let height = textHeightMeasurer(properties);
-                let maxNumLines = Math.max(1, Math.floor(margin.bottom / height));
+                let maxNumLines = Math.max(1, Math.floor(margin.bottom / height));  // TODO: not taking axis label into account
 
                 if (labels.length === 0)
                     return false;
@@ -1044,7 +1037,7 @@ module powerbi.visuals {
                     properties.text = label;
                     let rotateChars = textTruncator(properties, rotatedLength);
 
-                    return TextUtil.removeEllipses(wordBreakChars).length > TextUtil.removeEllipses(rotateChars).length;
+                    return TextUtil.removeEllipses(wordBreakChars).length >= TextUtil.removeEllipses(rotateChars).length;
                 });
 
                 // If majority show more with word rotated, use word break strategy
@@ -1183,12 +1176,20 @@ module powerbi.visuals {
 
         //this function can return different scales e.g. log, linear
         // NOTE: export only for testing, do not access directly
-        export function createNumericalScale(axisScaleType: string, pixelSpan: number, dataDomain: any[], dataType:ValueType, outerPadding: number = 0, niceCount?: number): D3.Scale.GenericScale<any> {                      
+        export function createNumericalScale(
+            axisScaleType: string,
+            pixelSpan: number,
+            dataDomain: any[],
+            dataType: ValueType,
+            outerPadding: number = 0,
+            niceCount?: number,
+            shouldClamp?: boolean): D3.Scale.GenericScale<any> {
+                                  
             if (axisScaleType === axisScale.log && isLogScalePossible(dataDomain,dataType)) {
                 return createLogScale(pixelSpan, dataDomain, outerPadding, niceCount);
             }
             else {
-                return createLinearScale(pixelSpan, dataDomain, outerPadding, niceCount);
+                return createLinearScale(pixelSpan, dataDomain, outerPadding, niceCount, shouldClamp);
             }            
         }
 
@@ -1207,10 +1208,11 @@ module powerbi.visuals {
         }
 
         // NOTE: export only for testing, do not access directly
-        export function createLinearScale(pixelSpan: number, dataDomain: any[], outerPadding: number = 0, niceCount?: number): D3.Scale.LinearScale {
+        export function createLinearScale(pixelSpan: number, dataDomain: any[], outerPadding: number = 0, niceCount?: number, shouldClamp?: boolean): D3.Scale.LinearScale {
             let scale = d3.scale.linear()
                 .range([outerPadding, pixelSpan - outerPadding])
-                .domain([dataDomain[0], dataDomain[1]]);
+                .domain([dataDomain[0], dataDomain[1]])
+                .clamp(shouldClamp);
             // .nice(undefined) still modifies the scale boundaries, and for datetime this messes things up.
             // we use millisecond ticks since epoch for datetime, so we don't want any "nice" with numbers like 17398203392.
             if (niceCount) {

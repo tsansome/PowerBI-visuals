@@ -125,12 +125,14 @@ module powerbitests {
         });
 
         it("AnimatedText_getAdjustedFontHeight when seed font width is bigger than the width", () => {
+            
             // parameters are availableWidth, textToMeasure, seedFontHeight
             // When the measured text with the seed height is bigger than availableWidth, decrease the font height
             expect(animatedTextBuilder.animatedText.getAdjustedFontHeight(4, "text", 10)).toBeLessThan(10);
         });
 
         it("AnimatedText_getAdjustedFontHeight when seed font width is smaller or equal to the width", () => {
+            
             // parameters are availableWidth, textToMeasure, seedFontHeight
             // When the measured text with the seed height is equal/smaller than availableWidth, return the font height
             expect(animatedTextBuilder.animatedText.getAdjustedFontHeight(30, "text", 3)).toBe(3);
@@ -161,6 +163,7 @@ module powerbitests {
             expect($(".animatedText")).toBeInDOM();
             expect($(".mainText")).toBeInDOM();
             setTimeout(() => {
+                
                 // IE and Chrome represent the transform differently
                 expect($(".mainText").attr("transform")).toMatch(/translate\(\d+(,| )130\)/);
                 done();

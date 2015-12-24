@@ -584,10 +584,7 @@ module powerbi.visuals {
                 let renderResult = this.render(false);
 
                 let labelLayoutOptions = NewDataLabelUtils.getDataLabelLayoutOptions(CartesianChartType.Scatter);
-                let labelLayout = new LabelLayout({
-                    maximumOffset: NewDataLabelUtils.maxLabelOffset,
-                    startingOffset: NewDataLabelUtils.startingLabelOffset
-                });
+                let labelLayout = new LabelLayout(labelLayoutOptions);
                 let resultsLabelDataPoints = renderResult.labelDataPoints;
                 let labelDataPointsGroup: LabelDataPointsGroup = {
                     labelDataPoints: resultsLabelDataPoints,
@@ -858,7 +855,7 @@ module powerbi.visuals {
                 pixelSpan: width,
                 dataDomain: combinedXDomain,
                 metaDataColumn: data.xCol,
-                formatStringProp: scatterChartProps.general.formatString,
+                formatString: valueFormatter.getFormatString(data.xCol, scatterChartProps.general.formatString),
                 outerPadding: 0,
                 isScalar: true,
                 isVertical: false,
@@ -878,7 +875,7 @@ module powerbi.visuals {
                 pixelSpan: height,
                 dataDomain: combinedDomain,
                 metaDataColumn: data.yCol,
-                formatStringProp: scatterChartProps.general.formatString,
+                formatString: valueFormatter.getFormatString(data.yCol, scatterChartProps.general.formatString),
                 outerPadding: 0,
                 isScalar: true,
                 isVertical: true,

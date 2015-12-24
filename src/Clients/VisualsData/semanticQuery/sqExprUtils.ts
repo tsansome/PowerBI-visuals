@@ -298,8 +298,13 @@ module powerbi.data {
         export function getDefaultValues(fieldSQExprs: SQExpr[], schema: FederatedConceptualSchema): SQConstantExpr[] {
             if (_.isEmpty(fieldSQExprs) || !schema)
                 return;
-
-            return _.map(fieldSQExprs, (col) => getDefaultValue(col, schema));
+            let result: SQConstantExpr[] = [];
+            for (let sqExpr of fieldSQExprs) {
+                let defaultValue = getDefaultValue(sqExpr, schema);
+                if (defaultValue)
+                    result.push(defaultValue);
+            }
+            return result;
         }
 
         /** Return compare or and expression for key value pairs. */

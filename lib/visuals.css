@@ -1112,12 +1112,6 @@ This must be run when you have at least 2 sprites.
 .kpi-red {
   color: #c0433a;
 }
-@font-face {
-  font-family: 'PowerVisuals';
-  src: url('../fonts/PowerVisuals.eot?#iefix') format('embedded-opentype'),url('../fonts/PowerVisuals.woff') format('woff'),url('../fonts/PowerVisuals.ttf') format('truetype'),url('../fonts/PowerVisuals.svg') format('svg');
-  font-weight: normal;
-  font-style: normal;
-}
 .powervisuals-glyph {
   font-family: PowerVisuals;
   font-size: 12px;
@@ -1256,6 +1250,27 @@ This must be run when you have at least 2 sprites.
 .powervisuals-glyph.circle-one-quarter::before {
   content: '\E738';
 }
+.powervisuals-glyph.link::before {
+  content: '\E8B5';
+}
+.powervisuals-glyph.bold::before {
+  content: '\E8DD';
+}
+.powervisuals-glyph.italic::before {
+  content: '\E8DB';
+}
+.powervisuals-glyph.underline::before {
+  content: '\E8DC';
+}
+.powervisuals-glyph.alignleft::before {
+  content: '\E8E4';
+}
+.powervisuals-glyph.aligncenter::before {
+  content: '\E8E3';
+}
+.powervisuals-glyph.alignright::before {
+  content: '\E8E2';
+}
 .powervisuals-glyph.boxes-stacked::before {
   content: '\E730';
   color: #C8C8C8;
@@ -1381,29 +1396,44 @@ This must be run when you have at least 2 sprites.
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-/* 
-    POWER BI V2 "Bumblebee" COLOR PALLETE
-    Please use only the colors declared here  - this file is to be kept in sync with the palette defined by the design team
-    If you need a color that is not here, talk to your designer and get it added to the main palette and then add it here
-
-    - Use #HEX codes - if you need to get alpha use fadeout(color, percentage)
-    - Colors should be reusable, and not duplicated.
-*/
 /* THEME COLORS */
 /* NEUTRAL COLORS */
 /* ACCENT COLORS */
 /* APPLICATION CHROME COLORS */
 /*dark chrome*/
-/*light chrome*/
-/*@primaryChromeColor: @whiteColor;
-@secondaryChromeColor: @whiteColor;
-@tertiaryChromeColor: @whiteColor;*/
 /* 
     DEPRECATED COLORS: Please refrain from adding one time use colors to the section below.
     These will be all be removed. New colors must be provided by design and be in the design OneNote palette
 */
 /* PowerView specific colors */
 /* Visual colors */
+/*
+ *  Power BI Colors
+ *
+ *  Copyright (c) Microsoft Corporation
+ *  All rights reserved. 
+ *  MIT License
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the ""Software""), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *   
+ *  The above copyright notice and this permission notice shall be included in 
+ *  all copies or substantial portions of the Software.
+ *   
+ *  THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+/* THEME COLORS */
+/* ACCENT COLORS */
 /*
  *  Power BI Visualizations
  *
@@ -1429,6 +1459,36 @@ This must be run when you have at least 2 sprites.
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+/*
+ *  Power BI Visualizations
+ *
+ *  Copyright (c) Microsoft Corporation
+ *  All rights reserved. 
+ *  MIT License
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the ""Software""), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *   
+ *  The above copyright notice and this permission notice shall be included in 
+ *  all copies or substantial portions of the Software.
+ *   
+ *  THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+/* BUG 6439234: CSS embedded fonts are loading once per stylesheet
+   ===============================================================
+   The following line causes fonts to load once per stylesheet, and needs to be removed. 
+   The Style Library CSS should be the only place where these get loaded. There are currently tests dependencies on this CSS.
+*/
 /*
  *  Power BI Visualizations
  *
@@ -1478,6 +1538,40 @@ body {
 .boldFontFamily {
   font-family: Tahoma,Verdana,Geneva,sans-serif;
 }
+.smallFontSize {
+  font-size: 12px;
+}
+.mediumFontSize {
+  font-size: 14px;
+}
+.largeFontSize {
+  font-size: 16px;
+}
+/*
+ *  Power BI Visualizations
+ *
+ *  Copyright (c) Microsoft Corporation
+ *  All rights reserved. 
+ *  MIT License
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the ""Software""), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *   
+ *  The above copyright notice and this permission notice shall be included in 
+ *  all copies or substantial portions of the Software.
+ *   
+ *  THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
 /*
  *  Power BI Visualizations
  *
@@ -1515,7 +1609,6 @@ body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  -o-user-select: none;
   user-select: none;
   cursor: default;
 }
@@ -1539,8 +1632,6 @@ body {
   width: 30px;
   height: 30px;
   cursor: pointer;
-  -moz-transition: opacity 0.2s ease-in;
-  -o-transition: opacity 0.2s ease-in;
   -webkit-transition: opacity 0.2s ease-in;
   transition: opacity 0.2s ease-in;
   -webkit-transition-delay: 0s;
@@ -1580,8 +1671,6 @@ body {
   opacity: 0;
 }
 .no-border-radius {
-  -webkit-border-radius: 0;
-  -moz-border-radius: 0;
   border-radius: 0;
 }
 .expAppBarMenu {
@@ -1756,10 +1845,8 @@ body {
 }
 .horizontalSlicerContainer .flexDisplay {
   display: -ms-flexbox;
-  display: -moz-box;
   display: flex;
   -ms-flex-direction: row;
-  -moz-box-orient: horizontal;
   flex-direction: row;
 }
 .horizontalSlicerContainer .slicerBody {
@@ -2106,8 +2193,6 @@ body {
   height: 24px;
   width: 24px;
   overflow: hidden;
-  -moz-border-radius: 13px;
-  -webkit-border-radius: 13px;
   border-radius: 13px;
   border: 1px solid #666666;
   margin: 10px;
@@ -2217,7 +2302,6 @@ body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  -o-user-select: none;
   user-select: none;
   cursor: default;
 }
@@ -2362,7 +2446,6 @@ body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  -o-user-select: none;
   user-select: none;
   cursor: default;
 }
@@ -2487,8 +2570,6 @@ body {
   color: #333;
   background: #ffffff;
   /* css3 */
-  -webkit-border-radius: 0px;
-  -moz-border-radius: 0px;
   border-radius: 0px;
 }
 .triangle-border:before {
@@ -2586,8 +2667,6 @@ body {
 }
 .visual .scroll-wrapper .scroll-element .scroll-element_outer,
 .visual .scroll-wrapper .scroll-element .scroll-bar {
-  -webkit-border-radius: 0;
-  -moz-border-radius: 0;
   border-radius: 0;
 }
 .visual .scroll-wrapper .scroll-element .scroll-bar {
@@ -2730,9 +2809,6 @@ body {
   word-wrap: break-word;
 }
 div.ql-toolbar {
-  padding: 4px;
-  background: #333333;
-  color: #FFF;
   white-space: nowrap;
   overflow-x: hidden;
   font-size: 14px;
@@ -2743,33 +2819,36 @@ div.ql-toolbar {
     */
 }
 div.ql-toolbar .ql-format-group {
-  display: inline-block;
   vertical-align: middle;
-  margin: 0px 2px;
 }
 div.ql-toolbar select.ql-picker {
-  margin: 3px;
   padding: 3px;
-  background: #444444;
-  border: 1px solid #000;
-}
-div.ql-toolbar select.ql-font {
-  width: 122px;
 }
 div.ql-toolbar label {
   margin: 3px;
 }
 div.ql-toolbar .ql-format-button {
   margin: 3px;
+  padding: 4px;
+  font-size: 16px;
   display: inline-block;
   vertical-align: middle;
+}
+div.ql-toolbar .ql-format-button:hover,
+div.ql-toolbar .ql-format-button.ql-active {
+  background: #F2C811;
+  color: #333333;
 }
 div.ql-toolbar .toolbar-url-input {
   display: inline-block;
   vertical-align: middle;
 }
 div.ql-toolbar .toolbar-url-input .ql-link div {
-  height: 100%;
+  height: 24px;
+  width: 24px;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 div.ql-toolbar .toolbar-url-input .ql-link-tooltip {
   display: none;
@@ -2792,7 +2871,7 @@ div.ql-toolbar .toolbar-url-input .ql-link-tooltip a {
   background: inherit;
 }
 div.ql-toolbar .toolbar-url-input .ql-link-tooltip a:hover {
-  color: #BE9A27;
+  color: #7d6707;
 }
 div.ql-toolbar .toolbar-url-input .ql-link-tooltip .bar {
   font-size: 18px;
@@ -2808,139 +2887,60 @@ div.ql-toolbar .toolbar-url-input .ql-link.ql-active + .ql-link-tooltip,
 div.ql-toolbar .toolbar-url-input .ql-link-tooltip.editing {
   display: inline-block;
 }
-div.ql-toolbar .ql-format-button:hover {
-  background: #F2C811;
-  color: #333333;
+div.ql-toolbar.stackedToolbar {
+  box-shadow: none;
+  position: inherit;
 }
-div.ql-toolbar .ql-format-button.ql-active {
-  background: #F2C811;
-  color: #333333;
+div.ql-toolbar.stackedToolbar .ql-link-tooltip a {
+  margin: 0;
 }
-div.ql-toolbar .ql-format-button[data-value="left"] {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -48px 0px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.stackedToolbar .ql-link-tooltip .url {
+  max-width: 135px;
+  overflow: hidden;
+  display: inline-block;
 }
-div.ql-toolbar .ql-format-button[data-value="left"].ql-active {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -72px 0px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.stackedToolbar .ql-link-tooltip.editing .url {
+  display: none;
 }
-div.ql-toolbar .ql-format-button[data-value="left"]:hover {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -72px 0px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.stackedToolbar .ql-link-tooltip .input {
+  width: 175px;
+  margin: 0;
 }
-div.ql-toolbar .ql-format-button[data-value="right"] {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: 0px -24px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.stackedToolbar .ql-format-group {
+  margin-top: 8px;
+  display: block;
+  float: left;
 }
-div.ql-toolbar .ql-format-button[data-value="right"].ql-active {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -24px -24px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.stackedToolbar label {
+  display: none;
 }
-div.ql-toolbar .ql-format-button[data-value="right"]:hover {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -24px -24px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.stackedToolbar select.ql-font {
+  width: 180px;
 }
-div.ql-toolbar .ql-format-button[data-value="center"] {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -48px -48px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.stackedToolbar select.ql-size {
+  width: 60px;
+  margin-left: 10px;
 }
-div.ql-toolbar .ql-format-button[data-value="center"].ql-active {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: 0px 0px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.overlayedToolbar {
+  padding: 4px;
 }
-div.ql-toolbar .ql-format-button[data-value="center"]:hover {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: 0px 0px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.overlayedToolbar select.ql-picker {
+  margin: 3px;
 }
-div.ql-toolbar .ql-format-button.ql-bold {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: 0px -48px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.overlayedToolbar .ql-format-group {
+  display: inline-block;
+  margin: 0px 2px;
 }
-div.ql-toolbar .ql-format-button.ql-bold.ql-active {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -48px -24px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.overlayedToolbar select.ql-font {
+  width: 122px;
 }
-div.ql-toolbar .ql-format-button.ql-bold:hover {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -48px -24px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.darkToolbar {
+  background: #333333;
+  color: #FFF;
 }
-div.ql-toolbar .ql-format-button.ql-italic {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -24px -72px;
-  width: 24px;
-  height: 24px;
-}
-div.ql-toolbar .ql-format-button.ql-italic.ql-active {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: 0px -72px;
-  width: 24px;
-  height: 24px;
-}
-div.ql-toolbar .ql-format-button.ql-italic:hover {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: 0px -72px;
-  width: 24px;
-  height: 24px;
-}
-div.ql-toolbar .ql-format-button.ql-underline {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -24px 0px;
-  width: 24px;
-  height: 24px;
-}
-div.ql-toolbar .ql-format-button.ql-underline.ql-active {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -24px -48px;
-  width: 24px;
-  height: 24px;
-}
-div.ql-toolbar .ql-format-button.ql-underline:hover {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -24px -48px;
-  width: 24px;
-  height: 24px;
-}
-div.ql-toolbar .ql-format-button.ql-link {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -72px -48px;
-  width: 24px;
-  height: 24px;
-}
-div.ql-toolbar .ql-format-button.ql-link.ql-active {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -72px -24px;
-  width: 24px;
-  height: 24px;
-}
-div.ql-toolbar .ql-format-button.ql-link:hover {
-  background-image: url(../images/visuals.sprites.png);
-  background-position: -72px -24px;
-  width: 24px;
-  height: 24px;
+div.ql-toolbar.darkToolbar select.ql-picker {
+  background: #444444;
+  border: 1px solid #000;
 }
 .multiRowCard .card {
   box-sizing: border-box;
@@ -3090,19 +3090,25 @@ div.ql-toolbar .ql-format-button.ql-link:hover {
     transform: rotate(2deg);
   }
 }
+.streamGraph {
+  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-size: 11px;
+}
 .streamGraph .axis path,
 .streamGraph .axis line {
   fill: none;
-  stroke: black;
+  stroke: #666;
   shape-rendering: crispEdges;
 }
 .streamGraph .axis text {
-  font-family: sans-serif;
   font-size: 11px;
 }
 .visual-sandbox {
   border: none;
   overflow: hidden;
+}
+.visual-sandbox .tooltip-container .tooltip-row {
+  font-size: 9px;
 }
 .x-ref-line {
   stroke-width: 3px;
@@ -3194,4 +3200,13 @@ div.ql-toolbar .ql-format-button.ql-link:hover {
 .areaRangeChart .chart path,
 .areaRangeChart .chart line {
   stroke-width: 1;
+}
+.tornado-chart {
+  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-size: 11px;
+}
+.tornado-chart .axes .axis {
+  fill: none;
+  stroke: #777777;
+  stroke-width: 1px;
 }

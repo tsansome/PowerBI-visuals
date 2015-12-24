@@ -28,6 +28,8 @@
 /// <reference path="typedefs/typedefs.obj.ts"/>
 
 /// <reference path="sampleDataViews/sampleDataViews.ts"/>
+/// <reference path="sampleDataViews/CarLogosData.ts"/>
+/// <reference path="sampleDataViews/DistrictSalesData.ts"/>
 /// <reference path="sampleDataViews/FileStorageData.ts"/>
 /// <reference path="sampleDataViews/ImageData.ts"/>
 /// <reference path="sampleDataViews/RichtextData.ts"/>
@@ -45,7 +47,8 @@
 /// <reference path="sampleDataViews/calenderData.ts"/>
 /// <reference path="sampleDataViews/SimpleTreeData.ts"/>
 /// <reference path="sampleDataViews/SimpleHistogramData.ts"/>
-/// <reference path="sampleDataViews/NodeLinkData.ts"/>
+/// <reference path="sampleDataViews/SimpleDataByCountries.ts"/>
+/// <reference path="sampleDataViews/SimpleCountriesData.ts"/>
 /// <reference path="sampleData.ts"/>
 /// <reference path="hostControls.ts"/>
 /// <reference path="app.ts"/>

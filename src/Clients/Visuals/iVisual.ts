@@ -360,6 +360,12 @@ module powerbi {
 
         /** Gets the locale string */
         locale?(): string;
+
+        /** Gets the promise factory. */
+        promiseFactory(): IPromiseFactory;
+
+        /** Gets filter analyzer */
+        filterAnalyzer?(filter: data.SemanticFilter, fieldSQExprs: data.SQExpr[]): IFilterAnalyzer;
     }
 
     /** Animation options for visuals. */
@@ -496,5 +502,16 @@ module powerbi {
 
         /** Instances which should be deleted from the existing instances. */
         remove?: VisualObjectInstance[];
+    }
+
+    export interface IFilterAnalyzer {
+        /** Indicates the filter has Not condition. */
+        isNotFilter(): boolean;
+
+        /** The selected filter values. */
+        selectedIdentities(): DataViewScopeIdentity[];
+
+        /** Indicates the filter is using a default filter value. */
+        hasDefaultFilterOverride(): IPromise<boolean>;
     }
 }

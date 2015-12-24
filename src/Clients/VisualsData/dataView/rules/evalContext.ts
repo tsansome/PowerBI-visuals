@@ -29,6 +29,7 @@
 module powerbi.data {
     /** Responsible for providing specific values to be used by expression and rule evaluation. */
     export interface IEvalContext {
+        getExprValue(expr: SQExpr): PrimitiveValue;
         getRoleValue(roleName: string): PrimitiveValue;
         getCurrentIdentity(): DataViewScopeIdentity;
     }

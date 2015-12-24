@@ -110,8 +110,7 @@ module powerbi.visuals {
                 }
             },
             labels: {
-                displayName: data.createDisplayNameGetter('Visual_DataPointsLabels'),
-                description: data.createDisplayNameGetter('Visual_DataPointsLabelsDescription'),
+                displayName: data.createDisplayNameGetter('Visual_DetailLabels'),
                 properties: {
                     show: {
                         type: { bool: true }
@@ -139,17 +138,12 @@ module powerbi.visuals {
                         type: { formatting: { fontSize: true } },
                         suppressFormatPainterCopy: true,
                     },
-                },
-            },
-            categoryLabels: {
-                displayName: data.createDisplayNameGetter('Visual_CategoryLabels'),
-                description: data.createDisplayNameGetter('Visual_CategoryLabelsDescription'),
-                properties: {
-                    show: {
-                        type: { bool: true }
+                    labelStyle: {
+                        displayName: data.createDisplayNameGetter('Visual_LabelStyle'),
+                        type: { enumeration: labelStyle.type }
                     },
                 },
-            }
+            },
         },
         dataViewMappings: [{
             conditions: [

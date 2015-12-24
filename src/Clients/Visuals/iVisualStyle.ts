@@ -49,6 +49,7 @@ module powerbi {
         foreground?: IColorInfo;
 
         positive?: IColorInfo;
+        neutral?: IColorInfo;
         negative?: IColorInfo;
         separator?: IColorInfo;
         selection?: IColorInfo;

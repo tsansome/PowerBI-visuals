@@ -30,6 +30,7 @@ module powerbi.visuals {
     import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
     import createClassAndSelector = jsCommon.CssConstants.createClassAndSelector;
     import PixelConverter = jsCommon.PixelConverter;
+    import LabelStyle = labelStyle;
 
     export const enum PointLabelPosition {
         Above,
@@ -59,6 +60,7 @@ module powerbi.visuals {
         labelColor: string;
         categoryLabelColor?: string;
         fontSize?: number;
+        labelStyle?: any;
     }
 
     /*
@@ -76,6 +78,7 @@ module powerbi.visuals {
         fontSize?: boolean;
         showAll?: boolean;
         labelDensity?: boolean;
+        labelStyle?: boolean;
     }
 
     export interface LabelEnabledDataPoint {
@@ -124,6 +127,7 @@ module powerbi.visuals {
         showAll?: boolean;
         showSeries?: boolean;
         labelDensity?: number;
+        labelStyle?: any;
     }
 
     export module dataLabelUtils {
@@ -158,20 +162,18 @@ module powerbi.visuals {
                     labelSettings.show = labelsObj.show;
                 if (labelsObj.showSeries !== undefined)
                     labelSettings.show = labelsObj.showSeries;
-                if (labelsObj.color !== undefined) {
+                if (labelsObj.color !== undefined)
                     labelSettings.labelColor = labelsObj.color.solid.color;
-                }
-                if (labelsObj.labelDisplayUnits !== undefined) {
+                if (labelsObj.labelDisplayUnits !== undefined)
                     labelSettings.displayUnits = labelsObj.labelDisplayUnits;
-                }
-                if (labelsObj.labelPrecision !== undefined) {
+                if (labelsObj.labelPrecision !== undefined)
                     labelSettings.precision = (labelsObj.labelPrecision >= 0) ? labelsObj.labelPrecision : defaultLabelPrecision;
-                }
                 if (labelsObj.fontSize !== undefined)
                     labelSettings.fontSize = labelsObj.fontSize;
-                if (labelsObj.showAll !== undefined) {
+                if (labelsObj.showAll !== undefined)
                     labelSettings.showLabelPerSeries = labelsObj.showAll;
-                }
+                if (labelsObj.labelStyle !== undefined)
+                    labelSettings.labelStyle = labelsObj.labelStyle;
             }
         }
 
@@ -236,7 +238,7 @@ module powerbi.visuals {
             };
         }
 
-        export function getDefaultLineChartLabelSettings(): LineChartDataLabelsSettings {
+        export function getDefaultLineChartLabelSettings(isComboChart?: boolean): LineChartDataLabelsSettings {
             return {
                 show: false,
                 position: PointLabelPosition.Above,
@@ -245,7 +247,7 @@ module powerbi.visuals {
                 labelColor: defaultLabelColor,
                 formatterOptions: null,
                 fontSize: DefaultFontSizeInPt,
-                labelDensity: NewDataLabelUtils.LabelDensityMax,
+                labelDensity: isComboChart ? NewDataLabelUtils.LabelDensityMax : NewDataLabelUtils.LabelDensityMin,
             };
         }
 
@@ -263,16 +265,9 @@ module powerbi.visuals {
         }
 
         export function getDefaultDonutLabelSettings(): VisualDataLabelsSettings {
-            return {
-                show: false,
-                displayUnits: 0,
-                precision: defaultLabelPrecision,
-                labelColor: defaultLabelColor,
-                position: null,
-                showCategory: true,
-                formatterOptions: null,
-                fontSize: DefaultFontSizeInPt,
-            };
+            let labelSettings = dataLabelUtils.getDefaultLabelSettings(true, defaultLabelColor, DefaultFontSizeInPt);
+            labelSettings.labelStyle = LabelStyle.category;
+            return labelSettings;
         }
 
         export function getDefaultGaugeLabelSettings(): VisualDataLabelsSettings {
@@ -296,6 +291,18 @@ module powerbi.visuals {
                 labelColor: defaultLabelColor,
                 formatterOptions: null,
                 fontSize: DefaultFontSizeInPt,
+            };
+        }
+
+        export function getDefaultKpiLabelSettings(): VisualDataLabelsSettings {
+            return {
+                show: false,
+                displayUnits: 0,
+                precision: defaultLabelPrecision,
+                labelColor: defaultLabelColor,
+                position: null,
+                showCategory: true,
+                formatterOptions: null,
             };
         }
 
@@ -870,11 +877,12 @@ module powerbi.visuals {
                     instance.validValues = { 'labelPosition': options.positionObject };
                 }
             }
+            if (options.labelStyle)
+                instance.properties['labelStyle'] = options.dataLabelsSettings.labelStyle;
             if (options.fontSize)
                 instance.properties['fontSize'] = options.dataLabelsSettings.fontSize;
-            if (options.showAll) {
+            if (options.showAll)
                 instance.properties['showAll'] = options.dataLabelsSettings.showLabelPerSeries;
-            }
 
             return options.enumeration.pushInstance(instance);
         }

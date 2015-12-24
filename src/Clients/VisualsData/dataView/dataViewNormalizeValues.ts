@@ -293,7 +293,7 @@ module powerbi.data {
             return false;
         }
 
-        function toMetadataColumnIndex(valueSources: DataViewMetadataColumn[], valueSourceIndex: number) {
+        function toMetadataColumnIndex(valueSources: DataViewMetadataColumn[], valueSourceIndex: number): number {
             let valueSource = valueSources[valueSourceIndex];
             return valueSource && valueSource.index;
         }

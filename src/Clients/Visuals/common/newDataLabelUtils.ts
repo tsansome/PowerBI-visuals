@@ -204,42 +204,32 @@ module powerbi.visuals {
         export function setLabelTextDonutChart(d: DonutArcDescriptor, labelX: number, viewport: IViewport, dataLabelsSettings: VisualDataLabelsSettings, alternativeScale: number): string {
             let spaceAvailableForLabels = viewport.width / 2 - Math.abs(labelX) - NewDataLabelUtils.maxLabelOffset;
             let measureFormattersCache = dataLabelUtils.createColumnFormatterCacheManager();
-            if (dataLabelsSettings.show) {
-                // Giving 50/50 space when both category and measure are on
-                let maxDataLabelWidth = spaceAvailableForLabels / 2;
-                let measureFormatter = measureFormattersCache.getOrCreate(d.data.labelFormatString, dataLabelsSettings, alternativeScale);
-                let labelText: string;
-                if (dataLabelsSettings.showCategory) {
-                    labelText = dataLabelUtils.getLabelFormattedText({
-                        label: d.data.label,
-                        maxWidth: maxDataLabelWidth,
-                        fontSize: dataLabelsSettings.fontSize
-                    }) +
-                    dataLabelUtils.getLabelFormattedText({
-                        label: " (" + measureFormatter.format(d.data.measure) + ")",
-                        maxWidth: maxDataLabelWidth,
-                        fontSize: dataLabelsSettings.fontSize
-                    });
-                }
-                else {
-                    labelText = dataLabelUtils.getLabelFormattedText({
-                        label: d.data.measure,
-                        maxWidth: spaceAvailableForLabels,
-                        formatter: measureFormatter,
-                        fontSize: dataLabelsSettings.fontSize
-                    });
-                }
-                return labelText;
-            }
-            else
-                // show only category label
-                return dataLabelUtils.getLabelFormattedText({
+            let resultLabelText: string = '';
+            if (!dataLabelsSettings.show)
+                return resultLabelText;
+
+            let maxDataLabelWidth = dataLabelsSettings.labelStyle === labelStyle.both ? spaceAvailableForLabels / 2 : spaceAvailableForLabels;
+            let measureFormatter = measureFormattersCache.getOrCreate(d.data.labelFormatString, dataLabelsSettings, alternativeScale);
+
+            if (dataLabelsSettings.labelStyle === labelStyle.both || dataLabelsSettings.labelStyle === labelStyle.category)
+                resultLabelText = dataLabelUtils.getLabelFormattedText({
                     label: d.data.label,
-                    maxWidth: spaceAvailableForLabels,
+                    maxWidth: maxDataLabelWidth,
                     fontSize: dataLabelsSettings.fontSize
                 });
+
+            if (dataLabelsSettings.labelStyle === labelStyle.both || dataLabelsSettings.labelStyle === labelStyle.data) {
+                let fullMeasureText = dataLabelsSettings.labelStyle === labelStyle.both ? " (" + measureFormatter.format(d.data.measure) + ")" : d.data.measure;
+                resultLabelText += dataLabelUtils.getLabelFormattedText({
+                    label: fullMeasureText,
+                    maxWidth: maxDataLabelWidth,
+                    formatter: dataLabelsSettings.labelStyle === labelStyle.data ? measureFormatter : null,
+                    fontSize: dataLabelsSettings.fontSize,
+                });
+            }
+            return resultLabelText;
         }
-        
+
         export function getXPositionForDonutLabel(textPointX: number): number {
             let margin = textPointX < 0 ? -maxLabelOffset : maxLabelOffset;
             return textPointX += margin;

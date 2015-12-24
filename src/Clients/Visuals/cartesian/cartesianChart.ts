@@ -86,7 +86,6 @@ module powerbi.visuals {
 
     export interface AxisRenderingOptions {
         axisLabels: ChartAxesLabels;
-        legendMargin: number;
         viewport: IViewport;
         margin: IMargin;
         hideXAxisTitle: boolean;
@@ -95,6 +94,7 @@ module powerbi.visuals {
         xLabelColor?: Fill;
         yLabelColor?: Fill;
         y2LabelColor?: Fill;
+        fontSize: number;
     }
 
     export interface CartesianConstructorOptions {
@@ -216,15 +216,15 @@ module powerbi.visuals {
         bottom: 12,
     };
 
-    export interface ReferenceLineOptions {     
+    export interface ReferenceLineOptions {
         graphicContext: D3.Selection;
         referenceLineProperties: DataViewObject;
         axes: CartesianAxisProperties;
         viewport: IViewport;
         classAndSelector: ClassAndSelector;
         defaultColor: string;
-        isHorizontal: boolean;        
-    }   
+        isHorizontal: boolean;
+    }
 
     export interface ReferenceLineDataLabelOptions {
         referenceLineProperties: DataViewObject;
@@ -232,7 +232,12 @@ module powerbi.visuals {
         viewport: IViewport;
         defaultColor: string;
         isHorizontal: boolean;
-    }    
+    }
+
+    type RenderPlotAreaDelegate = (
+        layers: ICartesianVisual[],
+        axesLayout: CartesianAxesLayout,
+        suppressAnimations: boolean) => void;
 
     /** 
      * Renders a data series as a cartestian visual.
@@ -245,10 +250,7 @@ module powerbi.visuals {
         public static TickLabelPadding = 2;
 
         private static ClassName = 'cartesianChart';
-        private static AxisGraphicsContextClassName = 'axisGraphicsContext';
         private static PlayAxisBottomMargin = 75;
-        private static TickPaddingY = 10;
-        private static TickPaddingRotatedX = 5;
         private static FontSize = 11;
         private static FontSizeString = jsCommon.PixelConverter.toString(CartesianChart.FontSize);
         private static TextProperties: TextProperties = {
@@ -256,10 +258,6 @@ module powerbi.visuals {
             fontSize: CartesianChart.FontSizeString,
         };
 
-        private axisGraphicsContext: D3.Selection;
-        private xAxisGraphicsContext: D3.Selection;
-        private y1AxisGraphicsContext: D3.Selection;
-        private y2AxisGraphicsContext: D3.Selection;
         private element: JQuery;
         private svg: D3.Selection;
         private clearCatcher: D3.Selection;
@@ -293,19 +291,9 @@ module powerbi.visuals {
         public animator: IGenericAnimator;
 
         private axes: CartesianAxes;
-
-        // Scrollbar related
-        private svgScrollable: D3.Selection;
-        private axisGraphicsContextScrollable: D3.Selection;
-        private labelGraphicsContextScrollable: D3.Selection;
-        private labelBackgroundGraphicsContextScrollable: D3.Selection;
-        private brushGraphicsContext: D3.Selection;
-        private brushContext: D3.Selection;
-        private brush: D3.Svg.Brush;
-        private static ScrollBarWidth = 10;
-        private static fillOpacity = 0.125;
-        private brushMinExtent: number;
-        private scrollScale: D3.Scale.OrdinalScale;
+        private scrollableAxes: ScrollableAxes;
+        private svgAxes: SvgCartesianAxes;
+        private svgBrush: SvgBrush;
 
         // TODO: Remove onDataChanged & onResizing once all visuals have implemented update.
         private dataViews: DataView[];
@@ -347,7 +335,10 @@ module powerbi.visuals {
                 }
             }
 
-            this.axes = new CartesianAxes(CartesianChart.ScrollBarWidth, isScrollable);
+            this.axes = new CartesianAxes(isScrollable, ScrollableAxes.ScrollbarWidth);
+            this.svgAxes = new SvgCartesianAxes(this.axes);
+            this.svgBrush = new SvgBrush(ScrollableAxes.ScrollbarWidth);
+            this.scrollableAxes = new ScrollableAxes(this.axes, this.svgBrush);
         }
 
         public init(options: VisualInitOptions) {
@@ -355,78 +346,28 @@ module powerbi.visuals {
             this.layers = [];
 
             let element = this.element = options.element;
-            let viewport = this.currentViewport = options.viewport;
+            this.currentViewport = options.viewport;
             this.hostServices = options.host;
-            this.brush = d3.svg.brush();
+
             element.addClass(CartesianChart.ClassName);
+            let svg = this.svg = d3.select(element.get(0)).append('svg')
+                .style('position', 'absolute');
 
-            this.adjustMargins(viewport);
-
-            this.sharedColorPalette = new SharedColorPalette(options.style.colorPalette.dataColors);
-
-            let axisLinesVisibility = CartesianChart.getAxisVisibility(this.type);
+            if (this.behavior) {
+                this.clearCatcher = appendClearCatcher(svg);
+                this.interactivityService = createInteractivityService(this.hostServices);
+            }
 
             if (options.style.maxMarginFactor != null)
                 this.axes.setMaxMarginFactor(options.style.maxMarginFactor);
 
+            let axisLinesVisibility = CartesianChart.getAxisVisibility(this.type);
             this.axes.setAxisLinesVisibility(axisLinesVisibility);
 
-            let showLinesOnX = this.axes.showLinesOnX;
-            let showLinesOnY = this.axes.showLinesOnY;
-            /*
-                The layout of the visual would look like :
-                <svg>
-                    <g>
-                        <nonscrollable axis/>
-                    </g>
-                    <svgScrollable>
-                        <g>
-                            <scrollable axis/>
-                        </g>
-                    </svgScrollable>
-                    <g xbrush/>
-                </svg>
+            this.svgAxes.init(svg);
+            this.svgBrush.init(svg);
 
-            */
-
-            let svg = this.svg = d3.select(element.get(0)).append('svg')
-                .style('position', 'absolute');
-
-            if (this.behavior)
-                this.clearCatcher = appendClearCatcher(this.svg);
-
-            let axisGraphicsContext = this.axisGraphicsContext = svg.append('g')
-                .classed(CartesianChart.AxisGraphicsContextClassName, true);
-
-            this.svgScrollable = svg.append('svg')
-                .classed('svgScrollable', true)
-                .style('overflow', 'hidden');
-
-            let axisGraphicsContextScrollable = this.axisGraphicsContextScrollable = this.svgScrollable.append('g')
-                .classed(CartesianChart.AxisGraphicsContextClassName, true);
-
-            this.labelBackgroundGraphicsContextScrollable = this.svgScrollable.append('g')
-                .classed(NewDataLabelUtils.labelBackgroundGraphicsContextClass.class, true);
-            this.labelGraphicsContextScrollable = this.svgScrollable.append('g')
-                .classed(NewDataLabelUtils.labelGraphicsContextClass.class, true);
-
-            let axisGroup = showLinesOnX ? axisGraphicsContextScrollable : axisGraphicsContext;
-
-            this.xAxisGraphicsContext = showLinesOnX ? axisGraphicsContext.append('g').attr('class', 'x axis') : axisGraphicsContextScrollable.append('g').attr('class', 'x axis');
-            this.y1AxisGraphicsContext = axisGroup.append('g').attr('class', 'y axis');
-            this.y2AxisGraphicsContext = axisGroup.append('g').attr('class', 'y axis');
-
-            this.xAxisGraphicsContext.classed('showLinesOnAxis', showLinesOnX);
-            this.y1AxisGraphicsContext.classed('showLinesOnAxis', showLinesOnY);
-            this.y2AxisGraphicsContext.classed('showLinesOnAxis', showLinesOnY);
-
-            this.xAxisGraphicsContext.classed('hideLinesOnAxis', !showLinesOnX);
-            this.y1AxisGraphicsContext.classed('hideLinesOnAxis', !showLinesOnY);
-            this.y2AxisGraphicsContext.classed('hideLinesOnAxis', !showLinesOnY);
-
-            if (this.behavior) {
-                this.interactivityService = createInteractivityService(this.hostServices);
-            }
+            this.sharedColorPalette = new SharedColorPalette(options.style.colorPalette.dataColors);
 
             this.legend = createLegend(
                 element,
@@ -435,7 +376,7 @@ module powerbi.visuals {
                 this.axes.isScrollable);
         }
 
-        private needsPlayAxisMargin(): boolean {
+        private isPlayAxis(): boolean {
             if (!this.dataViews || !this.dataViews[0])
                 return false;
 
@@ -451,157 +392,6 @@ module powerbi.visuals {
                 && this.animator
                 && dataView.matrix != null
                 && (!dataView.categorical || categoryRoleIsPlay);
-        }
-
-        private renderAxesLabels(options: AxisRenderingOptions): void {
-            debug.assertValue(options, 'options');
-            debug.assertValue(options.viewport, 'options.viewport');
-            debug.assertValue(options.axisLabels, 'options.axisLabels');
-
-            this.axisGraphicsContext.selectAll('.xAxisLabel').remove();
-            this.axisGraphicsContext.selectAll('.yAxisLabel').remove();
-
-            let margin = options.margin;
-            let width = options.viewport.width - (margin.left + margin.right);
-            let height = options.viewport.height;
-            let fontSize = CartesianChart.FontSize;
-            let heightOffset = fontSize;
-            if (this.needsPlayAxisMargin())
-                heightOffset += CartesianChart.PlayAxisBottomMargin;
-            let showOnRight = this.axes.shouldShowY1OnRight();
-
-            if (!options.hideXAxisTitle) {                
-                let xAxisLabel = this.axisGraphicsContext.append("text")
-                    .style("text-anchor", "middle")
-                    .text(options.axisLabels.x)
-                    .call((text: D3.Selection) => {
-                        text.each(function () {
-                            let text = d3.select(this);
-                            text.attr({
-                                "class": "xAxisLabel",
-                                "transform": SVGUtil.translate(width / 2, height - heightOffset)
-                            });
-                        });
-                    });
-
-                xAxisLabel.style("fill", options.xLabelColor ? options.xLabelColor.solid.color : null);
-
-                xAxisLabel.call(AxisHelper.LabelLayoutStrategy.clip,
-                    width,
-                    TextMeasurementService.svgEllipsis);
-            }
-
-            if (!options.hideYAxisTitle) {
-                let yAxisLabel = this.axisGraphicsContext.append("text")
-                    .style("text-anchor", "middle")
-                    .text(options.axisLabels.y)
-                    .call((text: D3.Selection) => {
-                        text.each(function () {
-                            let text = d3.select(this);
-                            text.attr({
-                                "class": "yAxisLabel",
-                                "transform": "rotate(-90)",
-                                "y": showOnRight ? width + margin.right - fontSize : -margin.left,
-                                "x": -((height - margin.top - options.legendMargin) / 2),
-                                "dy": "1em"
-                            });
-                        });
-                    });
-
-                yAxisLabel.style("fill", options.yLabelColor ? options.yLabelColor.solid.color : null);
-
-                yAxisLabel.call(AxisHelper.LabelLayoutStrategy.clip,
-                    height - (margin.bottom + margin.top),
-                    TextMeasurementService.svgEllipsis);
-            }
-
-            if (!options.hideY2AxisTitle && options.axisLabels.y2) {
-                let y2AxisLabel = this.axisGraphicsContext.append("text")
-                    .style("text-anchor", "middle")
-                    .text(options.axisLabels.y2)
-                    .call((text: D3.Selection) => {
-                        text.each(function () {
-                            let text = d3.select(this);
-                            text.attr({
-                                "class": "yAxisLabel",
-                                "transform": "rotate(-90)",
-                                "y": showOnRight ? -margin.left : width + margin.right - fontSize,
-                                "x": -((height - margin.top - options.legendMargin) / 2),
-                                "dy": "1em"
-                            });
-                        });
-                    });
-
-                y2AxisLabel.style("fill", options.y2LabelColor ? options.y2LabelColor.solid.color : null);
-
-                y2AxisLabel.call(AxisHelper.LabelLayoutStrategy.clip,
-                    height - (margin.bottom + margin.top),
-                    TextMeasurementService.svgEllipsis);
-            }
-        }
-
-        private adjustMargins(viewport: IViewport): void {
-            // Adjust margins if ticks are not going to be shown on either axis
-            let xAxis = this.element.find('.x.axis');
-
-            if (this.axes.axesHaveTicks(viewport)) {
-                xAxis.show();
-            }
-            else {
-                xAxis.hide();
-        }
-        }
-
-        // Margin convention: http://bl.ocks.org/mbostock/3019563
-        private translateAxes(viewport: IViewport, margin: IMargin): void {
-            this.adjustMargins(viewport);
-
-            let width = viewport.width - (margin.left + margin.right);
-            let height = viewport.height - (margin.top + margin.bottom);
-
-            let showY1OnRight = this.axes.shouldShowY1OnRight();
-
-            this.xAxisGraphicsContext
-                .attr('transform', SVGUtil.translate(0, height));
-
-            this.y1AxisGraphicsContext
-                .attr('transform', SVGUtil.translate(showY1OnRight ? width : 0, 0));
-
-            this.y2AxisGraphicsContext
-                .attr('transform', SVGUtil.translate(showY1OnRight ? 0 : width, 0));
-
-            this.svg.attr({
-                'width': viewport.width,
-                'height': viewport.height
-            });
-
-            this.svgScrollable.attr({
-                'x': 0,
-                'width': viewport.width,
-                'height': viewport.height
-            });
-
-            this.axisGraphicsContext.attr('transform', SVGUtil.translate(margin.left, margin.top));
-            this.axisGraphicsContextScrollable.attr('transform', SVGUtil.translate(margin.left, margin.top));
-            this.labelGraphicsContextScrollable.attr('transform', SVGUtil.translate(margin.left, margin.top));
-            this.labelBackgroundGraphicsContextScrollable.attr('transform', SVGUtil.translate(margin.left, margin.top));
-
-            if (this.axes.isXScrollBarVisible) {
-                this.svgScrollable.attr({
-                    'x': margin.left
-                });
-                this.axisGraphicsContextScrollable.attr('transform', SVGUtil.translate(0, margin.top));
-                this.labelGraphicsContextScrollable.attr('transform', SVGUtil.translate(0, margin.top));
-                this.labelBackgroundGraphicsContextScrollable.attr('transform', SVGUtil.translate(0, margin.top));
-                this.svgScrollable.attr('width', width);
-                this.svg.attr('width', viewport.width)
-                    .attr('height', viewport.height + CartesianChart.ScrollBarWidth);
-            }
-            else if (this.axes.isYScrollBarVisible) {
-                this.svgScrollable.attr('height', height + margin.top);
-                this.svg.attr('width', viewport.width + CartesianChart.ScrollBarWidth)
-                    .attr('height', viewport.height);
-            }
         }
 
         public static getIsScalar(objects: DataViewObjects, propertyId: DataViewObjectPropertyIdentifier, type: ValueType): boolean {
@@ -656,6 +446,7 @@ module powerbi.visuals {
             if (dataViews && dataViews.length > 0) {
                 this.populateObjectProperties(dataViews);
                 this.axes.update(dataViews);
+                this.svgAxes.update(this.categoryAxisProperties, this.valueAxisProperties);
                 let dataView = dataViews[0];
                 if (dataView.metadata) {
                     // flatten background data
@@ -672,12 +463,6 @@ module powerbi.visuals {
 
                 if (len > 1)
                     this.sharedColorPalette.rotateScale();
-            }
-
-            // Note: interactive legend shouldn't be rendered explicitly here
-            // The interactive legend is being rendered in the render method of ICartesianVisual
-            if (!(this.visualInitOptions.interactivity && this.visualInitOptions.interactivity.isInteractiveLegend)) {
-                this.renderLegend();
             }
 
             this.render(!this.hasSetData || options.suppressAnimations);
@@ -720,6 +505,10 @@ module powerbi.visuals {
             });
         }
 
+        public scrollTo(position: number): void {
+            this.scrollableAxes.scrollTo(position);
+        }
+
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
             let enumeration = new ObjectEnumerationBuilder();
             let layersLength = this.layers ? this.layers.length : 0;
@@ -754,7 +543,7 @@ module powerbi.visuals {
             }
             else if (options.objectName === 'y1AxisReferenceLine' && this.referenceLinesEnabled) {
                 let refLinedefaultColor = this.sharedColorPalette.getColorByIndex(0).value;
-                ReferenceLineHelper.enumerateObjectInstances(enumeration, this.y1AxisReferenceLines, refLinedefaultColor ,options.objectName);
+                ReferenceLineHelper.enumerateObjectInstances(enumeration, this.y1AxisReferenceLines, refLinedefaultColor, options.objectName);
             }
             else if (options.objectName === 'xAxisReferenceLine' && this.referenceLinesEnabled) {
                 let refLinedefaultColor = this.sharedColorPalette.getColorByIndex(0).value;
@@ -799,23 +588,6 @@ module powerbi.visuals {
             }
 
             return false;
-        }
-
-        public scrollTo(position: number): void {
-            debug.assert(this.axes.isXScrollBarVisible || this.axes.isYScrollBarVisible, 'scrolling is not available');
-            debug.assertValue(this.scrollScale, 'scrollScale');
-
-            let extent = this.brush.extent();
-            let extentLength = extent[1] - extent[0];
-            extent[0] = this.scrollScale(position);
-            extent[1] = extent[0] + extentLength;
-            this.brush.extent(extent);
-
-            let scrollSpaceLength = this.scrollScale.rangeExtent()[1];
-            this.setMinBrush(scrollSpaceLength, this.brushMinExtent);
-
-            let triggerBrush = this.brush.on('brush');
-            triggerBrush(null, 0);  // We don't use the data or index.
         }
 
         private getCategoryAxisValues(enumeration: ObjectEnumerationBuilder): void {
@@ -898,7 +670,7 @@ module powerbi.visuals {
             };
 
             instance.properties['show'] = this.valueAxisProperties['show'] != null ? this.valueAxisProperties['show'] : true;
-            
+
             if (!this.axes.isYAxisCategorical()) {
                 instance.properties['position'] = this.valueAxisProperties['position'] != null ? this.valueAxisProperties['position'] : yAxisPosition.left;
             }
@@ -917,12 +689,12 @@ module powerbi.visuals {
                     : labelPrecision;
             }
 
-            enumeration.pushInstance(instance);            
+            enumeration.pushInstance(instance);
 
             if (this.layers.length === 2) {
                 instance.properties['secShow'] = this.valueAxisProperties['secShow'] != null ? this.valueAxisProperties['secShow'] : this.axes.hasY2Axis();
                 if (instance.properties['secShow']) {
-                    instance.properties['axisLabel'] = '';//this.layers[0].getVisualType();//I will keep or remove this, depending on the decision made
+                    instance.properties['axisLabel'] = '';
                 }
             }
 
@@ -936,7 +708,7 @@ module powerbi.visuals {
                     properties: {},
                     objectName: 'valueAxis'
                 };
-                secInstance.properties['secAxisLabel'] = ''; //this.layers[1].getVisualType(); //I will keep or remove this, depending on the decision made                        
+                secInstance.properties['secAxisLabel'] = '';
                 secInstance.properties['secPosition'] = this.valueAxisProperties['secPosition'] != null ? this.valueAxisProperties['secPosition'] : yAxisPosition.right;
                 secInstance.properties['secAxisScale'] = this.valueAxisProperties['secAxisScale'] != null && secLogPossible ? this.valueAxisProperties['secAxisScale'] : axisScale.linear;
                 secInstance.properties['secStart'] = this.valueAxisProperties['secStart'];
@@ -946,18 +718,18 @@ module powerbi.visuals {
                 enumeration
                     .pushInstance(secInstance)
                     .pushInstance({
-                    selector: null,
-                    properties: {
-                        secAxisStyle: this.valueAxisProperties['secAxisStyle'] ? this.valueAxisProperties['secAxisStyle'] : axisStyle.showTitleOnly,
-                        labelColor: this.valueAxisProperties['secLabelColor'],
-                        secLabelDisplayUnits: this.valueAxisProperties['secLabelDisplayUnits'] ? this.valueAxisProperties['secLabelDisplayUnits'] : 0,
-                        secLabelPrecision: this.valueAxisProperties['secLabelPrecision'] < 0 ? 0 : this.valueAxisProperties['secLabelPrecision']
-                    },
-                    objectName: 'valueAxis',
-                    validValues: {
-                        secAxisStyle: this.axes.secondaryValueAxisHasUnitType ? [axisStyle.showTitleOnly, axisStyle.showUnitOnly, axisStyle.showBoth] : [axisStyle.showTitleOnly]
-                    },
-                });
+                        selector: null,
+                        properties: {
+                            secAxisStyle: this.valueAxisProperties['secAxisStyle'] ? this.valueAxisProperties['secAxisStyle'] : axisStyle.showTitleOnly,
+                            labelColor: this.valueAxisProperties['secLabelColor'],
+                            secLabelDisplayUnits: this.valueAxisProperties['secLabelDisplayUnits'] ? this.valueAxisProperties['secLabelDisplayUnits'] : 0,
+                            secLabelPrecision: this.valueAxisProperties['secLabelPrecision'] < 0 ? 0 : this.valueAxisProperties['secLabelPrecision']
+                        },
+                        objectName: 'valueAxis',
+                        validValues: {
+                            secAxisStyle: this.axes.secondaryValueAxisHasUnitType ? [axisStyle.showTitleOnly, axisStyle.showUnitOnly, axisStyle.showBoth] : [axisStyle.showTitleOnly]
+                        },
+                    });
 
                 enumeration.popContainer();
             }
@@ -994,8 +766,8 @@ module powerbi.visuals {
 
             // Initialize the layers
             let cartesianOptions = <CartesianVisualInitOptions>Prototype.inherit(this.visualInitOptions);
-            cartesianOptions.svg = this.axisGraphicsContextScrollable;
-            cartesianOptions.labelsContext = this.labelGraphicsContextScrollable;
+            cartesianOptions.svg = this.svgAxes.getScrollableRegion();
+            cartesianOptions.labelsContext = this.svgAxes.getLabelsRegion();
             cartesianOptions.cartesianHost = {
                 updateLegend: data => this.legend.drawLegend(data, this.currentViewport),
                 getSharedColors: () => this.sharedColorPalette,
@@ -1056,18 +828,29 @@ module powerbi.visuals {
         }
 
         private render(suppressAnimations: boolean): void {
+            // Note: interactive legend shouldn't be rendered explicitly here
+            // The interactive legend is being rendered in the render method of ICartesianVisual
+            if (!(this.visualInitOptions.interactivity && this.visualInitOptions.interactivity.isInteractiveLegend)) {
+                this.renderLegend();
+            }
+
             let legendMargins = this.legendMargins = this.legend.getMargins();
+            let hideAxisLabels = this.hideAxisLabels(legendMargins);
+
             let viewport: IViewport = {
                 height: this.currentViewport.height - legendMargins.height,
                 width: this.currentViewport.width - legendMargins.width
             };
 
-            let hideAxisLabels = this.hideAxisLabels(legendMargins);
-
             let padding = Prototype.inherit(AxisPadding);
-            if (this.needsPlayAxisMargin()) {
-                padding.bottom += CartesianChart.PlayAxisBottomMargin;
-                    }
+            if (this.isPlayAxis()) {
+                viewport.height -= CartesianChart.PlayAxisBottomMargin;
+            }
+
+            this.svg.attr({
+                'width': viewport.width,
+                'height': viewport.height
+            });
 
             let axesLayout = this.axes.negotiateAxes(
                 this.layers,
@@ -1077,43 +860,37 @@ module powerbi.visuals {
                 CartesianChart.TextProperties
             );
 
-            // Only create the g tag where there is a scrollbar
-            if (this.axes.isXScrollBarVisible || this.axes.isYScrollBarVisible) {
-                if (!this.brushGraphicsContext) {
-                    this.brushGraphicsContext = this.svg.append("g")
-                        .classed('x brush', true);
-                }
-            }
-            else {
-                // clear any existing brush if no scrollbar is shown
-                this.svg.selectAll('.brush').remove();
-                this.brushGraphicsContext = undefined;
-            }
+            this.scrollableAxes.render(axesLayout, this.layers, suppressAnimations, (layers, axesLayout, suppressAnimations) => this.renderPlotArea(layers, axesLayout, suppressAnimations, legendMargins));
+        }
 
-            this.renderChartWithScrollBar(axesLayout, suppressAnimations);
+        private getPlotAreaRect(axesLayout: CartesianAxesLayout, legendMargins: IViewport): IRect {
+            let rect: Rect = {
+                left: axesLayout.margin.left,
+                top: axesLayout.margin.top,
+                width: axesLayout.plotArea.width,
+                height: axesLayout.plotArea.height,
+            };
 
             // Adjust the margins to the legend position 
-            let plotArea = axesLayout.plotArea;
-            let backgroundImageMarginLeft: number = axesLayout.margin.left;
-            let backgroundImageMarginBottom: number = axesLayout.margin.bottom;
-            if (this.legendObjectProperties) {
-                let currentLegendPosition = this.legendObjectProperties['position'];
+            if (this.legend) {
+                let legendPosition = this.legend.getOrientation();
 
-                if (currentLegendPosition === legendPosition.bottom || currentLegendPosition === legendPosition.bottomCenter) {
-                    backgroundImageMarginBottom += legendMargins.height;
+                if (legendPosition === LegendPosition.Top || legendPosition === LegendPosition.TopCenter) {
+                    rect.top += legendMargins.height;
                 }
-                else if (currentLegendPosition === legendPosition.left || currentLegendPosition === legendPosition.leftCenter) {
-                    backgroundImageMarginLeft += legendMargins.width;
+                else if (legendPosition === LegendPosition.Left || legendPosition === LegendPosition.LeftCenter) {
+                    rect.left += legendMargins.width;
                 }
             }
 
+            return rect;
+        }
+
+        private renderBackgroundImage(layout: IRect): void {
             visualBackgroundHelper.renderBackgroundImage(
                 this.background,
                 this.element,
-                plotArea.width,
-                plotArea.height,
-                backgroundImageMarginLeft,
-                backgroundImageMarginBottom);
+                layout);
         }
 
         private hideAxisLabels(legendMargins: IViewport): boolean {
@@ -1125,383 +902,42 @@ module powerbi.visuals {
             return false;
         }
 
-        private renderChartWithScrollBar(
-            axesLayout: CartesianAxesLayout,
-            suppressAnimations: boolean): void {
-
-            let mainAxisScale: D3.Scale.OrdinalScale;
-            let brushX: number;
-            let brushY: number;
-            let svgLength: number;
-            if (this.axes.isXScrollBarVisible) {
-                mainAxisScale = <D3.Scale.OrdinalScale>axesLayout.axes.x.scale;
-                brushX = axesLayout.margin.left;
-                brushY = axesLayout.viewport.height;
-                svgLength = axesLayout.preferredPlotArea.width;
-            }
-            else if (this.axes.isYScrollBarVisible) {
-                mainAxisScale = <D3.Scale.OrdinalScale>axesLayout.axes.y1.scale;
-                brushX = axesLayout.viewport.width;
-                brushY = axesLayout.margin.top;
-                svgLength = axesLayout.preferredPlotArea.height;
-            }
-            else {
-                // No scrollbars, render the chart normally.
-                this.renderChart(null, axesLayout, suppressAnimations);
-                return;
-            }
-
-            let plotArea = axesLayout.plotArea;
-            let scrollScale = this.scrollScale = mainAxisScale.copy();
-            let brush = this.brush;
-            let scrollSpaceLength;
-            let minExtent;
-
-            if (this.axes.isXScrollBarVisible) {
-                scrollSpaceLength = plotArea.width;
-                minExtent = this.getMinExtent(svgLength, scrollSpaceLength);
-                scrollScale.rangeBands([0, scrollSpaceLength]);
-                brush.x(scrollScale)
-                    .extent([0, minExtent]);
-            }
-            else {
-                scrollSpaceLength = plotArea.height;
-                minExtent = this.getMinExtent(svgLength, scrollSpaceLength);
-                scrollScale.rangeBands([0, scrollSpaceLength]);
-                brush.y(scrollScale)
-                    .extent([0, minExtent]);
-            }
-
-            this.brushMinExtent = minExtent;
-
-            brush
-                .on("brush", () => window.requestAnimationFrame(() => this.onBrushed(scrollScale, mainAxisScale, axesLayout, scrollSpaceLength)))
-                .on("brushend", () => this.onBrushEnd(minExtent));
-
-            let brushContext = this.brushContext = this.brushGraphicsContext
-                .attr({
-                    "transform": SVGUtil.translate(brushX, brushY),
-                    "drag-resize-disabled": "true" /*disables resizing of the visual when dragging the scrollbar in edit mode*/
-                })
-                .call(brush);  /*call the brush function, causing it to create the rectangles   */              
-              
-            /* Disabling the zooming feature */
-            brushContext.selectAll(".resize rect")
-                .remove();
-
-            brushContext.select(".background")
-                .style('cursor', 'default');
-
-            brushContext.selectAll(".extent")
-                .style({
-                    "fill-opacity": CartesianChart.fillOpacity,
-                    "cursor": "default",
-                });
-
-            if (this.axes.isXScrollBarVisible)
-                brushContext.selectAll("rect").attr("height", CartesianChart.ScrollBarWidth);
-            else
-                brushContext.selectAll("rect").attr("width", CartesianChart.ScrollBarWidth);
-
-            if (mainAxisScale && scrollScale) {
-                mainAxisScale.rangeBands([0, scrollSpaceLength]);
-                this.renderChart(mainAxisScale, axesLayout, suppressAnimations, scrollScale, brush.extent());
-            }
-        }
-
-        private getMinExtent(svgLength: number, scrollSpaceLength: number): number {
-            return scrollSpaceLength * scrollSpaceLength / (svgLength);
-        }
-
-        private onBrushEnd(minExtent: number): void {
-            let brushContext = this.brushContext;
-            if (this.axes.isXScrollBarVisible) {
-                brushContext.select(".extent").attr("width", minExtent);
-            }
-            else
-                brushContext.select(".extent").attr("height", minExtent);
-        }
-
-        private onBrushed(scrollScale: any, mainAxisScale: any, axesLayout, scrollSpaceLength: number): void {
-            let brush = this.brush;
-
-            if (mainAxisScale && scrollScale) {
-                CartesianChart.clampBrushExtent(this.brush, scrollSpaceLength, this.brushMinExtent);
-                let extent = brush.extent();
-                this.renderChart(mainAxisScale, axesLayout, true /* suppressAnimations */, scrollScale, extent);
-            }
-        }
-        
-        /**
-         * To show brush every time when mouse is clicked on the empty background.
-         */
-        private setMinBrush(scrollSpaceLength: number, minExtent: number): void {
-            CartesianChart.clampBrushExtent(this.brush, scrollSpaceLength, minExtent);
-        }
-
-        private static clampBrushExtent(brush: D3.Svg.Brush, viewportWidth: number, minExtent: number): void {
-            let extent = brush.extent();
-            let width = extent[1] - extent[0];
-
-            if (width === minExtent && extent[1] <= viewportWidth && extent[0] >= 0)
-                return;
-
-            if (width > minExtent) {
-                let padding = (width - minExtent) / 2;
-                extent[0] += padding;
-                extent[1] -= padding;
-            }
-
-            else if (width < minExtent) {
-                let padding = (minExtent - width) / 2;
-                extent[0] -= padding;
-                extent[1] += padding;
-            }
-
-            if (extent[0] < 0) {
-                extent[0] = 0;
-                extent[1] = minExtent;
-            }
-
-            else if (extent[0] > viewportWidth - minExtent) {
-                extent[0] = viewportWidth - minExtent;
-                extent[1] = viewportWidth;
-            }
-
-            brush.extent(extent);
-        }
-
-        private renderChart(
-            mainAxisScale: any,
+        private renderPlotArea(
+            layers: ICartesianVisual[],
             axesLayout: CartesianAxesLayout,
             suppressAnimations: boolean,
-            scrollScale?: any,
-            extent?: number[]) {
-
-            let marginLimits = axesLayout.marginLimits;
-            let plotArea = axesLayout.plotArea;
-            let viewport = axesLayout.viewport;
-            let margin = axesLayout.margin;
-            let axes = axesLayout.axes;
-            let tickLabelMargins = axesLayout.tickLabelMargins;
-
-            let bottomMarginLimit = marginLimits.bottom;
-            let leftRightMarginLimit = marginLimits.left;
-            let layers = this.layers;
-            let duration = AnimatorCommon.GetAnimationDuration(this.animator, suppressAnimations);
-
+            legendMargins: IViewport) {
             debug.assertValue(layers, 'layers');
 
-            // Filter data that fits viewport
-            if (scrollScale) {
-                let selected: number[];
-                let data: CartesianData[] = [];
+            let axes = axesLayout.axes;
+            let plotArea = axesLayout.plotArea;
+            let plotAreaRect = this.getPlotAreaRect(axesLayout, legendMargins);
+            let duration = AnimatorCommon.GetAnimationDuration(this.animator, suppressAnimations);
 
-                let startValue = extent[0];
-                let endValue = extent[1];
+            this.renderBackgroundImage(plotAreaRect);
 
-                let pixelStepSize = scrollScale(1) - scrollScale(0);
-                let startIndex = Math.floor(startValue / pixelStepSize);
-                let sliceLength = Math.ceil((endValue - startValue) / pixelStepSize);
-                let endIndex = startIndex + sliceLength; //intentionally one past the end index for use with slice(start,end)
-                let domain = scrollScale.domain();
+            this.svgAxes.renderAxes(axesLayout, duration);
 
-                mainAxisScale.domain(domain);
-                selected = domain.slice(startIndex, endIndex); //up to but not including 'end'
-                if (selected && selected.length > 0) {
-                    for (let i = 0; i < layers.length; i++) {
-                        data[i] = layers[i].setFilteredData(selected[0], selected[selected.length - 1] + 1);
-                    }
-                    mainAxisScale.domain(selected);
+            this.renderReferenceLines(axesLayout);
 
-                    let axisPropsToUpdate: IAxisProperties;
-                    if (this.axes.isXScrollBarVisible) {
-                        axisPropsToUpdate = axes.x;
-                    }
-                    else {
-                        axisPropsToUpdate = axes.y1;
-                    }
+            this.renderLayers(layers, plotArea, axes, suppressAnimations);
+        }
 
-                    axisPropsToUpdate.axis.scale(mainAxisScale);
-                    axisPropsToUpdate.scale(mainAxisScale);
-
-                    // tick values are indices for ordinal axes
-                    axisPropsToUpdate.axis.ticks(selected.length);
-                    axisPropsToUpdate.axis.tickValues(selected); 
-
-                    // use the original tick format to format the tick values
-                    let tickFormat = axisPropsToUpdate.axis.tickFormat();
-                    axisPropsToUpdate.values = _.map(selected, (d) => tickFormat(d));
-                }
-            }
-
-            let xLabelColor: Fill;
-            let yLabelColor: Fill;
-            let y2LabelColor: Fill;
-            //hide show x-axis here
-            if (this.axes.shouldRenderAxis(axes.x)) {
-                if (axes.x.isCategoryAxis) {
-                    xLabelColor = this.categoryAxisProperties && this.categoryAxisProperties['labelColor'] ? this.categoryAxisProperties['labelColor'] : null;
-                } else {
-                    xLabelColor = this.valueAxisProperties && this.valueAxisProperties['labelColor'] ? this.valueAxisProperties['labelColor'] : null;
-                }
-                axes.x.axis.orient("bottom");
-                if (!axes.x.willLabelsFit)
-                    axes.x.axis.tickPadding(CartesianChart.TickPaddingRotatedX);
-
-                let xAxisGraphicsElement = this.xAxisGraphicsContext;
-                if (duration) {
-                    xAxisGraphicsElement
-                        .transition()
-                        .duration(duration)
-                        .call(axes.x.axis);
-                }
-                else {
-                    xAxisGraphicsElement
-                        .call(axes.x.axis);
-                }
-
-                xAxisGraphicsElement
-                    .call(CartesianChart.darkenZeroLine)
-                    .call(CartesianChart.setAxisLabelColor, xLabelColor);
-
-                let xAxisTextNodes = xAxisGraphicsElement.selectAll('text');
-                if (axes.x.willLabelsWordBreak) {
-                    xAxisTextNodes
-                        .call(AxisHelper.LabelLayoutStrategy.wordBreak, axes.x, bottomMarginLimit);
-                } else {
-                    xAxisTextNodes
-                        .call(AxisHelper.LabelLayoutStrategy.rotate,
-                            bottomMarginLimit,
-                            TextMeasurementService.svgEllipsis,
-                            !axes.x.willLabelsFit,
-                            bottomMarginLimit === tickLabelMargins.xMax,
-                            axes.x,
-                            margin,
-                            this.axes.isXScrollBarVisible || this.axes.isYScrollBarVisible);
-                }
-            }
-            else {
-                this.xAxisGraphicsContext.selectAll('*').remove();
-            }
-
-            if (this.axes.shouldRenderAxis(axes.y1)) {
-                if (axes.y1.isCategoryAxis) {
-                    yLabelColor = this.categoryAxisProperties && this.categoryAxisProperties['labelColor'] ? this.categoryAxisProperties['labelColor'] : null;
-                } else {
-                    yLabelColor = this.valueAxisProperties && this.valueAxisProperties['labelColor'] ? this.valueAxisProperties['labelColor'] : null;
-                }
-                let showY1OnRight = this.axes.shouldShowY1OnRight();
-                axes.y1.axis
-                    .tickSize(-plotArea.width)
-                    .tickPadding(CartesianChart.TickPaddingY)
-                    .orient(this.axes.getYAxisOrientation().toLowerCase());
-
-                let y1AxisGraphicsElement = this.y1AxisGraphicsContext;
-                if (duration) {
-                    y1AxisGraphicsElement
-                        .transition()
-                        .duration(duration)
-                        .call(axes.y1.axis);
-                }
-                else {
-                    y1AxisGraphicsElement
-                        .call(axes.y1.axis);
-                }
-
-                y1AxisGraphicsElement
-                    .call(CartesianChart.darkenZeroLine)
-                    .call(CartesianChart.setAxisLabelColor, yLabelColor);
-
-                if (tickLabelMargins.yLeft >= leftRightMarginLimit) {
-                    y1AxisGraphicsElement.selectAll('text')
-                        .call(AxisHelper.LabelLayoutStrategy.clip,
-                            // Can't use padding space to render text, so subtract that from available space for ellipses calculations
-                            leftRightMarginLimit - AxisPadding.left,
-                            TextMeasurementService.svgEllipsis);
-                }
-
-                if (axes.y2 && (!this.valueAxisProperties || this.valueAxisProperties['secShow'] == null || this.valueAxisProperties['secShow'])) {
-                    y2LabelColor = this.valueAxisProperties && this.valueAxisProperties['secLabelColor'] ? this.valueAxisProperties['secLabelColor'] : null;
-                    
-                    axes.y2.axis
-                        .tickPadding(CartesianChart.TickPaddingY)
-                        .orient(showY1OnRight ? yAxisPosition.left.toLowerCase() : yAxisPosition.right.toLowerCase());
-
-                    if (duration) {
-                        this.y2AxisGraphicsContext
-                            .transition()
-                            .duration(duration)
-                            .call(axes.y2.axis);
-                    }
-                    else {
-                        this.y2AxisGraphicsContext
-                            .call(axes.y2.axis);
-                    }
-
-                    this.y2AxisGraphicsContext
-                        .call(CartesianChart.darkenZeroLine)
-                        .call(CartesianChart.setAxisLabelColor, y2LabelColor);
-
-                    if (tickLabelMargins.yRight >= leftRightMarginLimit) {
-                        this.y2AxisGraphicsContext.selectAll('text')
-                            .call(AxisHelper.LabelLayoutStrategy.clip,
-                                // Can't use padding space to render text, so subtract that from available space for ellipses calculations
-                                leftRightMarginLimit - AxisPadding.right,
-                                TextMeasurementService.svgEllipsis);
-                    }
-                }
-                else {
-                    this.y2AxisGraphicsContext.selectAll('*').remove();
-                    }
-            }
-            else {
-                this.y1AxisGraphicsContext.selectAll('*').remove();
-                this.y2AxisGraphicsContext.selectAll('*').remove();
-            }
-
-            // Axis labels
-            //TODO: Add label for second Y axis for combo chart
-            let axisLabels = axesLayout.axisLabels;
-            let chartHasAxisLabels = (axisLabels.x != null) || (axisLabels.y != null || axisLabels.y2 != null);
-            if (chartHasAxisLabels) {
-                let hideXAxisTitle = !this.axes.shouldRenderAxisTitle(axes.x, /* defaultValue */ true, /* secondary */ false);
-                let hideYAxisTitle = !this.axes.shouldRenderAxisTitle(axes.y1, /* defaultValue */ true,  /* secondary */false);
-                let hideY2AxisTitle = !this.axes.shouldRenderAxisTitle(axes.y2, /* defaultValue */ false,  /* secondary */true);
-
-                let renderAxisOptions: AxisRenderingOptions = {
-                    axisLabels: axisLabels,
-                    legendMargin: this.legendMargins.height,
-                    viewport: viewport,
-                    margin: margin,
-                    hideXAxisTitle: hideXAxisTitle,
-                    hideYAxisTitle: hideYAxisTitle,
-                    hideY2AxisTitle: hideY2AxisTitle,
-                    xLabelColor: xLabelColor,
-                    yLabelColor: yLabelColor,
-                    y2LabelColor: y2LabelColor
-                };
-
-                this.renderAxesLabels(renderAxisOptions);
-            }
-            else {
-                this.axisGraphicsContext.selectAll('.xAxisLabel').remove();
-                this.axisGraphicsContext.selectAll('.yAxisLabel').remove();
-            }
-
-            this.translateAxes(viewport, margin);
-
-            // Render Reference Lines
-            // TODO: This should use D3 to handle multiple reference lines per axis.
+        private renderReferenceLines(axesLayout: CartesianAxesLayout): void {
+            let axes = axesLayout.axes;
+            let plotArea = axesLayout.plotArea;
+            let scrollableRegion = this.svgAxes.getScrollableRegion();
             let refLineDefaultColor = this.sharedColorPalette.getColorByIndex(0).value;
+
             let showY1ReferenceLines = false;
             if (this.y1AxisReferenceLines) {
                 for (let referenceLineProperties of this.y1AxisReferenceLines) {
                     let object: DataViewObject = referenceLineProperties.object;
                     if (object[ReferenceLineHelper.referenceLineProps.show]) {
+
                         let isHorizontal = !axes.y1.isCategoryAxis;
                         let y1RefLineOptions = {
-                            graphicContext: this.axisGraphicsContextScrollable,
+                            graphicContext: scrollableRegion,
                             referenceLineProperties: object,
                             axes: axes,
                             viewport: plotArea,
@@ -1517,7 +953,7 @@ module powerbi.visuals {
             }
 
             if (!showY1ReferenceLines) {
-                this.axisGraphicsContextScrollable.selectAll(this.y1RefLine.selector).remove();
+                scrollableRegion.selectAll(this.y1RefLine.selector).remove();
             }
 
             let showXReferenceLines = false;
@@ -1527,7 +963,7 @@ module powerbi.visuals {
                     if (object[ReferenceLineHelper.referenceLineProps.show]) {
                         let isHorizontal = false;
                         let xRefLineOptions = {
-                            graphicContext: this.axisGraphicsContextScrollable,
+                            graphicContext: scrollableRegion,
                             referenceLineProperties: object,
                             axes: axes,
                             viewport: plotArea,
@@ -1543,230 +979,170 @@ module powerbi.visuals {
             }
 
             if (!showXReferenceLines) {
-                this.axisGraphicsContextScrollable.selectAll(this.xRefLine.selector).remove();
+                scrollableRegion.selectAll(this.xRefLine.selector).remove();
+            }
+        }
+
+        private getReferenceLineDataLabels(axes: CartesianAxisProperties, plotArea: IViewport): LabelDataPoint[] {
+            let refLineDefaultColor = this.sharedColorPalette.getColorByIndex(0).value;
+            let referenceLineLabels: LabelDataPoint[] = [];
+            if (this.y1AxisReferenceLines) {
+                for (let referenceLineProperties of this.y1AxisReferenceLines) {
+                    let object: DataViewObject = referenceLineProperties.object;
+                    if (object[ReferenceLineHelper.referenceLineProps.show] && object[ReferenceLineHelper.referenceLineProps.dataLabelShow]) {
+                        let isHorizontal = !axes.y1.isCategoryAxis;
+                        let y1RefLineLabelOptions: ReferenceLineDataLabelOptions = {
+                            referenceLineProperties: object,
+                            axes: axes,
+                            viewport: plotArea,
+                            defaultColor: refLineDefaultColor,
+                            isHorizontal: isHorizontal
+                        };
+
+                        referenceLineLabels.push(ReferenceLineHelper.createLabelDataPoint(y1RefLineLabelOptions));
+                    }
+                }
             }
 
-            //Render chart columns
+            if (this.xAxisReferenceLines) {
+                for (let referenceLineProperties of this.xAxisReferenceLines) {
+                    let object: DataViewObject = referenceLineProperties.object;
+                    if (object[ReferenceLineHelper.referenceLineProps.show] && object[ReferenceLineHelper.referenceLineProps.dataLabelShow]) {
+                        let isHorizontal = false;
+                        let xRefLineLabelOptions: ReferenceLineDataLabelOptions = {
+                            referenceLineProperties: object,
+                            axes: axes,
+                            viewport: plotArea,
+                            defaultColor: refLineDefaultColor,
+                            isHorizontal: isHorizontal
+                        };
+
+                        referenceLineLabels.push(ReferenceLineHelper.createLabelDataPoint(xRefLineLabelOptions));
+                    }
+                }
+            }
+
+            return referenceLineLabels;
+        }
+
+        private renderDataLabels(labelDataPointGroups: LabelDataPointsGroup[], labelsAreNumeric: boolean, plotArea: IViewport, suppressAnimations: boolean, isCombo: boolean): void {
+            let labelBackgroundRegion = this.svgAxes.getLabelBackground();
+            let labelRegion = this.svgAxes.getLabelsRegion();
+
             if (this.behavior) {
-                let dataPoints: SelectableDataPoint[] = [];
-                let layerBehaviorOptions: any[] = [];
-                let labelsAreNumeric: boolean = true;
-                let labelDataPointsGroup: LabelDataPointsGroup[] = [];
-
-                // Add reference line data labels
-                let referenceLineLabel: LabelDataPoint[] = [];
-                if (this.y1AxisReferenceLines) {
-                    for (let referenceLineProperties of this.y1AxisReferenceLines) {
-                        let object: DataViewObject = referenceLineProperties.object;
-                        if (object[ReferenceLineHelper.referenceLineProps.show] && object[ReferenceLineHelper.referenceLineProps.dataLabelShow]) {
-                            let isHorizontal = !axes.y1.isCategoryAxis;
-                            let y1RefLineLabelOptions: ReferenceLineDataLabelOptions = {
-                                referenceLineProperties: object,
-                                axes: axes,
-                                viewport: plotArea,
-                                defaultColor: refLineDefaultColor,
-                                isHorizontal: isHorizontal
-                            };
-
-                            referenceLineLabel.push(ReferenceLineHelper.createLabelDataPoint(y1RefLineLabelOptions));
-                        }
-                    }
-                }
-
-                if (this.xAxisReferenceLines) {
-                    for (let referenceLineProperties of this.xAxisReferenceLines) {
-                        let object: DataViewObject = referenceLineProperties.object;
-                        if (object[ReferenceLineHelper.referenceLineProps.show] && object[ReferenceLineHelper.referenceLineProps.dataLabelShow]) {
-                            let isHorizontal = false;
-                            let xRefLineLabelOptions: ReferenceLineDataLabelOptions = {
-                                referenceLineProperties: object,
-                                axes: axes,
-                                viewport: plotArea,
-                                defaultColor: refLineDefaultColor,
-                                isHorizontal: isHorizontal
-                            };
-
-                            referenceLineLabel.push(ReferenceLineHelper.createLabelDataPoint(xRefLineLabelOptions));
-                        }
-                    }
-                }
-
-                if (!_.isEmpty(referenceLineLabel))
-                    labelDataPointsGroup.push({
-                        labelDataPoints: referenceLineLabel,
-                        maxNumberOfLabels: referenceLineLabel.length,
-                    });
-
-                for (let i = 0, len = layers.length; i < len; i++) {
-                    let result = layers[i].render(suppressAnimations);
-                    if (result) {
-                        dataPoints = dataPoints.concat(result.dataPoints);
-                        layerBehaviorOptions.push(result.behaviorOptions);
-                        if (result.labelDataPointGroups) {
-                            let resultLabelDataPointsGroups = result.labelDataPointGroups;
-                            for (let i = 0, ilen = resultLabelDataPointsGroups.length; i < ilen; i++) {
-                                let resultLabelDataPointsGroup = resultLabelDataPointsGroups[i];
-                                labelDataPointsGroup.push({
-                                    labelDataPoints: NewDataLabelUtils.removeDuplicates(resultLabelDataPointsGroup.labelDataPoints),
-                                    maxNumberOfLabels: resultLabelDataPointsGroup.maxNumberOfLabels,
-                                });
-                            }
-                        }
-                        else {
-                            let resultsLabelDataPoints = result.labelDataPoints;
-                            labelDataPointsGroup.push({
-                                labelDataPoints: NewDataLabelUtils.removeDuplicates(resultsLabelDataPoints),
-                                maxNumberOfLabels: resultsLabelDataPoints.length,
-                            });
-                        }
-                        labelsAreNumeric = labelsAreNumeric && result.labelsAreNumeric;
-                    }
-                }
-
                 let labelLayoutOptions = NewDataLabelUtils.getDataLabelLayoutOptions(this.type);
                 let labelLayout = new LabelLayout(labelLayoutOptions);
-                let svgLabels: D3.UpdateSelection;
-                let dataLabels = labelLayout.layout(labelDataPointsGroup, plotArea);
-                if (layers.length > 1) {
-                    NewDataLabelUtils.drawLabelBackground(this.labelBackgroundGraphicsContextScrollable, dataLabels, "#FFFFFF", 0.7);
+                let dataLabels = labelLayout.layout(labelDataPointGroups, plotArea);
+
+                if (isCombo) {
+                    NewDataLabelUtils.drawLabelBackground(labelBackgroundRegion, dataLabels, "#FFFFFF", 0.7);
                 }
-                let isPlayAxis = this.needsPlayAxisMargin();
+
+                let svgLabels: D3.UpdateSelection;
                 if (this.animator && !suppressAnimations) {
+                    let isPlayAxis = this.isPlayAxis();
                     let duration = isPlayAxis ? PlayChart.FrameAnimationDuration : this.animator.getDuration();
-                    svgLabels = NewDataLabelUtils.animateDefaultLabels(this.labelGraphicsContextScrollable, dataLabels, duration, labelsAreNumeric, isPlayAxis ? 'linear' : undefined);
+                    svgLabels = NewDataLabelUtils.animateDefaultLabels(labelRegion, dataLabels, duration, labelsAreNumeric, isPlayAxis ? 'linear' : undefined);
                 }
                 else {
-                    svgLabels = NewDataLabelUtils.drawDefaultLabels(this.labelGraphicsContextScrollable, dataLabels, labelsAreNumeric);
+                    svgLabels = NewDataLabelUtils.drawDefaultLabels(labelRegion, dataLabels, labelsAreNumeric);
                 }
 
                 if (labelLayoutOptions.allowLeaderLines) {
                     let filteredLabels = _.filter(dataLabels, (d: Label) => d.leaderLinePoints != null && !_.isEmpty(d.leaderLinePoints) && d.identity != null);
-                    NewDataLabelUtils.drawLabelLeaderLines(this.labelGraphicsContextScrollable, filteredLabels, (d: Label) => d.identity.getKey());
+                    NewDataLabelUtils.drawLabelLeaderLines(labelRegion, filteredLabels, (d: Label) => d.identity.getKey());
                 }
 
-                if (this.interactivityService) {
-                    if (this.isLabelInteractivityEnabled) {
-                        let labelsBehaviorOptions: LabelsBehaviorOptions = {
-                            labelItems: svgLabels,
-                        };
-                        this.interactivityService.bind(dataLabels, new LabelsBehavior(), labelsBehaviorOptions, { isLabels: true });
-                    }
-                    let behaviorOptions: CartesianBehaviorOptions = {
-                        layerOptions: layerBehaviorOptions,
-                        clearCatcher: this.clearCatcher,
+                if (this.interactivityService && this.isLabelInteractivityEnabled) {
+                    let labelsBehaviorOptions: LabelsBehaviorOptions = {
+                        labelItems: svgLabels,
                     };
-                    if (isPlayAxis) {
-                        let cartesianPlayBehavior = new CartesianChartBehavior([new PlayChartWebBehavior()]);
-                        // the visual doesn't have its behavior available, so we have to set the child behavior on the playBehaviorOptions here.
-                        (<PlayBehaviorOptions>layerBehaviorOptions[0]).visualBehavior = this.behavior['behaviors'][0];
-                        this.interactivityService.bind(dataPoints, cartesianPlayBehavior, behaviorOptions);
-                    }
-                    else {
-                        this.interactivityService.bind(dataPoints, this.behavior, behaviorOptions);
-                    }
+                    this.interactivityService.bind(dataLabels, new LabelsBehavior(), labelsBehaviorOptions, { isLabels: true });
                 }
             }
             else {
-                let labelsAreNumeric: boolean = true;
-                let labelDataPointsGroup: LabelDataPointsGroup[] = [];
-
-                // Add reference line data labels
-                let referenceLineLabel: LabelDataPoint[] = [];
-                if (this.y1AxisReferenceLines) {
-                    for (let referenceLineProperties of this.y1AxisReferenceLines) {
-                        let object: DataViewObject = referenceLineProperties.object;
-                        if (object[ReferenceLineHelper.referenceLineProps.show] && object[ReferenceLineHelper.referenceLineProps.dataLabelShow]) {
-                            let isHorizontal = !axes.y1.isCategoryAxis;
-                            let y1RefLineLabelOptions: ReferenceLineDataLabelOptions = {
-                                referenceLineProperties: object,
-                                axes: axes,
-                                viewport: plotArea,
-                                defaultColor: refLineDefaultColor,
-                                isHorizontal: isHorizontal
-                            };
-
-                            referenceLineLabel.push(ReferenceLineHelper.createLabelDataPoint(y1RefLineLabelOptions));
-                        }
-                    }
-                }
-
-                if (this.xAxisReferenceLines) {
-                    for (let referenceLineProperties of this.xAxisReferenceLines) {
-                        let object: DataViewObject = referenceLineProperties.object;
-                        if (object[ReferenceLineHelper.referenceLineProps.show] && object[ReferenceLineHelper.referenceLineProps.dataLabelShow]) {
-                            let isHorizontal = false;
-                            let xRefLineLabelOptions: ReferenceLineDataLabelOptions = {
-                                referenceLineProperties: object,
-                                axes: axes,
-                                viewport: plotArea,
-                                defaultColor: refLineDefaultColor,
-                                isHorizontal: isHorizontal
-                            };
-
-                            referenceLineLabel.push(ReferenceLineHelper.createLabelDataPoint(xRefLineLabelOptions));
-                        }
-                    }
-                }
-
-                if (!_.isEmpty(referenceLineLabel)) {
-                    labelDataPointsGroup.push({
-                        labelDataPoints: referenceLineLabel,
-                        maxNumberOfLabels: referenceLineLabel.length,
-                    });
-                }
-
-                for (let i = 0, len = layers.length; i < len; i++) {
-                    let result = layers[i].render(suppressAnimations);
-                    if (result) { // Workaround until out of date mobile render path for line chart is removed
-                        if (result.labelDataPointGroups) {
-                            let resultLabelDataPointsGroups = result.labelDataPointGroups;
-                            for (let i = 0, ilen = resultLabelDataPointsGroups.length; i < ilen; i++) {
-                                let resulatLabelDataPointsGroup = resultLabelDataPointsGroups[i];
-                                labelDataPointsGroup.push({
-                                    labelDataPoints: NewDataLabelUtils.removeDuplicates(resulatLabelDataPointsGroup.labelDataPoints),
-                                    maxNumberOfLabels: resulatLabelDataPointsGroup.maxNumberOfLabels,
-                                });
-                            }
-                        }
-                        else {
-                            let resultsLabelDataPoints = result.labelDataPoints;
-                            labelDataPointsGroup.push({
-                                labelDataPoints: NewDataLabelUtils.removeDuplicates(resultsLabelDataPoints),
-                                maxNumberOfLabels: resultsLabelDataPoints.length,
-                            });
-                        }
-                        labelsAreNumeric = labelsAreNumeric && result.labelsAreNumeric;
-                    }
-                }
-
                 let labelLayout = new LabelLayout({
                     maximumOffset: NewDataLabelUtils.maxLabelOffset,
                     startingOffset: NewDataLabelUtils.startingLabelOffset
                 });
-                let dataLabels = labelLayout.layout(labelDataPointsGroup, plotArea);
-                if (layers.length > 1) {
-                    NewDataLabelUtils.drawLabelBackground(this.labelBackgroundGraphicsContextScrollable, dataLabels, "#FFFFFF", 0.7);
+
+                let dataLabels = labelLayout.layout(labelDataPointGroups, plotArea);
+
+                if (isCombo) {
+                    NewDataLabelUtils.drawLabelBackground(labelBackgroundRegion, dataLabels, "#FFFFFF", 0.7);
                 }
-                NewDataLabelUtils.drawDefaultLabels(this.labelGraphicsContextScrollable, dataLabels, labelsAreNumeric);
+                NewDataLabelUtils.drawDefaultLabels(labelRegion, dataLabels, labelsAreNumeric);
             }
         }
 
-        /**
-         * Within the context of the given selection (g), find the offset of
-         * the zero tick using the d3 attached datum of g.tick elements.
-         * 'Classed' is undefined for transition selections
-         */
-        private static darkenZeroLine(g: D3.Selection): void {
-            let zeroTick = g.selectAll('g.tick').filter((data) => data === 0).node();
-            if (zeroTick) {
-                d3.select(zeroTick).select('line').classed('zero-line', true);
+        private renderLayers(layers: ICartesianVisual[], plotArea: IViewport, axes: CartesianAxisProperties, suppressAnimations: boolean): void {
+            let labelDataPointGroups: LabelDataPointsGroup[] = [];
+            let dataPoints: SelectableDataPoint[] = [];
+            let layerBehaviorOptions: any[] = [];
+            let labelsAreNumeric: boolean = true;
+            for (let i = 0, len = layers.length; i < len; i++) {
+                let result = layers[i].render(suppressAnimations);
+                if (result) {
+                    if (this.behavior) {
+                        // NOTE: these are not needed if we don't have interactivity
+                        dataPoints = dataPoints.concat(result.dataPoints);
+                        layerBehaviorOptions.push(result.behaviorOptions);
+                    }
+
+                    if (result.labelDataPointGroups) {
+                        let resultLabelDataPointsGroups = result.labelDataPointGroups;
+                        for (let resultLabelDataPointsGroup of resultLabelDataPointsGroups) {
+                            labelDataPointGroups.push({
+                                labelDataPoints: NewDataLabelUtils.removeDuplicates(resultLabelDataPointsGroup.labelDataPoints),
+                                maxNumberOfLabels: resultLabelDataPointsGroup.maxNumberOfLabels,
+                            });
+                        }
+                    }
+                    else {
+                        let resultsLabelDataPoints = result.labelDataPoints;
+                        labelDataPointGroups.push({
+                            labelDataPoints: NewDataLabelUtils.removeDuplicates(resultsLabelDataPoints),
+                            maxNumberOfLabels: resultsLabelDataPoints.length,
+                        });
+                    }
+
+                    labelsAreNumeric = labelsAreNumeric && result.labelsAreNumeric;
+                }
+            }
+
+            let referenceLineDataLabels = this.getReferenceLineDataLabels(axes, plotArea);
+            if (!_.isEmpty(referenceLineDataLabels)) {
+                labelDataPointGroups.unshift({
+                    labelDataPoints: referenceLineDataLabels,
+                    maxNumberOfLabels: referenceLineDataLabels.length,
+                });
+            }
+
+            this.renderDataLabels(
+                labelDataPointGroups,
+                labelsAreNumeric,
+                plotArea,
+                suppressAnimations,
+                (layers.length > 1));
+
+            if (this.interactivityService) {
+                let behaviorOptions: CartesianBehaviorOptions = {
+                    layerOptions: layerBehaviorOptions,
+                    clearCatcher: this.clearCatcher,
+                };
+
+                if (this.isPlayAxis()) {
+                    let cartesianPlayBehavior = new CartesianChartBehavior([new PlayChartWebBehavior()]);
+                    // the visual doesn't have its behavior available, so we have to set the child behavior on the playBehaviorOptions here.
+                    (<PlayBehaviorOptions>layerBehaviorOptions[0]).visualBehavior = this.behavior['behaviors'][0];
+                    this.interactivityService.bind(dataPoints, cartesianPlayBehavior, behaviorOptions);
+                }
+                else {
+                    this.interactivityService.bind(dataPoints, this.behavior, behaviorOptions);
+                }
             }
         }
 
-        private static setAxisLabelColor(g: D3.Selection, fill: Fill): void {
-            g.selectAll('g.tick text').style('fill', fill ? fill.solid.color : null);
-        }
-        
         /**
          * Returns the actual viewportWidth if visual is not scrollable.
          * @return If visual is scrollable, returns the plot area needed to draw all the datapoints.
@@ -1986,7 +1362,7 @@ module powerbi.visuals {
                 forceStartToZero: false
             };
     }
-    
+
     /** 
      * Computes the Cartesian Chart axes from the set of layers.
      */
@@ -2125,6 +1501,703 @@ module powerbi.visuals {
         tickLabelMargins: any;
     }
 
+    class SvgBrush {
+        private element: D3.Selection;
+        private brushGraphicsContext: D3.Selection;
+        private brushContext: D3.Selection;
+        private brush: D3.Svg.Brush;
+        private brushWidth: number;
+        private scrollCallback: () => void;
+        private isHorizontal: boolean;
+
+        private static Brush = createClassAndSelector('brush');
+        private static FillOpacity = 0.125;
+
+        constructor(brushWidth: number) {
+            this.brush = d3.svg.brush();
+            this.brushWidth = brushWidth;
+        }
+
+        public init(element: D3.Selection): void {
+            this.element = element;
+        }
+
+        public remove(): void {
+            this.element.selectAll(SvgBrush.Brush.selector).remove();
+            this.brushGraphicsContext = undefined;
+        }
+
+        public getExtent(): number[] {
+            return this.brush.extent();
+        }
+
+        public setExtent(extent: number[]): void {
+            this.brush.extent(extent);
+        }
+
+        public setScale(scale: D3.Scale.OrdinalScale): void {
+            if (this.isHorizontal)
+                this.brush.x(scale);
+            else
+                this.brush.y(scale);
+        }
+
+        public setOrientation(isHorizontal: boolean): void {
+            this.isHorizontal = isHorizontal;
+        }
+
+        public renderBrush(
+            extentLength: number,
+            brushX: number,
+            brushY: number,
+            scrollCallback: () => void): void {
+            if (!this.brushGraphicsContext) {
+                this.brushGraphicsContext = this.element.append("g")
+                    .classed(SvgBrush.Brush.class, true);
+            }
+
+            this.scrollCallback = scrollCallback;
+
+            this.brush
+                .on("brush", () => window.requestAnimationFrame(scrollCallback))
+                .on("brushend", () => this.resizeExtent(extentLength, this.isHorizontal));
+
+            let brushContext = this.brushContext = this.brushGraphicsContext
+                .attr({
+                    "transform": SVGUtil.translate(brushX, brushY),
+                    "drag-resize-disabled": "true" /* Disables resizing of the visual when dragging the scrollbar in edit mode */
+                })
+                .call(this.brush);
+              
+            /* Disabling the zooming feature */
+            brushContext.selectAll(".resize rect")
+                .remove();
+
+            brushContext.select(".background")
+                .style('cursor', 'default');
+
+            brushContext.selectAll(".extent")
+                .style({
+                    "fill-opacity": SvgBrush.FillOpacity,
+                    "cursor": "default",
+                });
+
+            if (this.isHorizontal)
+                brushContext.selectAll("rect").attr("height", this.brushWidth);
+            else
+                brushContext.selectAll("rect").attr("width", this.brushWidth);
+        }
+
+        public scroll(): void {
+            this.scrollCallback();
+        }
+
+        private resizeExtent(extentLength: number, isHorizontal: boolean): void {
+            let brushContext = this.brushContext;
+            if (isHorizontal)
+                brushContext.select(".extent").attr("width", extentLength);
+            else
+                brushContext.select(".extent").attr("height", extentLength);
+        }
+    }
+    
+    class ScrollableAxes {
+        public static ScrollbarWidth = 10;
+
+        private brush: SvgBrush;
+        private brushMinExtent: number;
+        private scrollScale: D3.Scale.OrdinalScale;
+
+        private axes: CartesianAxes;
+
+        constructor(axes: CartesianAxes, svgBrush: SvgBrush) {
+            this.axes = axes;
+            this.brush = svgBrush;
+        }
+
+        private filterDataToViewport(mainAxisScale: D3.Scale.OrdinalScale, layers: ICartesianVisual[], axes: CartesianAxisProperties, scrollScale: D3.Scale.OrdinalScale, extent: number[]): void {
+            if (scrollScale) {
+                let selected: number[];
+                let data: CartesianData[] = [];
+
+                let startValue = extent[0];
+                let endValue = extent[1];
+
+                let pixelStepSize = scrollScale(1) - scrollScale(0);
+                let startIndex = Math.floor(startValue / pixelStepSize);
+                let sliceLength = Math.ceil((endValue - startValue) / pixelStepSize);
+                let endIndex = startIndex + sliceLength; // NOTE: Intentionally one past the end index for use with slice(start,end)
+                let domain = scrollScale.domain();
+
+                mainAxisScale.domain(domain);
+                selected = domain.slice(startIndex, endIndex); // NOTE: Up to but not including 'end'
+                if (selected && selected.length > 0) {
+                    for (let i = 0; i < layers.length; i++) {
+                        data[i] = layers[i].setFilteredData(selected[0], selected[selected.length - 1] + 1);
+                    }
+                    mainAxisScale.domain(selected);
+
+                    let axisPropsToUpdate: IAxisProperties;
+                    if (this.axes.isXScrollBarVisible) {
+                        axisPropsToUpdate = axes.x;
+                    }
+                    else {
+                        axisPropsToUpdate = axes.y1;
+                    }
+
+                    axisPropsToUpdate.axis.scale(mainAxisScale);
+                    axisPropsToUpdate.scale(mainAxisScale);
+
+                    // tick values are indices for ordinal axes
+                    axisPropsToUpdate.axis.ticks(selected.length);
+                    axisPropsToUpdate.axis.tickValues(selected); 
+
+                    // use the original tick format to format the tick values
+                    let tickFormat = axisPropsToUpdate.axis.tickFormat();
+                    axisPropsToUpdate.values = _.map(selected, (d) => tickFormat(d));
+                }
+            }
+        }
+
+        public render(axesLayout: CartesianAxesLayout, layers: ICartesianVisual[], suppressAnimations: boolean, renderDelegate: RenderPlotAreaDelegate): void {
+            let plotArea = axesLayout.plotArea;
+
+            let axisScale: D3.Scale.OrdinalScale;
+            let brushX: number;
+            let brushY: number;
+            let scrollableLength: number;
+            let scrollbarLength: number;
+            if (this.axes.isXScrollBarVisible) {
+                axisScale = <D3.Scale.OrdinalScale>axesLayout.axes.x.scale;
+                brushX = axesLayout.margin.left;
+                brushY = axesLayout.viewport.height;  // - scrollbar width
+                scrollableLength = axesLayout.preferredPlotArea.width;
+                scrollbarLength = plotArea.width;
+            }
+            else if (this.axes.isYScrollBarVisible) {
+                axisScale = <D3.Scale.OrdinalScale>axesLayout.axes.y1.scale;
+                brushX = axesLayout.viewport.width;
+                brushY = axesLayout.margin.top;
+                scrollableLength = axesLayout.preferredPlotArea.height;
+                scrollbarLength = plotArea.height;
+            }
+            else {
+                // No scrollbars, render the chart normally.
+                this.brush.remove();
+                renderDelegate(layers, axesLayout, suppressAnimations);
+                return;
+            }
+
+            this.brushMinExtent = ScrollableAxes.getMinExtent(scrollableLength, scrollbarLength);
+            this.scrollScale = axisScale.copy();
+            this.scrollScale.rangeBands([0, scrollbarLength]);
+            this.brush.setOrientation(this.axes.isXScrollBarVisible);
+            this.brush.setScale(this.scrollScale);
+            this.brush.setExtent([0, this.brushMinExtent]);
+
+            // This function will be called whenever we scroll.
+            let renderOnScroll = (extent: number[], suppressAnimations: boolean) => {
+                this.filterDataToViewport(axisScale, layers, axesLayout.axes, this.scrollScale, extent);
+                renderDelegate(layers, axesLayout, suppressAnimations);
+            };
+
+            let scrollCallback = () => this.onBrushed(this.scrollScale, axisScale, axesLayout, scrollbarLength, renderOnScroll);
+            this.brush.renderBrush(this.brushMinExtent, brushX, brushY, scrollCallback);
+
+            // TODO: why modify original scale?
+            axisScale.rangeBands([0, scrollbarLength]);
+            renderOnScroll(this.brush.getExtent(), suppressAnimations);
+        }
+
+        public scrollTo(position: number): void {
+            debug.assert(this.axes.isXScrollBarVisible || this.axes.isYScrollBarVisible, 'scrolling is not available');
+            debug.assertValue(this.scrollScale, 'scrollScale');
+
+            let extent = this.brush.getExtent();
+            let extentLength = extent[1] - extent[0];
+            extent[0] = this.scrollScale(position);
+            extent[1] = extent[0] + extentLength;
+            this.brush.setExtent(extent);
+
+            let scrollbarLength = this.scrollScale.rangeExtent()[1];
+            ScrollableAxes.clampBrushExtent(this.brush, scrollbarLength, this.brushMinExtent);
+            this.brush.scroll();
+        }
+
+        private static getMinExtent(scrollableLength: number, scrollbarLength: number): number {
+            return scrollbarLength * scrollbarLength / (scrollableLength);
+        }
+
+        private onBrushed(scrollScale: any, mainAxisScale: any, axesLayout, scrollbarLength: number, render: (extent: number[], suppressAnimations: boolean) => void): void {
+            let brush = this.brush;
+
+            if (mainAxisScale && scrollScale) {
+                ScrollableAxes.clampBrushExtent(this.brush, scrollbarLength, this.brushMinExtent);
+                let extent = brush.getExtent();
+                render(extent, /* suppressAnimations */ true);
+            }
+        }
+
+        private static clampBrushExtent(brush: SvgBrush, scrollbarLength: number, minExtent: number): void {
+            let extent = brush.getExtent();
+            let width = extent[1] - extent[0];
+
+            if (width === minExtent && extent[1] <= scrollbarLength && extent[0] >= 0)
+                return;
+
+            if (width > minExtent) {
+                let padding = (width - minExtent) / 2;
+                extent[0] += padding;
+                extent[1] -= padding;
+            }
+
+            else if (width < minExtent) {
+                let padding = (minExtent - width) / 2;
+                extent[0] -= padding;
+                extent[1] += padding;
+            }
+
+            if (extent[0] < 0) {
+                extent[0] = 0;
+                extent[1] = minExtent;
+            }
+
+            else if (extent[0] > scrollbarLength - minExtent) {
+                extent[0] = scrollbarLength - minExtent;
+                extent[1] = scrollbarLength;
+            }
+
+            brush.setExtent(extent);
+        }
+    }
+
+    class SvgCartesianAxes {
+        private axisGraphicsContext: D3.Selection;
+        private xAxisGraphicsContext: D3.Selection;
+        private y1AxisGraphicsContext: D3.Selection;
+        private y2AxisGraphicsContext: D3.Selection;
+        private svgScrollable: D3.Selection;
+        private axisGraphicsContextScrollable: D3.Selection;
+        private labelRegion: D3.Selection;
+        private labelBackgroundRegion: D3.Selection;
+
+        private categoryAxisProperties: DataViewObject;
+        private valueAxisProperties: DataViewObject;
+
+        private static AxisGraphicsContext = createClassAndSelector('axisGraphicsContext');
+        private static TickPaddingY = 10;
+        private static TickPaddingRotatedX = 5;
+        private static AxisLabelFontSize = 11;
+
+        constructor(private axes: CartesianAxes) {
+        }
+
+        public getScrollableRegion(): D3.Selection {
+            return this.axisGraphicsContextScrollable;
+        }
+
+        public getLabelsRegion(): D3.Selection {
+            return this.labelRegion;
+        }
+
+        public getLabelBackground(): D3.Selection {
+            return this.labelBackgroundRegion;
+        }
+
+        public getXAxis(): D3.Selection {
+            return this.xAxisGraphicsContext;
+        }
+
+        public getY1Axis(): D3.Selection {
+            return this.y1AxisGraphicsContext;
+        }
+
+        public getY2Axis(): D3.Selection {
+            return this.y2AxisGraphicsContext;
+        }
+
+        public update(categoryAxisProperties: DataViewObject, valueAxisProperties: DataViewObject): void {
+            this.categoryAxisProperties = categoryAxisProperties;
+            this.valueAxisProperties = valueAxisProperties;
+        }
+
+        public init(svg: D3.Selection): void {
+            /*
+                The layout of the visual will look like:
+                <svg>
+                    <g>
+                        <nonscrollable axis/>
+                    </g>
+                    <svgScrollable>
+                        <g>
+                            <scrollable axis/>
+                        </g>
+                    </svgScrollable>
+                    <g xbrush/>
+                </svg>
+
+            */
+
+            let axisGraphicsContext = this.axisGraphicsContext = svg.append('g')
+                .classed(SvgCartesianAxes.AxisGraphicsContext.class, true);
+
+            this.svgScrollable = svg.append('svg')
+                .classed('svgScrollable', true)
+                .style('overflow', 'hidden');
+
+            let axisGraphicsContextScrollable = this.axisGraphicsContextScrollable = this.svgScrollable.append('g')
+                .classed(SvgCartesianAxes.AxisGraphicsContext.class, true);
+
+            this.labelBackgroundRegion = this.svgScrollable.append('g')
+                .classed(NewDataLabelUtils.labelBackgroundGraphicsContextClass.class, true);
+
+            this.labelRegion = this.svgScrollable.append('g')
+                .classed(NewDataLabelUtils.labelGraphicsContextClass.class, true);
+
+            let showLinesOnX = this.axes.showLinesOnX;
+            let showLinesOnY = this.axes.showLinesOnY;
+
+            // NOTE: We infer the axis which should scroll based on whether or not we draw grid lines for the other axis, and
+            // only allow one axis to scroll.
+            let scrollX = showLinesOnY;
+            let scrollY = !scrollX;
+            if (scrollY) {
+                this.y1AxisGraphicsContext = axisGraphicsContextScrollable.append('g').attr('class', 'y axis');
+                this.y2AxisGraphicsContext = axisGraphicsContextScrollable.append('g').attr('class', 'y axis');
+            }
+            else {
+                this.y1AxisGraphicsContext = axisGraphicsContext.append('g').attr('class', 'y axis');
+                this.y2AxisGraphicsContext = axisGraphicsContext.append('g').attr('class', 'y axis');
+            }
+
+            if (scrollX) {
+                this.xAxisGraphicsContext = axisGraphicsContextScrollable.append('g').attr('class', 'x axis');
+            }
+            else {
+                this.xAxisGraphicsContext = axisGraphicsContext.append('g').attr('class', 'x axis');
+            }
+
+            this.xAxisGraphicsContext.classed('showLinesOnAxis', showLinesOnX);
+            this.y1AxisGraphicsContext.classed('showLinesOnAxis', showLinesOnY);
+            this.y2AxisGraphicsContext.classed('showLinesOnAxis', showLinesOnY);
+
+            this.xAxisGraphicsContext.classed('hideLinesOnAxis', !showLinesOnX);
+            this.y1AxisGraphicsContext.classed('hideLinesOnAxis', !showLinesOnY);
+            this.y2AxisGraphicsContext.classed('hideLinesOnAxis', !showLinesOnY);
+        }
+
+        public renderAxes(axesLayout: CartesianAxesLayout, duration: number): void {
+            let marginLimits = axesLayout.marginLimits;
+            let plotArea = axesLayout.plotArea;
+            let viewport = axesLayout.viewport;
+            let margin = axesLayout.margin;
+            let axes = axesLayout.axes;
+            let tickLabelMargins = axesLayout.tickLabelMargins;
+
+            let bottomMarginLimit = marginLimits.bottom;
+            let leftRightMarginLimit = marginLimits.left;
+
+            let xLabelColor: Fill;
+            let yLabelColor: Fill;
+            let y2LabelColor: Fill;
+
+            if (this.axes.shouldRenderAxis(axes.x)) {
+                if (axes.x.isCategoryAxis) {
+                    xLabelColor = this.categoryAxisProperties && this.categoryAxisProperties['labelColor'] ? this.categoryAxisProperties['labelColor'] : null;
+                } else {
+                    xLabelColor = this.valueAxisProperties && this.valueAxisProperties['labelColor'] ? this.valueAxisProperties['labelColor'] : null;
+                }
+                axes.x.axis.orient("bottom");
+                if (!axes.x.willLabelsFit)
+                    axes.x.axis.tickPadding(SvgCartesianAxes.TickPaddingRotatedX);
+
+                let xAxisGraphicsElement = this.xAxisGraphicsContext;
+                if (duration) {
+                    xAxisGraphicsElement
+                        .transition()
+                        .duration(duration)
+                        .call(axes.x.axis);
+                }
+                else {
+                    xAxisGraphicsElement
+                        .call(axes.x.axis);
+                }
+
+                xAxisGraphicsElement
+                    .call(SvgCartesianAxes.darkenZeroLine)
+                    .call(SvgCartesianAxes.setAxisLabelColor, xLabelColor);
+
+                let xAxisTextNodes = xAxisGraphicsElement.selectAll('text');
+                if (axes.x.willLabelsWordBreak) {
+                    xAxisTextNodes
+                        .call(AxisHelper.LabelLayoutStrategy.wordBreak, axes.x, bottomMarginLimit);
+                } else {
+                    xAxisTextNodes
+                        .call(AxisHelper.LabelLayoutStrategy.rotate,
+                        bottomMarginLimit,
+                        TextMeasurementService.svgEllipsis,
+                        !axes.x.willLabelsFit,
+                        bottomMarginLimit === tickLabelMargins.xMax,
+                        axes.x,
+                        margin,
+                        this.axes.isXScrollBarVisible || this.axes.isYScrollBarVisible);
+                }
+            }
+            else {
+                this.xAxisGraphicsContext.selectAll('*').remove();
+            }
+
+            if (this.axes.shouldRenderAxis(axes.y1)) {
+                if (axes.y1.isCategoryAxis) {
+                    yLabelColor = this.categoryAxisProperties && this.categoryAxisProperties['labelColor'] ? this.categoryAxisProperties['labelColor'] : null;
+                } else {
+                    yLabelColor = this.valueAxisProperties && this.valueAxisProperties['labelColor'] ? this.valueAxisProperties['labelColor'] : null;
+                }
+                let showY1OnRight = this.axes.shouldShowY1OnRight();
+                axes.y1.axis
+                    .tickSize(-plotArea.width)
+                    .tickPadding(SvgCartesianAxes.TickPaddingY)
+                    .orient(this.axes.getYAxisOrientation().toLowerCase());
+
+                let y1AxisGraphicsElement = this.y1AxisGraphicsContext;
+                if (duration) {
+                    y1AxisGraphicsElement
+                        .transition()
+                        .duration(duration)
+                        .call(axes.y1.axis);
+                }
+                else {
+                    y1AxisGraphicsElement
+                        .call(axes.y1.axis);
+                }
+
+                y1AxisGraphicsElement
+                    .call(SvgCartesianAxes.darkenZeroLine)
+                    .call(SvgCartesianAxes.setAxisLabelColor, yLabelColor);
+
+                if (tickLabelMargins.yLeft >= leftRightMarginLimit) {
+                    y1AxisGraphicsElement.selectAll('text')
+                        .call(AxisHelper.LabelLayoutStrategy.clip,
+                        // Can't use padding space to render text, so subtract that from available space for ellipses calculations
+                        leftRightMarginLimit - AxisPadding.left,
+                        TextMeasurementService.svgEllipsis);
+                }
+
+                if (axes.y2 && (!this.valueAxisProperties || this.valueAxisProperties['secShow'] == null || this.valueAxisProperties['secShow'])) {
+                    y2LabelColor = this.valueAxisProperties && this.valueAxisProperties['secLabelColor'] ? this.valueAxisProperties['secLabelColor'] : null;
+
+                    axes.y2.axis
+                        .tickPadding(SvgCartesianAxes.TickPaddingY)
+                        .orient(showY1OnRight ? yAxisPosition.left.toLowerCase() : yAxisPosition.right.toLowerCase());
+
+                    if (duration) {
+                        this.y2AxisGraphicsContext
+                            .transition()
+                            .duration(duration)
+                            .call(axes.y2.axis);
+                    }
+                    else {
+                        this.y2AxisGraphicsContext
+                            .call(axes.y2.axis);
+                    }
+
+                    this.y2AxisGraphicsContext
+                        .call(SvgCartesianAxes.darkenZeroLine)
+                        .call(SvgCartesianAxes.setAxisLabelColor, y2LabelColor);
+
+                    if (tickLabelMargins.yRight >= leftRightMarginLimit) {
+                        this.y2AxisGraphicsContext.selectAll('text')
+                            .call(AxisHelper.LabelLayoutStrategy.clip,
+                            // Can't use padding space to render text, so subtract that from available space for ellipses calculations
+                            leftRightMarginLimit - AxisPadding.right,
+                            TextMeasurementService.svgEllipsis);
+                    }
+                }
+                else {
+                    this.y2AxisGraphicsContext.selectAll('*').remove();
+                }
+            }
+            else {
+                this.y1AxisGraphicsContext.selectAll('*').remove();
+                this.y2AxisGraphicsContext.selectAll('*').remove();
+            }
+
+            // Axis labels
+            //TODO: Add label for second Y axis for combo chart
+            let axisLabels = axesLayout.axisLabels;
+            let chartHasAxisLabels = (axisLabels.x != null) || (axisLabels.y != null || axisLabels.y2 != null);
+            if (chartHasAxisLabels) {
+                let hideXAxisTitle = !this.axes.shouldRenderAxisTitle(axes.x, /* defaultValue */ true, /* secondary */ false);
+                let hideYAxisTitle = !this.axes.shouldRenderAxisTitle(axes.y1, /* defaultValue */ true,  /* secondary */false);
+                let hideY2AxisTitle = !this.axes.shouldRenderAxisTitle(axes.y2, /* defaultValue */ false,  /* secondary */true);
+
+                let renderAxisOptions: AxisRenderingOptions = {
+                    axisLabels: axisLabels,
+                    viewport: viewport,
+                    margin: margin,
+                    hideXAxisTitle: hideXAxisTitle,
+                    hideYAxisTitle: hideYAxisTitle,
+                    hideY2AxisTitle: hideY2AxisTitle,
+                    xLabelColor: xLabelColor,
+                    yLabelColor: yLabelColor,
+                    y2LabelColor: y2LabelColor,
+                    fontSize: SvgCartesianAxes.AxisLabelFontSize,
+                };
+
+                this.renderAxesLabels(renderAxisOptions);
+            }
+            else {
+                this.axisGraphicsContext.selectAll('.xAxisLabel').remove();
+                this.axisGraphicsContext.selectAll('.yAxisLabel').remove();
+            }
+
+            this.translateAxes(viewport, margin);
+        }
+
+        private renderAxesLabels(options: AxisRenderingOptions): void {
+            debug.assertValue(options, 'options');
+            debug.assertValue(options.viewport, 'options.viewport');
+            debug.assertValue(options.axisLabels, 'options.axisLabels');
+
+            this.axisGraphicsContext.selectAll('.xAxisLabel').remove();
+            this.axisGraphicsContext.selectAll('.yAxisLabel').remove();
+
+            let margin = options.margin;
+            let width = options.viewport.width - (margin.left + margin.right);
+            let height = options.viewport.height;
+            let fontSize = options.fontSize;
+
+            let heightOffset = fontSize;
+            let showOnRight = this.axes.shouldShowY1OnRight();
+
+            if (!options.hideXAxisTitle) {
+                let xAxisLabel = this.axisGraphicsContext.append("text")
+                    .style("text-anchor", "middle")
+                    .text(options.axisLabels.x)
+                    .call((text: D3.Selection) => {
+                        text.each(function () {
+                            let text = d3.select(this);
+                            text.attr({
+                                "class": "xAxisLabel",
+                                "transform": SVGUtil.translate(width / 2, height - heightOffset)
+                            });
+                        });
+                    });
+
+                xAxisLabel.style("fill", options.xLabelColor ? options.xLabelColor.solid.color : null);
+
+                xAxisLabel.call(AxisHelper.LabelLayoutStrategy.clip,
+                    width,
+                    TextMeasurementService.svgEllipsis);
+            }
+
+            if (!options.hideYAxisTitle) {
+                let yAxisLabel = this.axisGraphicsContext.append("text")
+                    .style("text-anchor", "middle")
+                    .text(options.axisLabels.y)
+                    .call((text: D3.Selection) => {
+                        text.each(function () {
+                            let text = d3.select(this);
+                            text.attr({
+                                "class": "yAxisLabel",
+                                "transform": "rotate(-90)",
+                                "y": showOnRight ? width + margin.right - fontSize : -margin.left,
+                                "x": -((height - margin.top - margin.bottom) / 2),
+                                "dy": "1em",
+                            });
+                        });
+                    });
+
+                yAxisLabel.style("fill", options.yLabelColor ? options.yLabelColor.solid.color : null);
+
+                yAxisLabel.call(AxisHelper.LabelLayoutStrategy.clip,
+                    height - (margin.bottom + margin.top),
+                    TextMeasurementService.svgEllipsis);
+            }
+
+            if (!options.hideY2AxisTitle && options.axisLabels.y2) {
+                let y2AxisLabel = this.axisGraphicsContext.append("text")
+                    .style("text-anchor", "middle")
+                    .text(options.axisLabels.y2)
+                    .call((text: D3.Selection) => {
+                        text.each(function () {
+                            let text = d3.select(this);
+                            text.attr({
+                                "class": "yAxisLabel",
+                                "transform": "rotate(-90)",
+                                "y": showOnRight ? -margin.left : width + margin.right - fontSize,
+                                "x": -((height - margin.top - margin.bottom) / 2),
+                                "dy": "1em",
+                            });
+                        });
+                    });
+
+                y2AxisLabel.style("fill", options.y2LabelColor ? options.y2LabelColor.solid.color : null);
+
+                y2AxisLabel.call(AxisHelper.LabelLayoutStrategy.clip,
+                    height - (margin.bottom + margin.top),
+                    TextMeasurementService.svgEllipsis);
+            }
+        }
+
+        // Margin convention: http://bl.ocks.org/mbostock/3019563
+        private translateAxes(viewport: IViewport, margin: IMargin): void {
+            let width = viewport.width - (margin.left + margin.right);
+            let height = viewport.height - (margin.top + margin.bottom);
+
+            let showY1OnRight = this.axes.shouldShowY1OnRight();
+
+            this.xAxisGraphicsContext
+                .attr('transform', SVGUtil.translate(0, height));
+
+            this.y1AxisGraphicsContext
+                .attr('transform', SVGUtil.translate(showY1OnRight ? width : 0, 0));
+
+            this.y2AxisGraphicsContext
+                .attr('transform', SVGUtil.translate(showY1OnRight ? 0 : width, 0));
+
+            this.svgScrollable.attr({
+                'x': 0,
+                'width': viewport.width,
+                'height': viewport.height
+            });
+
+            this.axisGraphicsContext.attr('transform', SVGUtil.translate(margin.left, margin.top));
+            this.axisGraphicsContextScrollable.attr('transform', SVGUtil.translate(margin.left, margin.top));
+            this.labelRegion.attr('transform', SVGUtil.translate(margin.left, margin.top));
+            this.labelBackgroundRegion.attr('transform', SVGUtil.translate(margin.left, margin.top));
+
+            if (this.axes.isXScrollBarVisible) {
+                this.svgScrollable.attr({
+                    'x': margin.left
+                });
+                this.axisGraphicsContextScrollable.attr('transform', SVGUtil.translate(0, margin.top));
+                this.labelRegion.attr('transform', SVGUtil.translate(0, margin.top));
+                this.labelBackgroundRegion.attr('transform', SVGUtil.translate(0, margin.top));
+                this.svgScrollable.attr('width', width);
+            }
+            else if (this.axes.isYScrollBarVisible) {
+                this.svgScrollable.attr('height', height + margin.top);
+            }
+        }
+
+        /**
+         * Within the context of the given selection (g), find the offset of
+         * the zero tick using the d3 attached datum of g.tick elements.
+         * 'Classed' is undefined for transition selections
+         */
+        private static darkenZeroLine(g: D3.Selection): void {
+            let zeroTick = g.selectAll('g.tick').filter((data) => data === 0).node();
+            if (zeroTick) {
+                d3.select(zeroTick).select('line').classed('zero-line', true);
+            }
+        }
+
+        private static setAxisLabelColor(g: D3.Selection, fill: Fill): void {
+            g.selectAll('g.tick text').style('fill', fill ? fill.solid.color : null);
+        }
+    }
+
     class CartesianAxes {
         private static YAxisLabelPadding = 20;
         private static XAxisLabelPadding = 18;
@@ -2141,9 +2214,8 @@ module powerbi.visuals {
 
         private maxMarginFactor: number;
         private yAxisOrientation: string;
-        private scrollBarWidth: number;
+        private scrollbarWidth: number;
         private lastLeft: number;
-
         public showLinesOnX: boolean;
         public showLinesOnY: boolean;
         public isScrollable: boolean;
@@ -2155,10 +2227,8 @@ module powerbi.visuals {
 
         private layout: CartesianAxesLayout;
 
-        constructor(
-            scrollBarWidth: number,
-            isScrollable: boolean) {
-            this.scrollBarWidth = scrollBarWidth;
+        constructor(isScrollable: boolean, scrollbarWidth: number) {
+            this.scrollbarWidth = scrollbarWidth;
             this.isScrollable = isScrollable;
             this.maxMarginFactor = CartesianAxes.MaxMarginFactor;
             this.yAxisOrientation = yAxisPosition.left;
@@ -2271,17 +2341,17 @@ module powerbi.visuals {
                     preferredPlotArea = layers[0].getPreferredPlotArea(isScalar, categoryCount, categoryThickness);
                     if (this.showLinesOnY && preferredPlotArea && preferredPlotArea.width > viewport.width) {
                         this.isXScrollBarVisible = true;
-                        viewport.height -= this.scrollBarWidth;
+                        viewport.height -= this.scrollbarWidth;
                     }
 
                     if (this.showLinesOnX && preferredPlotArea && preferredPlotArea.height > viewport.height) {
                         this.isYScrollBarVisible = true;
-                        viewport.width -= this.scrollBarWidth;
+                        viewport.width -= this.scrollbarWidth;
                         width = viewport.width - (margin.left + margin.right);
                     }
                 }
             }
-            
+
             // Recalculate axes now that scrollbar visible variables have been set.
             axes = calculateAxes(layers, viewport, margin, this.categoryAxisProperties, this.valueAxisProperties, textProperties, this.isXScrollBarVisible || this.isYScrollBarVisible, axes);
 

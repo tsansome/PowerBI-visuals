@@ -30,6 +30,8 @@ module powerbitests {
     import AxisHelper = powerbi.visuals.AxisHelper;
     import ValueType = powerbi.ValueType;
     import axisScale = powerbi.visuals.axisScale;
+    import PrimitiveType = powerbi.PrimitiveType;
+    import valueFormatter = powerbi.visuals.valueFormatter;
 
     describe("AxisHelper invertOrdinalScale tests", () => {
         var domain: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -405,7 +407,7 @@ module powerbitests {
             var values = <any>axisProperties.values;
             expect(values).toBeDefined();
             expect(values.length).toEqual(3);
-            expect(values[0]).toBe("2014");
+            expect(values[0]).toBe("2014/10/15");
         });
 
         it('huge currency values', () => {
@@ -441,7 +443,7 @@ module powerbitests {
                 pixelSpan: 100,
                 dataDomain: [dataPercent[0], dataPercent[2]],
                 metaDataColumn: metaDataColumnPercent,
-                formatStringProp: formatStringProp,
+                formatString: valueFormatter.getFormatString(metaDataColumnPercent, formatStringProp),
                 outerPadding: 0.5,
                 isScalar: true,
                 isVertical: true,
@@ -463,7 +465,7 @@ module powerbitests {
                 pixelSpan: 100,
                 dataDomain: [AxisPropertiesBuilder.dataNumbers[0], AxisPropertiesBuilder.dataNumbers[2]],
                 metaDataColumn: AxisPropertiesBuilder.metaDataColumnNumeric,
-                formatStringProp: formatStringProp,
+                formatString: valueFormatter.getFormatString(AxisPropertiesBuilder.metaDataColumnNumeric, formatStringProp),
                 outerPadding: 0.5,
                 isScalar: true,
                 isVertical: false,
@@ -490,7 +492,7 @@ module powerbitests {
                 pixelSpan: 100,
                 dataDomain: AxisPropertiesBuilder.domainNaN,
                 metaDataColumn: AxisPropertiesBuilder.metaDataColumnNumeric,
-                formatStringProp: formatStringProp,
+                formatString: valueFormatter.getFormatString(AxisPropertiesBuilder.metaDataColumnNumeric, formatStringProp),
                 outerPadding: 0.5,
                 isScalar: true,
                 isVertical: true,
@@ -516,7 +518,7 @@ module powerbitests {
                 pixelSpan: 100,
                 dataDomain: [domain[0], domain[2]],
                 metaDataColumn: AxisPropertiesBuilder.metaDataColumnNumeric,
-                formatStringProp: formatStringProp,
+                formatString: valueFormatter.getFormatString(AxisPropertiesBuilder.metaDataColumnNumeric, formatStringProp),
                 outerPadding: 0.5,
                 isScalar: true,
                 isVertical: false,
@@ -545,7 +547,7 @@ module powerbitests {
                 pixelSpan: 100,
                 dataDomain: [domain[0], domain[2]],
                 metaDataColumn: AxisPropertiesBuilder.metaDataColumnNumeric,
-                formatStringProp: formatStringProp,
+                formatString: valueFormatter.getFormatString(AxisPropertiesBuilder.metaDataColumnNumeric, formatStringProp),
                 outerPadding: 0.5,
                 isScalar: true,
                 isVertical: true,
@@ -801,6 +803,91 @@ module powerbitests {
             expect(actual).toBe(3);
             actual = AxisHelper.getBestNumberOfTicks(NaN, NaN, dataViewMetadataColumnWithNonInteger, 6);
             expect(actual).toBe(3);
+        });
+    });
+
+    describe("AxisHelper createFormatter", () => {
+        let measureColumn: powerbi.DataViewMetadataColumn = {
+            displayName: 'sales', queryName: 'selectSales', isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Integer),
+            format: '$0',
+        };
+        let dateColumn: powerbi.DataViewMetadataColumn = {
+            displayName: 'date', queryName: 'selectDate', isMeasure: false, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.DateTime),
+            format: 'MM/dd/yyyy',
+        };
+
+        it('createFormatter: value (hundreds)', () => {
+            let min = 0,
+                max = 200,
+                value = 100,
+                tickValues = [0,50,100,150,200];
+
+            expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true)
+                .format(value))
+                .toBe('$100');
+        });
+
+        it('createFormatter: value (millions)', () => {
+            let min = 0,
+                max = 2e6,
+                value = 1e6,
+                tickValues = [0, 0.5e6, 1e6, 1.5e6, 2e6];
+
+            expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true)
+                .format(value))
+                .toBe('$1M');
+        });
+
+        it('createFormatter: value (huge)', () => {
+            let min = 0,
+                max = 600000000000000,
+                value = 563732000000000,
+                tickValues = [0, 1e14, 2e14, 2e14, 4e14, 5e14, 6e14];
+
+            // Used to return '5.63732E+14', not the correct currency value
+            let expectedValue = '$563.73T';
+            expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true)
+                .format(value))
+                .toBe(expectedValue);
+        });
+
+        it('createFormatter: 100% stacked', () => {
+            let min = 0,
+                max = 1,
+                value = 0.5,
+                tickValues =  [0,0.25,0.5,0.75,1];
+
+            expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, '0%', 6, tickValues, 'getValueFn', true)
+                .format(value))
+                .toBe('50%');
+        });
+
+        it('createFormatter: dateTime scalar', () => {
+            let min = new Date(2014, 6, 14).getTime(),
+                max = new Date(2014, 11, 14).getTime(),
+                value = new Date(2014, 9, 13).getTime();
+
+            expect(AxisHelper.createFormatter([min, max], [min, max], dateColumn.type, true, dateColumn.format, 6, [/*not used by datetime*/], 'getValueFn', true)
+                .format(new Date(value)))
+                .toBe('Oct 2014');
+        });
+
+        it('createFormatter: dateTime ordinal', () => {
+            let min = new Date(2014, 6, 14).getTime(),
+                max = new Date(2014, 11, 14).getTime(),
+                value = new Date(2014, 9, 13).getTime();
+
+            expect(AxisHelper.createFormatter([min, max], [min, max], dateColumn.type, false, dateColumn.format, 6, [/*not used by datetime*/], 'getValueFn', true)
+                .format(new Date(value)))
+                .toBe('10/13/2014');
+        });
+
+        it('createFormatter: dateTime scalar - filtered to single value', () => {
+            let min = new Date(2014, 6, 14).getTime();
+
+            expect(AxisHelper.createFormatter([min, min], [min, min], dateColumn.type, true, dateColumn.format, 6, [/*not used by datetime*/], 'getValueFn', true)
+                .format(new Date(min)))
+                .toBe('Jul 14');
         });
     });
 
@@ -1177,7 +1264,9 @@ module powerbitests {
 
         var metaDataColumnTime: powerbi.DataViewMetadataColumn = {
             displayName: displayName,
-            type: ValueType.fromDescriptor({ dateTime: true })
+            type: ValueType.fromDescriptor({ dateTime: true }),
+            format: 'yyyy/MM/dd',
+            objects: { general: { formatString: 'yyyy/MM/dd' } },
         };
 
         var formatStringProp: powerbi.DataViewObjectPropertyIdentifier = {
@@ -1213,7 +1302,7 @@ module powerbitests {
                 pixelSpan: pixelSpan,
                 dataDomain: dataDomain,
                 metaDataColumn: metaDataColumn,
-                formatStringProp: formatStringProp,
+                formatString: valueFormatter.getFormatString(metaDataColumn, formatStringProp),
                 outerPadding: 0.5,
                 isScalar: false,
                 isVertical: false,

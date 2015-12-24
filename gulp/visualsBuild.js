@@ -224,7 +224,9 @@ module.exports.load = function (options) {
         var css = gulp.src([
                 "src/Clients/Externals/ThirdPartyIP/jqueryui/1.11.4/jquery-ui.min.css",
                 "src/Clients/Visuals/styles/visuals.less"])
-            .pipe(less())
+            .pipe(less({
+                modifyVars: { themeName: 'default' }
+            }))
             .pipe(concat("visuals.css"));
         if (isRelease) {
             css = css.pipe(minifyCSS());

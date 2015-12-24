@@ -554,7 +554,7 @@ module powerbi.visuals.samples {
                 pixelSpan: this.viewport.width,
                 dataDomain: xDomain,
                 metaDataColumn: categoryColumn.source,
-                formatStringProp: AreaRangeChart.properties.general.formatString,
+                formatString: valueFormatter.getFormatString(categoryColumn.source, AreaRangeChart.properties.general.formatString),
                 outerPadding: 0,
                 isScalar: false,
                 isVertical: false,
@@ -571,12 +571,13 @@ module powerbi.visuals.samples {
         private getYAxisProperties(valueColumns: DataViewValueColumns, lowerMeasureIndex: number, upperMeasureIndex: number): IAxisProperties {
             let grouped = valueColumns.grouped();
             let yDomain = this.calculateYDomain(valueColumns, lowerMeasureIndex, upperMeasureIndex);
+            let metadata: DataViewMetadataColumn = grouped[0].values[lowerMeasureIndex].source;
 
             let yAxisProperties = AxisHelper.createAxis({
                 pixelSpan: this.viewport.height,
                 dataDomain: yDomain,
-                metaDataColumn: grouped[0].values[lowerMeasureIndex].source,
-                formatStringProp: AreaRangeChart.properties.general.formatString,
+                metaDataColumn: metadata,
+                formatString: valueFormatter.getFormatString(metadata, AreaRangeChart.properties.general.formatString),
                 outerPadding: 0,
                 isScalar: true,
                 isVertical: true,

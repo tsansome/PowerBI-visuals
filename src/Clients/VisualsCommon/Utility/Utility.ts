@@ -285,6 +285,14 @@ module jsCommon {
         export function escapeStringForRegex(s: string): string {
             return s.replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, '\\$1');
         }
+
+        /**
+         * Remove file name reserved characters <>:"/\|?* from input string.
+         */
+        export function normalizeFileName(fileName: string): string {   
+            debug.assertValue(fileName, 'fileName');         
+            return fileName.replace(/[\<\>\:"\/\\\|\?*]/g, '');
+        }
     }
 
     /**

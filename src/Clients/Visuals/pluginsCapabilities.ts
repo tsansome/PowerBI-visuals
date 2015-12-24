@@ -94,7 +94,9 @@ module powerbi.visuals.capabilities {
 
     export let cheerMeter = powerbi.visuals.cheerMeterCapabilities;
 
-	export let sunburst = powerbi.visuals.sunburstCapabilities;
+    export let sunburst = powerbi.visuals.sunburstCapabilities;
 
     export let scriptVisual = powerbi.visuals.scriptVisualCapabilities;
+    
+    export let kpi = powerbi.visuals.KPIStatusWithHistoryCapabilities;
 }

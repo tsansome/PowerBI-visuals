@@ -99,18 +99,34 @@ module powerbi.visuals {
 
         public setYScale(is100Pct: boolean, forcedTickCount?: number, forcedYDomain?: any[], axisScaleType?: string, axisDisplayUnits?: number, axisPrecision?: number): IAxisProperties {
             let height = this.viewportHeight;
-            let yProps = this.yProps = StackedUtil.getValueAxis(
-                this.data,
-                is100Pct,
-                height,
-                [height, 0],
-                forcedTickCount,
-                forcedYDomain,
-                axisScaleType,
-                axisDisplayUnits,
-                axisPrecision);
+            let valueDomain = StackedUtil.calcValueDomain(this.data.series, is100Pct);
+            let valueDomainArr = [valueDomain.min, valueDomain.max];
+            let combinedDomain = AxisHelper.combineDomain(forcedYDomain, valueDomainArr);
+            let shouldClamp = AxisHelper.scaleShouldClamp(combinedDomain, valueDomainArr);
+            let metadataColumn = this.data.valuesMetadata[0];
+            let formatString = is100Pct ?
+                this.graphicsContext.hostService.getLocalizedString('Percentage')
+                : valueFormatter.getFormatString(metadataColumn, columnChartProps.general.formatString);
 
-            return yProps;
+            this.yProps = AxisHelper.createAxis({
+                pixelSpan: height,
+                dataDomain: combinedDomain,
+                metaDataColumn: metadataColumn,
+                formatString: formatString,
+                outerPadding: 0,
+                isScalar: true,
+                isVertical: true,
+                forcedTickCount: forcedTickCount,
+                useTickIntervalForDisplayUnits: true,
+                isCategoryAxis: false,
+                scaleType: axisScaleType,
+                axisDisplayUnits: axisDisplayUnits,
+                axisPrecision: axisPrecision,
+                is100Pct: is100Pct,
+                shouldClamp: shouldClamp,
+            });
+
+            return this.yProps;
         }
 
         public drawColumns(useAnimation: boolean): ColumnChartDrawInfo {
@@ -394,22 +410,37 @@ module powerbi.visuals {
         public setXScale(is100Pct: boolean, forcedTickCount?: number, forcedXDomain?: any[], axisScaleType?: string, axisDisplayUnits?: number, axisPrecision?: number): IAxisProperties {
             debug.assert(forcedTickCount === undefined, 'Cannot have stacked bar chart as combo chart.');
 
-            let height = this.viewportHeight;
+            let width = this.width;
+            let valueDomain = StackedUtil.calcValueDomain(this.data.series, is100Pct);
+            let valueDomainArr = [valueDomain.min, valueDomain.max];
+            let combinedDomain = AxisHelper.combineDomain(forcedXDomain, valueDomainArr);
+            let shouldClamp = AxisHelper.scaleShouldClamp(combinedDomain, valueDomainArr);
+            let metadataColumn = this.data.valuesMetadata[0];
+            let formatString = is100Pct ?
+                this.graphicsContext.hostService.getLocalizedString('Percentage')
+                : valueFormatter.getFormatString(metadataColumn, columnChartProps.general.formatString);
 
-            let xProps = this.xProps = StackedUtil.getValueAxis(
-                this.data,
-                is100Pct,
-                this.width,
-                [0, this.width],
-                undefined,
-                forcedXDomain,
-                axisScaleType,
-                axisDisplayUnits,
-                axisPrecision);
+            this.xProps = AxisHelper.createAxis({
+                pixelSpan: width,
+                dataDomain: combinedDomain,
+                metaDataColumn: metadataColumn,
+                formatString: formatString,
+                outerPadding: 0,
+                isScalar: true,
+                isVertical: false,
+                forcedTickCount: forcedTickCount,
+                useTickIntervalForDisplayUnits: true,
+                isCategoryAxis: false,
+                scaleType: axisScaleType,
+                axisDisplayUnits: axisDisplayUnits,
+                axisPrecision: axisPrecision,
+                is100Pct: is100Pct,
+                shouldClamp: shouldClamp,
+            });
 
-            xProps.axis.tickSize(-height, 0);
+            this.xProps.axis.tickSize(-this.viewportHeight, 0);
 
-            return xProps;
+            return this.xProps;
         }
 
         public drawColumns(useAnimation: boolean): ColumnChartDrawInfo {
@@ -524,28 +555,28 @@ module powerbi.visuals {
             let xScale = axisOptions.xScale;
             let yScale = axisOptions.yScale;
             let scaledX0 = xScale(0);
-            let xScaleOffset = 0;
-
+            let yScaleOffset = 0;
+            
             if (isScalar)
-                xScaleOffset = columnWidth / 2;
+                yScaleOffset = columnWidth / 2;
 
             return {
                 shapeLayout: {
                     width: (d: ColumnChartDataPoint) => -StackedUtil.getSize(xScale, d.valueAbsolute),
                     x: (d: ColumnChartDataPoint) => scaledX0 + AxisHelper.diffScaled(xScale, d.position - d.valueAbsolute, 0),
-                    y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - xScaleOffset,
+                    y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - yScaleOffset,
                     height: (d: ColumnChartDataPoint) => columnWidth,
                 },
                 shapeLayoutWithoutHighlights: {
                     width: (d: ColumnChartDataPoint) => -StackedUtil.getSize(xScale, d.originalValueAbsolute),
                     x: (d: ColumnChartDataPoint) => scaledX0 + AxisHelper.diffScaled(xScale, d.originalPosition - d.originalValueAbsolute, 0),
-                    y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - xScaleOffset,
+                    y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - yScaleOffset,
                     height: (d: ColumnChartDataPoint) => columnWidth,
                 },
                 zeroShapeLayout: {
                     width: (d: ColumnChartDataPoint) => 0,
                     x: (d: ColumnChartDataPoint) => scaledX0 + AxisHelper.diffScaled(xScale, d.position - d.valueAbsolute, 0),
-                    y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - xScaleOffset,
+                    y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - yScaleOffset,
                     height: (d: ColumnChartDataPoint) => columnWidth,
                 },
             };

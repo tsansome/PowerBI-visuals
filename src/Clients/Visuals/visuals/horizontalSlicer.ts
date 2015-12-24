@@ -27,7 +27,6 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
-    import DOMHelper = SlicerUtil.DOMHelper;
     import PixelConverter = jsCommon.PixelConverter;
     import SlicerOrientation = slicerOrientation.Orientation;
 
@@ -53,7 +52,7 @@ module powerbi.visuals {
         },
     };
 
-    export class HorizontalSlicer implements ISlicerVisual {
+    export class HorizontalSlicerRenderer implements ISlicerRenderer, SlicerDefaultValueHandler {
         private element: JQuery;
         private currentViewport: IViewport;
         private data: SlicerData;
@@ -70,34 +69,46 @@ module powerbi.visuals {
         private leftNavigationArrow: D3.Selection;
         private dataStartIndex: number = 0;
         private itemsToDisplay: number;
-        private waitingForData: boolean;
         private textProperties: TextProperties = {
             fontFamily: 'wf_segoe-ui_normal',
             fontSize: '14px'
         };
         private leftScrollRequested: boolean;
         private maxItemWidth: number;
+        private loadMoreData: () => void;
+        private domHelper: SlicerUtil.DOMHelper;
 
         constructor(options?: SlicerConstructorOptions) {
             if (options) {
                 this.behavior = options.behavior;
             }
+            this.domHelper = options.domHelper;
         }
 
-        public init(options: VisualInitOptions): IInteractivityService {
-            this.element = options.element;
-            this.currentViewport = options.viewport;
-            let hostServices = this.hostServices = options.host;
+        // SlicerDefaultValueHandler
+        public getDefaultValue(): data.SQConstantExpr {
+            return SlicerUtil.DefaultValueHandler.getDefaultValue(this.dataView);
+        }
+
+        public getIdentityFields(): data.SQExpr[] {
+            return SlicerUtil.DefaultValueHandler.getIdentityFields(this.dataView);
+        }
+
+        public init(slicerInitOptions: SlicerInitOptions): IInteractivityService {
+            this.element = slicerInitOptions.visualInitOptions.element;
+            this.currentViewport = slicerInitOptions.visualInitOptions.viewport;
+            let hostServices = this.hostServices = slicerInitOptions.visualInitOptions.host;
 
             if (this.behavior) {
                 this.interactivityService = createInteractivityService(hostServices);
             }
+            this.loadMoreData = () => slicerInitOptions.loadMoreData();
 
             let containerDiv = document.createElement('div');
             containerDiv.className = Selectors.container.class;
             let container: D3.Selection = this.container = d3.select(containerDiv);
 
-            let header = DOMHelper.createSlicerHeader(this.hostServices);
+            let header = this.domHelper.createSlicerHeader(this.hostServices);
             containerDiv.appendChild(header);
             this.header = d3.select(header);
 
@@ -135,10 +146,6 @@ module powerbi.visuals {
             this.leftScrollRequested = false;
             this.calculateAndSetMaxItemWidth();
             this.renderCore();
-
-            // This variable is set to true in tryLoadMoreData() when waiting for next segement from server
-            // This is set to false here to make sure that the next onDataChanged or Resize calls loadMore on server when it meets the loadMore criteria
-            this.waitingForData = false;
         }
 
         private renderCore(): void {
@@ -162,13 +169,14 @@ module powerbi.visuals {
 
             // Load More Data
             if (this.dataStartIndex + itemsToDisplay >= data.slicerDataPoints.length * LoadMoreDataThreshold) {
-                this.tryLoadMoreData();
+                this.loadMoreData();
             }
         }
 
         private updateStyle(data: SlicerData, itemsToDisplay: number): void {
             let viewport = this.currentViewport;
             let defaultSettings: SlicerSettings = data.slicerSettings;
+            let domHelper = this.domHelper;
 
             this.container
                 .classed(Selectors.MultiSelectEnabled.class, !data.slicerSettings.selection.singleSelect)
@@ -178,11 +186,11 @@ module powerbi.visuals {
                 });
 
             // Style Slicer Header
-            DOMHelper.styleSlicerHeader(this.header, defaultSettings, data.categorySourceName);
-            let headerTextProperties = DOMHelper.getHeaderTextProperties(defaultSettings);
+            domHelper.styleSlicerHeader(this.header, defaultSettings, data.categorySourceName);
+            let headerTextProperties = domHelper.getHeaderTextProperties(defaultSettings);
 
             // Update body width and height
-            let bodyViewport = this.bodyViewport = DOMHelper.getSlicerBodyViewport(viewport, defaultSettings, headerTextProperties);
+            let bodyViewport = this.bodyViewport = domHelper.getSlicerBodyViewport(viewport, defaultSettings, headerTextProperties);
             this.body.style({
                 "height": PixelConverter.toString(bodyViewport.height),
                 "width": PixelConverter.toString(bodyViewport.width),
@@ -242,7 +250,7 @@ module powerbi.visuals {
                 });
 
             // Default style settings from formatting pane settings
-            DOMHelper.setSlicerTextStyle(items, defaultSettings);
+            this.domHelper.setSlicerTextStyle(items, defaultSettings);
 
             // Wrap long text into multiple columns based on height availbale
             let labels = this.element.find(SlicerUtil.Selectors.LabelText.selector);
@@ -276,10 +284,10 @@ module powerbi.visuals {
                 };
 
                 this.interactivityService.bind(data.slicerDataPoints, this.behavior, orientationBehaviorOptions, { overrideSelectionFromData: true, hasSelectionOverride: data.hasSelectionOverride });
-                SlicerWebBehavior.styleSlicerItems(this.itemsContainer.selectAll(SlicerUtil.Selectors.LabelText.selector), this.interactivityService.hasSelection());
+                SlicerWebBehavior.styleSlicerItems(this.itemsContainer.selectAll(SlicerUtil.Selectors.LabelText.selector), this.interactivityService.hasSelection(), this.interactivityService.isSelectionModeInverted());
             }
             else {
-                SlicerWebBehavior.styleSlicerItems(this.itemsContainer.selectAll(SlicerUtil.Selectors.LabelText.selector), false);
+                SlicerWebBehavior.styleSlicerItems(this.itemsContainer.selectAll(SlicerUtil.Selectors.LabelText.selector), false, false);
             }
         }
 
@@ -441,17 +449,6 @@ module powerbi.visuals {
             this.dataStartIndex = startIndex;
             this.leftScrollRequested = true;
             this.renderCore();
-        }
-
-        // Making public for testability
-        public tryLoadMoreData(): void {
-            let dataViewMetadata = this.dataView.metadata;
-            let waitingForData = this.waitingForData;
-            // Making sure that hostservices.loadMoreData is not invoked when waiting for server to load the next segment of data
-            if (!waitingForData && dataViewMetadata && dataViewMetadata.segment) {
-                this.hostServices.loadMoreData();
-                this.waitingForData = true;
-            }
         }
 
         private isLastRowItem(fieldIndex: number, columnsToDisplay: number): boolean {

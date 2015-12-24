@@ -72,28 +72,37 @@ module powerbi.visuals {
                 itemLabel.style('color', slicerSettings.slicerText.color);
             }
             else {
-                SlicerWebBehavior.styleSlicerItems(selectableItems, hasSelection);
+                SlicerWebBehavior.styleSlicerItems(selectableItems, hasSelection, interactivityService.isSelectionModeInverted());
             }
         }
 
-        public static styleSlicerItems(slicerItems: D3.Selection, hasSelection: boolean): void {
+        public static styleSlicerItems(slicerItems: D3.Selection, hasSelection: boolean, isSelectionInverted: boolean): void {
             slicerItems.each(function (d: SlicerDataPoint) {
                 let slicerItem: HTMLElement = this;
-
-                if (d.isSelectAllDataPoint && hasSelection)
-                    slicerItem.classList.add('partiallySelected');
-                else
-                    slicerItem.classList.remove('partiallySelected');
-
-                if (d.selected)
+                let shouldCheck: boolean = false;
+                if (d.isSelectAllDataPoint) {
+                    if (hasSelection) {
+                        slicerItem.classList.add('partiallySelected');
+                        shouldCheck = false;
+                    }
+                    else {
+                        slicerItem.classList.remove('partiallySelected');
+                        shouldCheck = isSelectionInverted;
+                    }
+                }
+                else {
+                    shouldCheck = jsCommon.LogicExtensions.XOR(d.selected, isSelectionInverted);
+                }
+                
+                if (shouldCheck)
                     slicerItem.classList.add('selected');
                 else
                     slicerItem.classList.remove('selected');
-                 
+
                 // Set input selected state to match selection
                 let input = slicerItem.getElementsByTagName('input')[0];
                 if (input)
-                    input.checked = d.selected;
+                    input.checked = shouldCheck;
             });
         }
 

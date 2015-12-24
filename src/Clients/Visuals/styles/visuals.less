@@ -36,6 +36,7 @@
 @import (optional) "webChart.less";
 @import (optional) "partitionMap.less";
 @import (optional) "sunburstChart.less";
+@import (optional) "samples/chordChart.less";
 
 @defaultShapeRendering: crispEdges;
 
@@ -203,10 +204,8 @@
 
     .flexDisplay {
         display: -ms-flexbox;
-        display: -moz-box;
         display: flex;
         -ms-flex-direction: row;
-        -moz-box-orient: horizontal;
         flex-direction: row;
     }
 
@@ -671,8 +670,6 @@
         height: 24px;
         width: 24px;
         overflow: hidden;
-        -moz-border-radius: 13px;
-        -webkit-border-radius: 13px;
         border-radius: 13px;
         border: 1px solid @neutralSecondaryColor;
         margin: 10px;
@@ -798,7 +795,6 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
-            -o-user-select: none;
             user-select: none;
             cursor: default;
         }
@@ -854,7 +850,7 @@
              &>div:hover {
                 div.sorted {
                     display: none;
-        }
+                }
 
                 div.future {
                     display: inline-block;
@@ -974,7 +970,6 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
-            -o-user-select: none;
             user-select: none;
             cursor: default;
         }
@@ -1125,8 +1120,6 @@
     color: #333;
     background: rgba(255,255,255,1);
     /* css3 */
-    -webkit-border-radius: 0px;
-    -moz-border-radius: 0px;
     border-radius: 0px;
 }
 
@@ -1249,8 +1242,8 @@
             .scroll-bar {
                 background-color: @neutralTertiaryAltColor !important;
                 opacity: 0;
-    }
-}
+            }
+        }
     }
     /* Only show the scrollbars on hover or when being dragged. */
     .scroll-wrapper:hover .scroll-element .scroll-bar,
@@ -1374,13 +1367,13 @@
         font-size: 12px;
         text-anchor: middle;
         font-family: @regularSecondaryFontFamily;
-    }
+    } 
 
     .catagorylabel {
         font-size: 12px;
         text-anchor: middle;
         font-family: @regularSecondaryFontFamily;
-}
+    }
 }
 
     .leader-lines {
@@ -1419,12 +1412,10 @@
 }
 
 div.ql-toolbar {
-    padding: 4px;
-    background: @neutralPrimaryColor;
-    color: @whiteColor;
     white-space: nowrap;
     overflow-x: hidden;
     font-size: 14px;
+
     // TODO: fix SELECT dropdown arrow in IE
     /*
     select::-ms-expand {
@@ -1432,20 +1423,11 @@ div.ql-toolbar {
     }
     */
     .ql-format-group {
-        display: inline-block;
         vertical-align: middle;
-        margin: 0px 2px;
     }
 
     select.ql-picker {
-        margin: 3px;
         padding: 3px;
-        background: @neutralPrimaryColorAlt;
-        border: 1px solid @blackColor;
-    }
-
-    select.ql-font {
-        width: 122px;
     }
 
     label {
@@ -1454,8 +1436,16 @@ div.ql-toolbar {
 
     .ql-format-button {
         margin: 3px;
+        padding: 4px;
+        font-size: @largeFontSize;
         display: inline-block;
         vertical-align: middle;
+
+        &:hover,
+        &.ql-active {
+            background: @themePrimaryColor;
+            color: @neutralPrimaryColor;
+    }
     }
 
     .toolbar-url-input {
@@ -1463,7 +1453,11 @@ div.ql-toolbar {
         vertical-align: middle;
 
         .ql-link div {
-            height: 100%;
+            height: 24px;
+            width: 24px;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         .ql-link-tooltip {
@@ -1514,98 +1508,76 @@ div.ql-toolbar {
         }
     }
 
-    .ql-format-button:hover {
-        background: @themePrimaryColor;
-        color: @neutralPrimaryColor;
+    &.stackedToolbar {
+        box-shadow: none;
+        position: inherit;
+
+        .ql-link-tooltip {
+            a {
+                margin: 0;
     }
 
-    .ql-format-button.ql-active {
-        background: @themePrimaryColor;
-        color: @neutralPrimaryColor;
+            .url {
+                max-width: 135px;
+                overflow: hidden;
+                display: inline-block;
     }
 
-    .ql-format-button[data-value="left"] {
-        .sprite(@left-align-text-white);
+            &.editing .url {
+                display: none;
     }
 
-    .ql-format-button[data-value="left"].ql-active {
-        .sprite(@left-align-text-black);
+            .input {
+                width: 175px;
+                margin: 0;
+    }
     }
 
-    .ql-format-button[data-value="left"]:hover {
-        .sprite(@left-align-text-black);
+        .ql-format-group {
+            margin-top: 8px;
+            display: block;
+            float: left;
     }
 
-    .ql-format-button[data-value="right"] {
-        .sprite(@right-align-text-white);
+        label {
+            display: none;
     }
 
-    .ql-format-button[data-value="right"].ql-active {
-        .sprite(@right-align-text-black);
+        select.ql-font {
+            width: 180px;
     }
 
-    .ql-format-button[data-value="right"]:hover {
-        .sprite(@right-align-text-black);
+        select.ql-size {
+            width: 60px;
+            margin-left: 10px;
+    }
     }
 
-    .ql-format-button[data-value="center"] {
-        .sprite(@center-align-text-white);
+    &.overlayedToolbar {
+        padding: 4px;
+
+        select.ql-picker {
+            margin: 3px;
     }
 
-    .ql-format-button[data-value="center"].ql-active {
-        .sprite(@center-align-text-black);
+        .ql-format-group {
+            display: inline-block;
+            margin: 0px 2px;
     }
 
-    .ql-format-button[data-value="center"]:hover {
-        .sprite(@center-align-text-black);
+        select.ql-font {
+            width: 122px;
+    }
     }
 
-    .ql-format-button.ql-bold {
-        .sprite(@bold-text-white);
-    }
+    &.darkToolbar {
+        background: @neutralPrimaryColor;
+        color: @whiteColor;
 
-    .ql-format-button.ql-bold.ql-active {
-        .sprite(@bold-text-black);
+        select.ql-picker {
+            background: @neutralPrimaryColorAlt;
+            border: 1px solid @blackColor;
     }
-
-    .ql-format-button.ql-bold:hover {
-        .sprite(@bold-text-black);
-    }
-
-    .ql-format-button.ql-italic {
-        .sprite(@italic-text-white);
-    }
-
-    .ql-format-button.ql-italic.ql-active {
-        .sprite(@italic-text-black);
-    }
-
-    .ql-format-button.ql-italic:hover {
-        .sprite(@italic-text-black);
-    }
-
-    .ql-format-button.ql-underline {
-        .sprite(@underline-text-white);
-    }
-
-    .ql-format-button.ql-underline.ql-active {
-        .sprite(@underline-text-black);
-    }
-
-    .ql-format-button.ql-underline:hover {
-        .sprite(@underline-text-black);
-    }
-
-    .ql-format-button.ql-link {
-        .sprite(@insert-link-white);
-    }
-
-    .ql-format-button.ql-link.ql-active {
-        .sprite(@insert-link-black);
-    }
-
-    .ql-format-button.ql-link:hover {
-        .sprite(@insert-link-black);
     }
 }
 
@@ -1830,12 +1802,17 @@ div.ql-toolbar {
 .visual-sandbox {
     border: none;
     overflow: hidden;
+
+    //adding this because cors block fonts for sandboxed visuals.
+    .tooltip-container .tooltip-row{
+        font-size: 9px;
+    }
 }
 
 .x-ref-line {
     stroke-width: 3px;
     stroke-opacity: 0.5;
-    }
+}
 
 .y1-ref-line {
     stroke-width: 3px;
@@ -1970,6 +1947,60 @@ div.ql-toolbar {
             stroke: @tornadoChartAxisColor;
             stroke-width: 1px;
         }
+    }
+}
+
+.sankeyDiagram {
+    @sankeyDiagramFontSize: 11px;
+
+    font-family: @regularFontFamily;
+    font-size: @sankeyDiagramFontSize;
+
+    .nodes {
+        .node {
+            .nodeRect {
+                stroke-width: 1px;
+                fill-opacity: 0.9;
+                shape-rendering: crispEdges;
+            }
+
+            .nodeLabel {
+                font-size: @sankeyDiagramFontSize;
+            }
+        }
+    }
+
+    .links {
+        .link {
+            fill: none;
+            stroke-opacity: 0.2;
+        }
+
+        .link:hover {
+            stroke-opacity: 0.7;
+        }
+    }
+}
+
+.chordChart {
+    font-family: @regularFontFamily;
+    font-size: 12px;
+    path.chord {
+        fill-opacity: .67;
+        stroke: #000;
+        stroke-width: .5px;
+    }
+    polyline {
+        stroke-width: 1px;
+        fill: rgba(0, 0, 0, 0.00);
+    }
+        }
+
+.wordCloud {
+    font-family: @regularFontFamily;
+
+    .words text {
+        text-anchor: middle;
     }
 }
 

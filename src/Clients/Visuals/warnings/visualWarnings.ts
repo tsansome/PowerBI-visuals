@@ -197,7 +197,25 @@ module powerbi.visuals {
         }
     }
 
-    export class ScriptVisualRefreshWarning implements IVisualWarning {
+    export class VisualKPIDataMissingWarning implements IVisualWarning {
+        public get code(): string {
+            return "VisualKPIDataMissing";
+        }
+
+        public getMessages(resourceProvider: IStringResourceProvider): IVisualErrorMessage {
+            let messageKey: string = 'Visual_KPI_DataMissing';
+
+            let visualMessage: IVisualErrorMessage = {
+                message: resourceProvider.get(messageKey),
+                title: '',
+                detail: '',
+            };
+
+            return visualMessage;
+        }
+    }
+
+        export class ScriptVisualRefreshWarning implements IVisualWarning {
         public get code(): string {
             return "ScriptVisualNotRefreshed";
         }
@@ -215,4 +233,5 @@ module powerbi.visuals {
             return visualMessage;
         }
     }
+
 }

@@ -31,7 +31,6 @@ module powerbitests {
     import DataViewTransform = powerbi.data.DataViewTransform;
     import ColumnChart = powerbi.visuals.ColumnChart;
     import DataViewObjects = powerbi.DataViewObjects;
-    import ClusteredUtil = powerbi.visuals.ClusteredUtil;
     import StackedUtil = powerbi.visuals.StackedUtil;
     import ColumnUtil = powerbi.visuals.ColumnUtil;
     import AxisHelper = powerbi.visuals.AxisHelper;
@@ -3170,47 +3169,6 @@ module powerbitests {
             });
         });
 
-        it('createValueFormatter: value (hundreds)', () => {
-            let columns = [measureColumn, measure2Column];
-            let min = 0,
-                max = 200,
-                value = 100;
-
-            expect(ClusteredUtil.createValueFormatter(columns, max - min).format(value)).toBe('$100');
-            expect(StackedUtil.createValueFormatter(columns, /*is100Pct*/ false, max - min).format(value)).toBe('$100');
-        });
-
-        it('createValueFormatter: value (millions)', () => {
-            let columns = [measureColumn, measure2Column];
-            let min = 0,
-                max = 2e6,
-                value = 1e6;
-
-            expect(ClusteredUtil.createValueFormatter(columns, max - min).format(value)).toBe('$1M');
-            expect(StackedUtil.createValueFormatter(columns, /*is100Pct*/ false, max - min).format(value)).toBe('$1M');
-        });
-
-        it('createValueFormatter: value (huge)', () => {
-            let columns = [measureColumn, measure2Column];
-            let min = 0,
-                max = 600000000000000,
-                value = 563732000000000;
-
-            // Used to return '5.63732E+14', not the correct currency value
-            let expectedValue = '$563.73T';
-            expect(ClusteredUtil.createValueFormatter(columns, max - min).format(value)).toBe(expectedValue);
-            expect(StackedUtil.createValueFormatter(columns, /*is100Pct*/ false, max - min).format(value)).toBe(expectedValue);
-        });
-
-        it('createValueFormatter: 100% stacked', () => {
-            let columns = [measureColumn, measure2Column];
-            let min = 0,
-                max = 1,
-                value = .5;
-
-            expect(StackedUtil.createValueFormatter(columns, /*is100Pct*/ true, max - min).format(value)).toBe('50%');
-        });
-
         let categoricalData: powerbi.visuals.ColumnChartData = {
             categories: [],
             categoryFormatter: null,
@@ -3504,75 +3462,6 @@ module powerbitests {
             expect(layout.categoryThickness).toBeCloseTo(61, 0);
             expect(layout.isScalar).toBeTruthy();
         });
-
-        it('getForcedTickValues: 0 forced tick count', () => {
-            let expected = [];
-            let actual = ColumnChart.getForcedTickValues(0, 100, 0);
-            expect(actual).toEqual(expected);
-        });
-
-        it('getForcedTickValues: 0 min', () => {
-            let expected = [0, 50, 100];
-            let actual = ColumnChart.getForcedTickValues(0, 100, 3);
-            expect(actual).toEqual(expected);
-        });
-
-        it('getForcedTickValues: 0 max', () => {
-            let expected = [-200, -150, -100, -50, 0];
-            let actual = ColumnChart.getForcedTickValues(-200, 0, 5);
-            expect(actual).toEqual(expected);
-        });
-
-        it('getForcedTickValues: 0 between min and max', () => {
-            let expected = [-20, 40, 100, 0];
-            let actual = ColumnChart.getForcedTickValues(-20, 100, 3);
-            expect(actual).toEqual(expected);
-        });
-
-        it('getTickCount: 6 max tick count without forced tick count', () => {
-            let valuesMetadata: powerbi.DataViewMetadataColumn[] = [];
-            valuesMetadata.push(measure2Column);
-            let actual = ColumnUtil.getTickCount(0, 3, valuesMetadata, 6, false);
-            expect(actual).toEqual(6);
-        });
-
-        it('getTickCount: 6 max tick count with 2 forced tick count', () => {
-            let valuesMetadata: powerbi.DataViewMetadataColumn[] = [];
-            valuesMetadata.push(measureColumn);
-            let actual = ColumnUtil.getTickCount(0, 3, valuesMetadata, 6, false, 2);
-            expect(actual).toEqual(2);
-        });
-
-        it('getTickCount: 0 max tick count with 2 forced tick count', () => {
-            let valuesMetadata: powerbi.DataViewMetadataColumn[] = [];
-            valuesMetadata.push(measureColumn);
-            let actual = ColumnUtil.getTickCount(0, 3, valuesMetadata, 0, false, 2);
-            expect(actual).toEqual(0);
-        });
-
-        it('getTickInterval: empty tick value', () => {
-            let tickValues = [];
-            let tickInterval = ColumnChart.getTickInterval(tickValues);
-            expect(tickInterval).toBe(0);
-        });
-
-        it('getTickInterval: single tick value', () => {
-            let tickValues = [2.35];
-            let tickInterval = ColumnChart.getTickInterval(tickValues);
-            expect(tickInterval).toBe(2.35);
-        });
-
-        it('getTickInterval: sorted tick values', () => {
-            let tickValues = [48000, 48500, 49000, 49500, 50000];
-            let tickInterval = ColumnChart.getTickInterval(tickValues);
-            expect(tickInterval).toBe(500);
-        });
-
-        it('getTickInterval: unsorted tick values', () => {
-            let tickValues = [48500, 49000, 48000, 49500, 50000];
-            let tickInterval = ColumnChart.getTickInterval(tickValues);
-            expect(tickInterval).toBe(500);
-        });
     });
 
     function clusterColumnChartDomValidation(interactiveChart: boolean, scalarSetting: boolean) {
@@ -3796,7 +3685,7 @@ module powerbitests {
                 let x = +$('.column')[1].attributes.getNamedItem('x').value;
                 let width = +$('.column')[1].attributes.getNamedItem('width').value;
                 if (scalarSetting) {
-                    expect($('.column').length).toBe(4);                    
+                    expect($('.column').length).toBe(4);
                     expect(powerbitests.helpers.isInRange(x, 371, 375)).toBe(true);
                     expect(powerbitests.helpers.isInRange(width, 48, 51)).toBe(true);
                 }
@@ -9218,22 +9107,6 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        it('Scrollbar OnMousedown Validation', (done) => {
-            let transform = SVGUtil.parseTranslateTransform($('.svgScrollable .axisGraphicsContext').first().attr('transform'));
-            let cartesianChart = (<any>v);
-            let brush = v['brush'];
-            let brushExtent = [40, 55];
-            brush.extent(brushExtent);
-            cartesianChart.setMinBrush(100, 10);
-
-            setTimeout(() => {
-                let scrolledTransform = SVGUtil.parseTranslateTransform($('.svgScrollable .axisGraphicsContext').first().attr('transform'));
-                expect(transform.y).toEqual(scrolledTransform.y);
-                expect(scrolledTransform.y).toBe('8');
-                done();
-            }, DefaultWaitForRender);
-        });
-
         it('should have correct tick labels after scrolling', (done) => {
             setTimeout(() => {
                 let ticks = $('.columnChart .axisGraphicsContext .y.axis .tick');
@@ -9282,29 +9155,13 @@ module powerbitests {
 
                 // Windows and Mac OS differ
                 expect(powerbitests.helpers.isTranslateCloseTo($('.brush').attr('transform'), 22, 90)).toBe(true);
-                let width = parseInt($('.brush .extent')[0].attributes.getNamedItem('width').value, 0);
+                let width = parseInt($('.brush .extent')[0].attributes.getNamedItem('width').value, 10);
                 
                 // Windows and Mac OS differ
                 expect(powerbitests.helpers.isInRange(width, 13, 15)).toBe(true);
                 expect($('.brush .extent')[0].attributes.getNamedItem('x').value).toBe('0');
                 v.onResizing({ height: 500, width: 500 });
                 expect($('.brush')).not.toBeInDOM();
-                done();
-            }, DefaultWaitForRender);
-        });
-
-        it('Scrollbar On Mousedown Validation', (done) => {
-            let transform = SVGUtil.parseTranslateTransform($('.svgScrollable .axisGraphicsContext').first().attr('transform'));
-            let cartesianChart = (<any>v);
-            let brush = v['brush'];
-            let brushExtent = [25, 35];
-            brush.extent(brushExtent);
-            cartesianChart.setMinBrush(100, 10);
-
-            setTimeout(() => {
-                let scrolledTransform = SVGUtil.parseTranslateTransform($('.svgScrollable .axisGraphicsContext').first().attr('transform'));
-                expect(transform.x).toEqual(scrolledTransform.x);
-                expect(scrolledTransform.x).toBe('0');
                 done();
             }, DefaultWaitForRender);
         });
@@ -9399,7 +9256,7 @@ module powerbitests {
             let actualLongLabelTextContent = element.find('.x.axis text')[0].textContent;
             expect(actualLongLabelTextContent).toContain('…');
         });
-    });    
+    });
 
     describe("X Axis Customization: Column Chart", () => {
         let v: powerbi.IVisual, element: JQuery;
@@ -9407,7 +9264,7 @@ module powerbitests {
         let unitLength: number;
         let bars;
         let labels;
-        let columnWidth: number;        
+        let columnWidth: number;
         let dataChangedOptions;
         let lastIndex;
 
@@ -9631,7 +9488,7 @@ module powerbitests {
             //Verify begin&end labels
             expect(labels[0].textContent).toBe('0K');
             expect(labels[labels.length - 1].textContent).toBe('100K');
-        });      
+        });
 
         it('Big Range scale check', () => {
 
@@ -9792,6 +9649,66 @@ module powerbitests {
             };
             v.onDataChanged(dataChangedOptions);            
             expect($('.x.axis').children('.tick').find('text').css('fill')).toBe(labelColor);
+        });
+
+        it('Null category value for categorical Datetime axis type', () => {
+            let dataViewMetadataDatetimeColumn: powerbi.DataViewMetadata = {
+                columns: [
+                    {
+                        displayName: 'col1',
+                        queryName: 'col1',
+                        type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.DateTime)
+                    },
+                    {
+                        displayName: 'col2',
+                        queryName: 'col2',
+                        isMeasure: true,
+                        type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
+                    }],
+            };
+
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity("2011"),
+                mocks.dataViewScopeIdentity("2012"),
+                mocks.dataViewScopeIdentity("2013"),
+                mocks.dataViewScopeIdentity("2014"),
+            ];
+            dataViewMetadataDatetimeColumn.objects = {
+                categoryAxis: {
+                    show: true,
+                    axisType: AxisType.categorical,
+                    showAxisTitle: true,
+                    axisStyle: true
+                }
+            };
+            dataChangedOptions = {
+                dataViews: [{
+                    metadata: dataViewMetadataDatetimeColumn,
+                    categorical: {
+                        categories: [{
+                            source: dataViewMetadataDatetimeColumn.columns[0],
+                            values: [null, new Date(1325404800000), new Date(1357027200000), new Date(1388563200000)],
+                            identity: categoryIdentities
+                        }],
+                        values: DataViewTransform.createValueColumns([{
+                            source: dataViewMetadataDatetimeColumn.columns[1],
+                            min: 50000,
+                            max: 200000,
+                            subtotal: 500000,
+                            values: [100000, 200000, 150000, 50000]
+                        }])
+                    }
+                }]
+            };
+
+            v.onDataChanged(dataChangedOptions);
+
+            let axisLabels = $('.x.axis .tick text');
+            expect(axisLabels.length).toBe(4);
+            expect(axisLabels.eq(0).text()).toBe('(Blank)');
+            expect(axisLabels.eq(1).text()).toBe('1/1/2012');
+            expect(axisLabels.eq(2).text()).toBe('1/1/2013');
+            expect(axisLabels.eq(3).text()).toBe('1/1/2014');
         });
     });
 

@@ -35,7 +35,6 @@ module powerbi.visuals {
     }
 
     export interface ColumnChartData extends CartesianData {
-        categories: any[];
         categoryFormatter: IValueFormatter;
         series: ColumnChartSeries[];
         valuesMetadata: DataViewMetadataColumn[];
@@ -140,6 +139,7 @@ module powerbi.visuals {
         height: number;
         width: number;
         duration: number;
+        hostService: IVisualHostServices;
         margin: IMargin;
         mainGraphicsContext: D3.Selection;
         labelGraphicsContext: D3.Selection;
@@ -743,38 +743,6 @@ module powerbi.visuals {
                 }
             }
             return newSeries;
-        }
-
-        public static getForcedTickValues(min: number, max: number, forcedTickCount: number): number[] {
-            debug.assert(min <= max, "min must be less or equal to max");
-            debug.assert(forcedTickCount >= 0, "forcedTickCount must be greater or equal to zero");
-            if (forcedTickCount <= 1)
-                return [];
-
-            let tickValues = [];
-            let interval = (max - min) / (forcedTickCount - 1);
-            for (let i = 0; i < forcedTickCount - 1; i++) {
-                tickValues.push(min + i * interval);
-            }
-            tickValues.push(max);
-
-            if (tickValues.indexOf(0) === -1)
-                tickValues.push(0);
-
-            // It's not needed to sort the array here since when we pass tick value array to D3,
-            // D3 does not care whether the elements in the array are in order or not.
-            return tickValues;
-        }
-
-        public static getTickInterval(tickValues: number[]): number {
-            if (tickValues.length === 0)
-                return 0;
-
-            if (tickValues.length === 1)
-                return tickValues[0];
-
-            tickValues.sort((a, b) => (a - b));
-            return tickValues[1] - tickValues[0];
         }
 
         public static getInteractiveColumnChartDomElement(element: JQuery): HTMLElement {

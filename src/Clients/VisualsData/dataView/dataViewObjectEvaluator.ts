@@ -69,7 +69,7 @@ module powerbi.data {
         export function evaluateProperty(
             evalContext: IEvalContext,
             propertyDescriptor: DataViewObjectPropertyDescriptor,
-            propertyDefinition: DataViewObjectPropertyDefinition) {
+            propertyDefinition: DataViewObjectPropertyDefinition): any {
             debug.assertValue(evalContext, 'evalContext');
             debug.assertValue(propertyDescriptor, 'propertyDescriptor');
             debug.assertValue(propertyDefinition, 'propertyDefinition');
@@ -197,8 +197,8 @@ module powerbi.data {
             let evaluated: TextRun;
 
             let definitionValue = definition.value;
-            let evaluatedValue = evaluateValue(evalContext, <any> definitionValue, textType) || definitionValue;
-            if (definitionValue !== evaluatedValue) {
+            let evaluatedValue = evaluateValue(evalContext, <any> definitionValue, textType);
+            if (evaluatedValue !== undefined) {
                 evaluated = _.clone(<any>definition);
                 evaluated.value = evaluatedValue;
             }
@@ -213,7 +213,7 @@ module powerbi.data {
         function evaluateArrayCopyOnChange<TDefinition, TEvaluated>(
             evalContext: IEvalContext,
             definitions: TDefinition[],
-            evaluator: (ctx: IEvalContext, defn: TDefinition) => TEvaluated): TEvaluated[]{
+            evaluator: (ctx: IEvalContext, defn: TDefinition) => TEvaluated): TEvaluated[] {
             debug.assertValue(evalContext, 'evalContext');
             debug.assertValue(definitions, 'definitions');
             debug.assertValue(evaluator, 'evaluator');
@@ -247,20 +247,26 @@ module powerbi.data {
         }
 
         /** Responsible for evaluating SQExprs into values. */
-        class ExpressionEvaluator extends DefaultSQExprVisitorWithArg<any, IEvalContext> {
+        class ExpressionEvaluator extends DefaultSQExprVisitorWithArg<PrimitiveValue, IEvalContext> {
             private static instance: ExpressionEvaluator = new ExpressionEvaluator();
 
-            public static evaluate(expr: SQExpr, evalContext: IEvalContext): any {
+            public static evaluate(expr: SQExpr, evalContext: IEvalContext): PrimitiveValue {
                 if (expr == null)
                     return;
 
                 return expr.accept(ExpressionEvaluator.instance, evalContext);
             }
 
-            public visitConstant(expr: SQConstantExpr, evalContext: IEvalContext): any {
-                // TODO: We should coerce/respect property type.
-                // NOTE: There shouldn't be a need to coerce color strings, since the UI layers can handle that directly.
+            public visitConstant(expr: SQConstantExpr, evalContext: IEvalContext): PrimitiveValue {
                 return expr.value;
+            }
+
+            public visitMeasureRef(expr: SQMeasureRefExpr, evalContext: IEvalContext): PrimitiveValue {
+                return evalContext.getExprValue(expr);
+            }
+
+            public visitAggr(expr: SQAggregationExpr, evalContext: IEvalContext): PrimitiveValue {
+                return evalContext.getExprValue(expr);
             }
         }
     }

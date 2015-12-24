@@ -65,6 +65,7 @@ module powerbi.data {
         roles?: { [roleName: string]: boolean };
         kpi?: DataViewKpiColumnMetadata;
         sort?: SortDirection;
+        expr?: SQExpr;
 
         /** Describes the default value applied to a column, if any. */
         defaultValue?: DefaultValueDefinition;
@@ -759,13 +760,13 @@ module powerbi.data {
             let metadataOnce = objectsForAllSelectors.metadataOnce;
             let dataObjects = objectsForAllSelectors.data;
             if (metadataOnce)
-                evaluateMetadataObjects(dataView, objectDescriptors, metadataOnce.objects, dataObjects, colorAllocatorFactory);
+                evaluateMetadataObjects(dataView, selectTransforms, objectDescriptors, metadataOnce.objects, dataObjects, colorAllocatorFactory);
 
             let metadataObjects = objectsForAllSelectors.metadata;
             if (metadataObjects) {
                 for (let i = 0, len = metadataObjects.length; i < len; i++) {
                     let metadataObject = metadataObjects[i];
-                    evaluateMetadataRepetition(dataView, objectDescriptors, metadataObject.selector, metadataObject.objects);
+                    evaluateMetadataRepetition(dataView, selectTransforms, objectDescriptors, metadataObject.selector, metadataObject.objects);
                 }
             }
 
@@ -777,15 +778,17 @@ module powerbi.data {
             let userDefined = objectsForAllSelectors.userDefined;
             if (userDefined) {
                 // TODO: We only handle user defined objects at the metadata level, but should be able to support them with arbitrary repetition.
-                evaluateUserDefinedObjects(dataView, objectDescriptors, userDefined);
+                evaluateUserDefinedObjects(dataView, selectTransforms, objectDescriptors, userDefined);
             }
         }
 
         function evaluateUserDefinedObjects(
             dataView: DataView,
+            selectTransforms: DataViewSelectTransform[],
             objectDescriptors: DataViewObjectDescriptors,
             objectDefns: DataViewObjectDefinitionsForSelector[]): void {
             debug.assertValue(dataView, 'dataView');
+            debug.assertAnyValue(selectTransforms, 'selectTransforms');
             debug.assertValue(objectDescriptors, 'objectDescriptors');
             debug.assertValue(objectDefns, 'objectDefns');
 
@@ -793,7 +796,7 @@ module powerbi.data {
             if (!dataViewObjects) {
                 dataViewObjects = dataView.metadata.objects = {};
             }
-            let evalContext = createStaticEvalContext(dataView);
+            let evalContext = createStaticEvalContext(dataView, selectTransforms);
 
             for (let objectDefn of objectDefns) {
                 let id = objectDefn.selector.id;
@@ -817,17 +820,19 @@ module powerbi.data {
         /** Evaluates and sets properties on the DataView metadata. */
         function evaluateMetadataObjects(
             dataView: DataView,
+            selectTransforms: DataViewSelectTransform[],
             objectDescriptors: DataViewObjectDescriptors,
             objectDefns: DataViewNamedObjectDefinition[],
             dataObjects: DataViewObjectDefinitionsForSelectorWithRule[],
             colorAllocatorFactory: IColorAllocatorFactory): void {
             debug.assertValue(dataView, 'dataView');
+            debug.assertAnyValue(selectTransforms, 'selectTransforms');
             debug.assertValue(objectDescriptors, 'objectDescriptors');
             debug.assertValue(objectDefns, 'objectDefns');
             debug.assertValue(dataObjects, 'dataObjects');
             debug.assertValue(colorAllocatorFactory, 'colorAllocatorFactory');
 
-            let evalContext = createStaticEvalContext(dataView);
+            let evalContext = createStaticEvalContext(dataView, selectTransforms);
             let objects = DataViewObjectEvaluationUtils.evaluateDataViewObjects(evalContext, objectDescriptors, objectDefns);
             if (objects) {
                 dataView.metadata.objects = objects;
@@ -1326,10 +1331,12 @@ module powerbi.data {
 
         function evaluateMetadataRepetition(
             dataView: DataView,
+            selectTransforms: DataViewSelectTransform[],
             objectDescriptors: DataViewObjectDescriptors,
             selector: Selector,
             objectDefns: DataViewNamedObjectDefinition[]): void {
             debug.assertValue(dataView, 'dataView');
+            debug.assertAnyValue(selectTransforms, 'selectTransforms');
             debug.assertValue(objectDescriptors, 'objectDescriptors');
             debug.assertValue(selector, 'selector');
             debug.assertValue(objectDefns, 'objectDefns');
@@ -1338,7 +1345,7 @@ module powerbi.data {
             // revisit this, likely when we do lazy evaluation of DataView.
             let columns = dataView.metadata.columns,
                 metadataId = selector.metadata,
-                evalContext = createStaticEvalContext(dataView);
+                evalContext = createStaticEvalContext(dataView, selectTransforms);
             for (let i = 0, len = columns.length; i < len; i++) {
                 let column = columns[i];
                 if (column.queryName === metadataId) {

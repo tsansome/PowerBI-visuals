@@ -24,15 +24,6 @@
  *  THE SOFTWARE.
  */
 
-/* 
-    POWER BI V2 "Bumblebee" COLOR PALLETE
-    Please use only the colors declared here  - this file is to be kept in sync with the palette defined by the design team
-    If you need a color that is not here, talk to your designer and get it added to the main palette and then add it here
-
-    - Use #HEX codes - if you need to get alpha use fadeout(color, percentage)
-    - Colors should be reusable, and not duplicated.
-*/
-
 /* THEME COLORS */
 @themePrimaryColor: #F2C811;
 @themeDarkColor: #CDA521;
@@ -75,6 +66,10 @@
 @criticalColor: #FADBD2;
 @questionBoxForegroundColor: #999;
 
+@positiveColor: #01B8AA;
+@neutralColor: #F2C80F;
+@negativeColor: #FD625E;
+
 /* APPLICATION CHROME COLORS */
 /*dark chrome*/
 @primaryNavColor: @themeSecondaryColor;
@@ -83,11 +78,6 @@
 @tertiaryChromeColor: @whiteColor;
 @primaryChromeFontColor: @whiteColor;
 @secondaryChromeFontColor: @neutralTertiaryColor;
-
-/*light chrome*/
-/*@primaryChromeColor: @whiteColor;
-@secondaryChromeColor: @whiteColor;
-@tertiaryChromeColor: @whiteColor;*/
 
 /* 
     DEPRECATED COLORS: Please refrain from adding one time use colors to the section below.
@@ -118,3 +108,17 @@
 @interactiveHoverLineColor: #666666; 
 @chartConnectorColor: #A6A6A6;
 @tooltipShadowColor: fadeout(@blackColor, 90%);
+
+@dataColor1: #01B8AA;
+@dataColor2: #374649;
+@dataColor3: #FD625E;
+@dataColor4: #F2C80F;
+@dataColor5: #5F6B6D;
+@dataColor6: #8AD4EB;
+@dataColor7: #FE9666; // Bethany's Mango
+@dataColor8: #A66999;
+@dataColor9: #3599B8;
+@dataColor10: #DFBFBF;
+
+// Theme strapping
+@import "themes/@{themeName}/colors.less";

@@ -26,7 +26,7 @@
 
 /// <reference path="../_references.ts"/>
 
-module powerbi.visuals {      
+module powerbi.visuals {
     export module CartesianHelper {
         export function getCategoryAxisProperties(dataViewMetadata: DataViewMetadata, axisTitleOnByDefault?: boolean): DataViewObject {
             let toReturn: DataViewObject = {};
@@ -108,7 +108,46 @@ module powerbi.visuals {
                 }
                 return <number>precision;
             }
-            return null;            
+            return null;
+        }
+
+        export function lookupXValue(data: CartesianData, index: number, type: ValueType, isScalar: boolean): any {
+            debug.assertValue(data, 'data');
+            debug.assertValue(type, 'type');
+
+            let isDateTime = AxisHelper.isDateTime(type);
+
+            if (isScalar) {
+                if (isDateTime)
+                    return new Date(index);
+
+                // index is the numeric value
+                return index;
+            }
+
+            if (type.text) {
+                debug.assert(index < data.categories.length, 'category index out of range');
+                return data.categories[index];
+            }
+
+            if (data && data.series && data.series.length > 0) {
+                let firstSeries = data.series[0];
+                if (firstSeries) {
+                    let seriesValues = firstSeries.data;
+                    if (seriesValues) {
+                        if (data.hasHighlights)
+                            index = index * 2;
+                        let dataAtIndex = seriesValues[index];
+                        if (dataAtIndex) {
+                            if (isDateTime && dataAtIndex.categoryValue != null)
+                                return new Date(dataAtIndex.categoryValue);
+                            return dataAtIndex.categoryValue;
+                        }
+                    }
+                }
+            }
+
+            return index;
         }
     }
 }
