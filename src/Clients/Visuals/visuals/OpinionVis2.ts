@@ -33,12 +33,14 @@ module powerbi.visuals {
         public identity: any;
         public statement: string;
         public GroupA: OpinionNodeV2;
-        public GroupB: OpinionNodeV2;        
-        public constructor(identity: any, statement: string, GroupA: OpinionNodeV2, GroupB: OpinionNodeV2) {
+        public GroupB: OpinionNodeV2;       
+        public color: string; 
+        public constructor(identity: any, statement: string, GroupA: OpinionNodeV2, GroupB: OpinionNodeV2, color: string) {
             this.identity = identity;
             this.statement = statement;
             this.GroupA = GroupA;
             this.GroupB = GroupB;            
+            this.color = color;
         }
     }
 
@@ -261,7 +263,6 @@ module powerbi.visuals {
         private selectedId: any;
         
         private circleNodesCollectionD3: any[];
-        private circleNodesCollectionClasses: OpinionNodeV2[];
         private rectNodesCollectionD3: any[];
         private rectNodesCollectionClasses: StatementResponseV2[];
 
@@ -359,7 +360,6 @@ module powerbi.visuals {
             //don't render the visual
             if (dataPoints.values.length > 1) {
                 this.circleNodesCollectionD3 = [];
-                this.circleNodesCollectionClasses = [];
                 this.rectNodesCollectionD3 = [];
                 this.rectNodesCollectionClasses = [];
                 //prep the visual area
@@ -631,11 +631,13 @@ module powerbi.visuals {
                     }
                     var RightNode = new OpinionNodeV2(label, valB, valBStr, valBDetailsStr, valBDetailsLabel, RightCircleX);
                     
+                    //get the id and the color for the category
                     var id = SelectionIdBuilder
                         .builder()
                         .withCategory(dataPoints.categories[0], i)
                         .createSelectionId();
-                    var dd = new StatementResponseV2(id,statementStr, LeftNode, RightNode);
+                    var color = this.colors.getColorByIndex(i);                    
+                    var dd = new StatementResponseV2(id,statementStr, LeftNode, RightNode, color.value);
                                 
                     //determine the two x start positions, then just calculate the width
                     //do the rectangle between the circles and add the text underneath or on top of
@@ -925,20 +927,18 @@ module powerbi.visuals {
                         }
                     };
                     enumeration.pushInstance(gapbarproperties);
-                    for (var i = 0; i < dV.categorical.categories[0].values.length; i++) {
-                        var label = dV.categorical.categories[0].values[i];
-                        var colorStr = this.colors.getColorByIndex(i).value;
+                    this.rectNodesCollectionClasses.forEach((resp, idx) => {
                         enumeration.pushInstance({
                             objectName: objectname,
-                            displayName: label,
-                            selector: null,
+                            displayName: resp.statement,
+                            selector: ColorHelper.normalizeSelector(resp.identity.getSelector(), false),
                             properties: {
                                 fill: {
-                                    solid: { color: colorStr }
+                                    solid: { color: resp.color }
                                 }
                             },
                         });
-                    }                    
+                    });                  
                     break;
                 case 'gaplabelproperties':
                     var objectname = 'gaplabelproperties';
