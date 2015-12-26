@@ -253,6 +253,11 @@ module powerbi.visuals {
                             type: { fill: { solid: { color: true } } },
                             displayName: "Default Color"
                         },
+                        defaultHeight: {
+                            description: "Specifiy the size of a bar (px).",
+                            type: { numeric: true },
+                            displayName: "Default Height"
+                        },
                         colorByCategory: {
                             description: "Color the bars by each statement",
                             type: { bool: true },
@@ -449,6 +454,18 @@ module powerbi.visuals {
 
             minValStr.remove();
 
+            //get an idea of a value under the bars size
+            var gapBarUnderTextHeight = 0;
+            var gapBarUnderTextStr = this.root.append("text")
+                .data([this.maxVal])
+                .text(valueFormatter.format(this.maxVal, this.fStrA))
+                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "px")
+                .each(function (d) {
+                    gapBarUnderTextHeight = this.getBBox().height;
+                });
+
+            gapBarUnderTextStr.remove();
+
             //longest group label text
             var longestSeriesElem: string = _.max(dv.categories[0].values, function (d: string) {
                 return d.length;
@@ -469,13 +486,13 @@ module powerbi.visuals {
             //now we set up the default frame
 
             var fc = new OpinionFrameClass();
-            fc.rowIncrementPx = 30;            
-            fc.circleRadiusPx = 8;
+            fc.rowIncrementPx = 30;
+            fc.circleRadiusPx = this.GetProperty(this.dataView[0], "gapbarproperties", "defaultHeight", OpinionVis2.gapBarHeight) / 2;
             fc.gapBetweenBarAndUnderneathLabel = 3;
 
             //we need to define the total height of a statmen record
             var option1 = longestSeriesElemHeight + 20; //10 either side for a buffer
-            var option2 = (maxValHeight + 5) + (minValHeight + 5) + fc.gapBetweenBarAndUnderneathLabel + (fc.circleRadiusPx * 2) + 20;
+            var option2 = (maxValHeight + 5) + (gapBarUnderTextHeight + fc.gapBetweenBarAndUnderneathLabel) + (fc.circleRadiusPx * 2) + 20;
 
             fc.heightOfStatementLine = option1 > option2 ? option1: option2;
 
@@ -769,7 +786,7 @@ module powerbi.visuals {
             rectDLabel.attr("dy", function (d) {
                 var rectStart = (CentreYPx - frame.circleRadiusPx);
                 var rectHeight = (frame.circleRadiusPx * 2);
-                if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
+                if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width || d.height > (frame.circleRadiusPx*2)) {
                     return rectStart + rectHeight + (d.height) + frame.gapBetweenBarAndUnderneathLabel;
                 }
                 var rectMidPointY = rectStart + (rectHeight / 2);
@@ -777,7 +794,7 @@ module powerbi.visuals {
             });
 
             rectDLabel.style("fill", function (d) {
-                if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
+                if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width || d.height > (frame.circleRadiusPx * 2)) {
                     return gapBFontBelowBar;
                 } else {
                     return gapBFontOnBar;
@@ -979,6 +996,7 @@ module powerbi.visuals {
         static statementDefaultFontColor = "#777";
         static statementColorByStatement = false;
 
+        static gapBarHeight = 16;
         static gapBarDefaultColor = "rgb(1, 184, 170)";
         static gapLabelDefaultColorOnBar = "white";
         static gapLabelDefaultColorBelowBar = "#4884d9";
@@ -1056,6 +1074,7 @@ module powerbi.visuals {
                         selector: null,
                         properties: {
                             defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.gapBarDefaultColor),
+                            defaultHeight: this.GetProperty(dV, objectname, "defaultHeight", OpinionVis2.gapBarHeight),
                             colorByCategory: this.GetProperty(dV, objectname, "colorByCategory", OpinionVis2.statementColorByStatement)
                         }
                     };
