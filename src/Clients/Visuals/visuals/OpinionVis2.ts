@@ -84,6 +84,7 @@ module powerbi.visuals {
 
     export class OpinionFrameClass {
         public rowIncrementPx: number;
+        public gapBetweenBarAndUnderneathLabel: number;
         public circleRadiusPx: number;
         public outerRightMargin: number;
         public outerTopMargin: number;
@@ -91,6 +92,7 @@ module powerbi.visuals {
         public leftMarginPx: number;
         public maxWidthBarPx: number;        
         public xAxisScale: D3.Scale.LinearScale;
+        public heightOfStatementLine: number;
     }
 
     export class OpinionLegendProperties {
@@ -302,6 +304,7 @@ module powerbi.visuals {
         private root: D3.Selection;
         private dataView: DataView[];
         private selectionManager: SelectionManager;
+        private opinionContainerRef: D3.Selection;
         
         private circleNodesCollectionD3: any[];
         private rectNodesCollectionD3: any[];
@@ -329,15 +332,13 @@ module powerbi.visuals {
         public init(options: VisualInitOptions): void {
             this.selectionManager = new SelectionManager({ hostServices: options.host });
             
-            this.root = d3.select(options.element.get(0))
-                .append("div")
-                .attr("id", "OpinionNodeContainer")
-                .append('svg');
+            this.root = d3.select(options.element.get(0));                
+            this.opinionContainerRef = this.root.append("div").attr("id", "OpinionNodeContainer").style("overflow", "hidden");
+            this.root = this.opinionContainerRef.append('svg');
 
             this.colors = options.style.colorPalette.dataColors;
 
-            this.interactivityService = options.interactivity;
-            
+            this.interactivityService = options.interactivity;            
         }
 
         public static converter(dataView: DataView[]): DataViewCategorical {
@@ -422,24 +423,28 @@ module powerbi.visuals {
             //we are going to draw the largest value for 
             //the maximum datapoint value
             var maxValWidth = 0;
+            var maxValHeight = 0;
             var maxValStr = this.root.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.maxVal, this.fStrA))
                 .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
                 .each(function (d) {
                     maxValWidth = this.getBBox().width;
+                    maxValHeight = this.getBBox().height;
                 });
 
             maxValStr.remove();
 
             //the minimum datapoint value
             var minValWidth = 0;
+            var minValHeight = 0;
             var minValStr = this.root.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.minVal, this.fStrA))
                 .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
                 .each(function (d) {
                     minValWidth = this.getBBox().width;
+                    minValHeight = 0;
                 });
 
             minValStr.remove();
@@ -449,6 +454,7 @@ module powerbi.visuals {
                 return d.length;
             });
             var longestSeriesElemWidth = 0;
+            var longestSeriesElemHeight = 0;
             var longestSeriesElemDraw = this.root.append("text")
                 .data([longestSeriesElem])
                 .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "px")
@@ -456,14 +462,22 @@ module powerbi.visuals {
                 .text(longestSeriesElem)
                 .each(function (d) {
                     longestSeriesElemWidth = this.getBBox().width;
+                    longestSeriesElemHeight = this.getBBox().height;
                 });
             longestSeriesElemDraw.remove();
 
             //now we set up the default frame
 
             var fc = new OpinionFrameClass();
-            fc.rowIncrementPx = 30;
+            fc.rowIncrementPx = 30;            
             fc.circleRadiusPx = 8;
+            fc.gapBetweenBarAndUnderneathLabel = 3;
+
+            //we need to define the total height of a statmen record
+            var option1 = longestSeriesElemHeight + 20; //10 either side for a buffer
+            var option2 = (maxValHeight + 5) + (minValHeight + 5) + fc.gapBetweenBarAndUnderneathLabel + (fc.circleRadiusPx * 2) + 20;
+
+            fc.heightOfStatementLine = option1 > option2 ? option1: option2;
 
             fc.outerRightMargin = 15;
             fc.outerTopMargin = 15;
@@ -568,51 +582,51 @@ module powerbi.visuals {
             //firstly we need to draw the header with the legend
             this.root.append("circle")
                 .attr("cx", 15)
-                .attr("cy", 10)
+                .attr("cy", frame.outerTopMargin + frame.circleRadiusPx)
                 .attr("r", frame.circleRadiusPx)
                 .style("fill", "white")
                 .attr("stroke", mtdt.valueGroupColor);
 
             var width = 0;
-            legendProps.height = 0;
+            var legendTextHeight = 0;
             legendProps.valueAGroupLabel = this.root.append("text")
                 .data([mtdt])
                 .attr("dx", 15 + frame.circleRadiusPx + 3)
-                .attr("dy", 10 + frame.circleRadiusPx)
+                .attr("dy", function (d) {
+                    return frame.outerTopMargin + (frame.circleRadiusPx * 2) - 3;
+                })
                 .style("font-size", "11px")
                 .text(mtdt.valAGroupLabel)
                 .each(function (d) {
                     d.width = this.getBBox().width;
                     width = d.width;
                     d.height = this.getBBox().height;
-                    legendProps.height = d.height;
+                    legendTextHeight = d.height;
                 });
 
             this.root.append("circle")
                 .attr("cx", frame.outerTopMargin + frame.circleRadiusPx + 3 + width + frame.circleRadiusPx + 10)
-                .attr("cy", 10)
+                .attr("cy", frame.outerTopMargin + frame.circleRadiusPx)
                 .attr("r", frame.circleRadiusPx)
                 .style("fill", mtdt.valueGroupColor);
 
             legendProps.valueBGroupLabel = this.root.append("text")
                 .data([mtdt])
                 .attr("dx", frame.outerTopMargin + frame.circleRadiusPx + 3 + width + frame.circleRadiusPx + 10 + (frame.circleRadiusPx) + 3)
-                .attr("dy", 10 + frame.circleRadiusPx)
+                .attr("dy", function (d) {
+                    return frame.outerTopMargin + (frame.circleRadiusPx * 2) - 3;
+                })
                 .style("font-size", "11px")
                 .text(mtdt.valBGroupLabel)
                 .each(function (d) {
                     d.width = this.getBBox().width;
                     width = d.width;
                     d.height = this.getBBox().height;
-                });
+                }); 
 
-            legendProps.valueAGroupLabel.attr("dy", function (d) {
-                return 10 + (d.height / 2) - 3;
-            });
-
-            legendProps.valueBGroupLabel.attr("dy", function (d) {
-                return 10 + (d.height / 2) - 3;
-            });  
+            var option1 = legendTextHeight + 3;
+            var option2 = (frame.circleRadiusPx * 2) + 3;
+            legendProps.height = option1 > option2 ? option1 : option2;
             
             return legendProps;       
         }
@@ -621,36 +635,37 @@ module powerbi.visuals {
             var hp = new OpinionHoverProperties();
             
             //lets put the hover legend content in
+            var selectedTextHeight = 0;
             hp.selectedText = this.root.append("text")
                 .attr("dx", frame.leftTextMarginPx)
                 .attr("dy", frame.outerTopMargin + legendProperties.height + 15 + 3)
                 .text(OpinionVis2.defaultHeaderMoreDetailsLabel)
-                .style("font-size", "13px");
+                .style("font-size", "13px")
+                .each(function (d) {
+                    selectedTextHeight = this.getBBox().height;
+                });;
 
+            hp.height = (selectedTextHeight + 15) + 3;
+            
             //now we draw the line seperating the legend from the visual
+            var yPos = frame.outerTopMargin + legendProperties.height + hp.height;
             this.root.append("line")
                 .attr("x1", frame.leftTextMarginPx)
-                .attr("y1", frame.outerTopMargin + legendProperties.height + 30 + 3)
+                .attr("y1", yPos)
                 .attr("x2", frame.leftTextMarginPx + frame.leftMarginPx + frame.maxWidthBarPx)
-                .attr("y2", frame.outerTopMargin + legendProperties.height + 30 + 3)
+                .attr("y2", yPos)
                 .attr("stroke-width", 1)
-                .attr("stroke", mtdt.valueGroupColor);          
-            
+                .attr("stroke", mtdt.valueGroupColor); 
 
             //now we put the vertical tooltip
-            var startYPy = frame.outerTopMargin + legendProperties.height + 40 + 3;
-            startYPy += (frame.circleRadiusPx * 2.5);
-
             this.tooltip = this.root.append("line")
                 .attr("x1", 30)
-                .attr("y1", frame.outerTopMargin + legendProperties.height + 30 + 3)
+                .attr("y1", yPos)
                 .attr("x2", 30)
                 .attr("y2", 5)
                 .attr("stroke-width", 1)
                 .attr("stroke", mtdt.valueGroupColor)
                 .style("visibility", "hidden");     
-            
-            hp.height = 40;   
             
             return hp;    
         }
@@ -755,7 +770,7 @@ module powerbi.visuals {
                 var rectStart = (CentreYPx - frame.circleRadiusPx);
                 var rectHeight = (frame.circleRadiusPx * 2);
                 if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
-                    return rectStart + rectHeight + (d.height) + 3;
+                    return rectStart + rectHeight + (d.height) + frame.gapBetweenBarAndUnderneathLabel;
                 }
                 var rectMidPointY = rectStart + (rectHeight / 2);
                 return rectMidPointY + (d.height / 2) - 3;
@@ -783,9 +798,9 @@ module powerbi.visuals {
         private drawDivider(frame: OpinionFrameClass, YPosition: number) {
             this.root.append("line")
                 .attr("x1", frame.leftTextMarginPx)
-                .attr("y1", YPosition + frame.rowIncrementPx)
+                .attr("y1", YPosition)
                 .attr("x2", frame.leftTextMarginPx + frame.leftMarginPx + frame.maxWidthBarPx)
-                .attr("y2", YPosition + frame.rowIncrementPx)
+                .attr("y2", YPosition)
                 .attr("stroke-width", 2)
                 .style("stroke-dasharray", ("3, 3"))  // <== This line here!!
                 .attr("stroke", "grey");
@@ -878,6 +893,15 @@ module powerbi.visuals {
             });
         }
 
+        private activateYScrollBar(frame: OpinionFrameClass, endingHeight: number) {
+            this.opinionContainerRef.style("overflow-y", "scroll");
+            this.root.attr("height", endingHeight + frame.heightOfStatementLine); 
+        }
+
+        private disableYScrollBar() {
+            this.opinionContainerRef.style("overflow-y", "hidden");
+        }
+
         public update(options: VisualUpdateOptions) {
             var dataView = this.dataView = options.dataViews;
             var viewport = options.viewport;
@@ -900,7 +924,7 @@ module powerbi.visuals {
                 });                
 
                 //setup the container with the height
-                $(this.root).find("#OpinionNodeContainer").css("height", viewport.height).css("width", viewport.width).css("overflow", "hidden");
+                this.opinionContainerRef.style("height", viewport.height.toString() + "px");
 
                 //set up our indexes & formatters
                 this.setupFormattersAndIndexers(dataPoints);
@@ -911,48 +935,42 @@ module powerbi.visuals {
                 var valueGroupColor = this.GetPropertyColor(this.dataView[0], "groupnodeproperties", "defaultColor", OpinionVis2.groupNodeDefaultColor).solid.color;
                 var mtdt = new OpinionVisualMetaDataV2(dataPoints.values[this.valAIndex].source.groupName, dataPoints.values[this.valBIndex].source.groupName, valueGroupColor);
 
-                var lgProps = this.drawLegend(frame, mtdt);                                
-                var hp = this.drawHoverInteractiveArea(frame, mtdt, lgProps);           
+                var legendArea = this.drawLegend(frame, mtdt);                                
+                var hoverArea = this.drawHoverInteractiveArea(frame, mtdt, legendArea);           
 
-                var startYPy = frame.outerTopMargin + lgProps.height + hp.height + 3;
-                startYPy += (frame.circleRadiusPx * 2.5);     
-
+                var startYPy = frame.outerTopMargin + legendArea.height + hoverArea.height;
+              
                 var valMeasureName: string = dataPoints.values[0].source.displayName;
-
-                var endIndex = dataPoints.categories[0].values.length;
+                
                 //now lets walk through the values
-                for (var i = 0; i < endIndex; i++) {
+                for (var i = 0; i < dataPoints.categories[0].values.length; i++) {
                     //extract the record from the categorical data view
                     var dd = this.extractStatementRecord(dataPoints, frame, mtdt, i);
+                    var yCenter = startYPy + (frame.heightOfStatementLine / 2);
                     //now we want to put the text on the page
-                    this.drawStatementLabel(frame, mtdt, dd, startYPy);
+                    this.drawStatementLabel(frame, mtdt, dd, yCenter);
                     //draw the the gap
-                    this.drawGap(frame, mtdt, dd, startYPy);
+                    this.drawGap(frame, mtdt, dd, yCenter);
                     //draw the two circles
-                    this.drawGroup(frame, mtdt, dd.GroupA, startYPy, true);
-                    this.drawGroup(frame, mtdt, dd.GroupB, startYPy, false);
+                    this.drawGroup(frame, mtdt, dd.GroupA, yCenter, true);
+                    this.drawGroup(frame, mtdt, dd.GroupB, yCenter, false);
+                    //progress it to the next record                    
+                    startYPy += frame.heightOfStatementLine;
                     //draw the divider
-                    this.drawDivider(frame, startYPy);                    
-
-                    startYPy += frame.rowIncrementPx;
-                    startYPy += frame.rowIncrementPx;
+                    this.drawDivider(frame, startYPy);
                 }
-
-                //need to reset for the +1 effect from the loop
-                startYPy -= frame.rowIncrementPx;
-
+                
                 this.tooltip.attr("y2", startYPy);
 
                 //we need to append scroll bars if it went past
                 if (startYPy > viewport.height) {
-                    $("#OpinionNodeContainer").css("overflow-y", "scroll");
-                    this.root.attr("height", startYPy + frame.rowIncrementPx); //just add an extra rowIncrement as a buffer
+                    this.activateYScrollBar(frame, startYPy);
                 } else {
-                    $("#OpinionNodeContainer").css("overflow-y", "hidden");
+                    this.disableYScrollBar();
                 }                
 
                 //activate the two interaction ones.
-                this.activateHoverOnGroups(mtdt, lgProps, hp, valMeasureName);
+                this.activateHoverOnGroups(mtdt, legendArea, hoverArea, valMeasureName);
                 this.activateClickOnGapBars();                
             }            
         }
