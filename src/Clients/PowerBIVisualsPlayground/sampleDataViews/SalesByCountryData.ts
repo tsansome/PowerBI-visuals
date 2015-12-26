@@ -34,7 +34,7 @@ module powerbi.visuals.sampleDataViews {
         public name: string = "SalesByCountryData";
         public displayName: string = "Sales By Country";
 
-        public visuals: string[] = ['default','opinionVis'];
+        public visuals: string[] = ['default','opinionVis2'];
 
         private sampleData = [
             [742731.43, 162066.43, 283085.78, 300263.49, 376074.57, 814724.34],

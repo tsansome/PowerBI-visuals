@@ -146,6 +146,14 @@ module powerbi.visuals {
                 }
             ],
             objects: { 
+                general: {
+                    displayName: data.createDisplayNameGetter('Visual_General'),
+                    properties: {
+                        formatString: {
+                            type: { formatting: { formatString: true } },
+                        },
+                    },
+                },
                 statementproperties: {
                     displayName: "Statement",
                     properties: {
@@ -208,16 +216,16 @@ module powerbi.visuals {
                             description: "Specify the default color for the gap bar.",
                             type: { fill: { solid: { color: true } } },
                             displayName: "Default Color"
-                        },
-                        colorByCategory: {
-                            description: "Color the bars by each statement",
-                            type: { bool: true },
-                            displayName: "Color by Statement"
-                        },
-                        fill: {
-                            displayName: "Color for the bars",
-                            type: { fill: { solid: { color: true } } }
                         }
+                        //colorByCategory: {
+                        //    description: "Color the bars by each statement",
+                        //    type: { bool: true },
+                        //    displayName: "Color by Statement"
+                        //},
+                        //fill: {
+                        //    displayName: "Color for the bars",
+                        //    type: { fill: { solid: { color: true } } }
+                        //}
                     }
                 },
                 gaplabelproperties: {
@@ -260,7 +268,6 @@ module powerbi.visuals {
         private root: D3.Selection;
         private dataView: DataView[];
         private selectionManager: SelectionManager;
-        private selectedId: any;
         
         private circleNodesCollectionD3: any[];
         private rectNodesCollectionD3: any[];
@@ -823,21 +830,59 @@ module powerbi.visuals {
                 });
 
                 //now we need to do the click animation
+                var percentUnhighlighted = 0.5;
+                var percentHighlighted = 1;
                 var self = this;
                 d3.selectAll(this.rectNodesCollectionD3).on("click", function (d: StatementResponseV2) {
-                    self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {                        
-                        //now we should do highlighting here
-                        if (self.selectedId === d.identity) {
-                            d3.selectAll(self.rectNodesCollectionD3).style("opacity", 1);
-                        } else {
-                            //if control key is pressed we just want to highlight another
-                            if (!d3.event.ctrlKey) {
-                                d3.selectAll(self.rectNodesCollectionD3).style("opacity", 0.5);
-                            }                            
-                            d3.select(this).style("opacity", 1);
+                    //in the case that nothing is selected, just select the selcted one
+                    if (self.selectionManager.getSelectionIds().length === 0) {
+                        self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                            d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
+                            d3.select(this).style("opacity", percentHighlighted);
+                        });
+                    }
+                    //in the case that there's only one selected id and it's the one clicked
+                    //we just completely clear the selection and go to the default state
+                    else if (self.selectionManager.getSelectionIds().length === 1 && self.selectionManager.getSelectionIds()[0] === d.identity) {
+                        self.selectionManager.clear();
+                        d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentHighlighted);
+                    }
+                    else {
+                        //Check to see if the newly selected was previously clicked
+                        if (_.contains(self.selectionManager.getSelectionIds(), d.identity)) {                        
+                            //if they click cntrl key we want to unhighlight it and deselect it
+                            if (d3.event.ctrlKey) {
+                                self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                                    d3.select(this).style("opacity", percentUnhighlighted);
+                                });
+                            }
+                            //else we want to clear every selection and just select this one
+                            else {
+                                self.selectionManager.clear();
+                                self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                                    d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
+                                    d3.select(this).style("opacity", percentHighlighted);
+                                });
+                            }
                         }
-                        self.selectedId = d.identity;
-                    });
+                        //it hasn't been previously selected
+                        else {
+                            //if they click cntrl key we want to add it to the selection
+                            if (d3.event.ctrlKey) {
+                                self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                                    d3.select(this).style("opacity", percentHighlighted);
+                                });
+                            }
+                            //else we want it to clear every selection just select this one
+                            else {
+                                self.selectionManager.clear();
+                                self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                                    d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
+                                    d3.select(this).style("opacity", percentHighlighted);
+                                });
+                            }
+                        }
+                    }
                 });
             }            
         }
@@ -922,8 +967,8 @@ module powerbi.visuals {
                         displayName: 'Gap Bar',
                         selector: null,
                         properties: {
-                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.gapBarDefaultColor),
-                            colorByCategory: this.GetProperty(dV, objectname, "colorByCategory", OpinionVis2.statementColorByStatement)
+                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.gapBarDefaultColor)
+                            //colorByCategory: this.GetProperty(dV, objectname, "colorByCategory", OpinionVis2.statementColorByStatement)
                         }
                     };
                     enumeration.pushInstance(gapbarproperties);

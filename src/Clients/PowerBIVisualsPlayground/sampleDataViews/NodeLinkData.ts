@@ -113,7 +113,7 @@ module powerbi.visuals.sampleDataViews {
     }
 
     export class NodeLinkDataBase extends SampleDataViews {
-        public visuals: string[] = ['nodeLink','opinionVis2' ];
+        public visuals: string[] = ['nodeLink' ];
 
         public measureDisplayName_nodeCat = "NodeSize";
         public measureQueryName_nodeCat = "Sum(NodeLinksCategories.NodeSize)";

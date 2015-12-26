@@ -49,6 +49,7 @@
 /// <reference path="sampleDataViews/SimpleHistogramData.ts"/>
 /// <reference path="sampleDataViews/SimpleDataByCountries.ts"/>
 /// <reference path="sampleDataViews/SimpleCountriesData.ts"/>
+/// <reference path="sampleDataViews/NodeLinkData.ts"/>
 /// <reference path="sampleData.ts"/>
 /// <reference path="hostControls.ts"/>
 /// <reference path="app.ts"/>
