@@ -42,6 +42,12 @@ module powerbi.visuals {
             this.GroupB = GroupB;            
             this.color = color;
         }
+
+        public SwapNodes() {
+            var tmp = this.GroupA;
+            this.GroupA = this.GroupB;
+            this.GroupB = tmp;
+        }
     }
 
     export class OpinionNodeV2 {
@@ -51,23 +57,51 @@ module powerbi.visuals {
         public valDetails: string;
         public valDetailsLabel: string;
         public XpX: number;        
-        public constructor(GroupLabel: string, valAInput: number, valAFormatted: string, valADetails:string, valADetailsLabel:string, XpX: number) {
+        public IsGroupA: boolean;
+        public IsFilled: boolean;
+        public constructor(IsGroupA:boolean, GroupLabel: string, valAInput: number, valAFormatted: string, valADetails:string, valADetailsLabel:string, XpX: number) {
             this.groupLabel = GroupLabel;
             this.val = valAInput;
             this.XpX = XpX;
             this.valDetails = valADetails;
             this.valFormatted = valAFormatted;
             this.valDetailsLabel = valADetailsLabel;
+            this.IsGroupA = IsGroupA;
+            this.IsFilled = this.IsGroupA;
         }
     }
 
     export class OpinionVisualMetaDataV2 {
         public valAGroupLabel: string;
         public valBGroupLabel: string;
-        public constructor(valAGroupLabelInput: string, valBGroupLabelInput) {
+        public valueGroupColor: string;
+        public constructor(valAGroupLabelInput: string, valBGroupLabelInput, valueGroupColor: string) {
             this.valAGroupLabel = valAGroupLabelInput;
             this.valBGroupLabel = valBGroupLabelInput;
+            this.valueGroupColor = valueGroupColor;
         }
+    }
+
+    export class OpinionFrameClass {
+        public rowIncrementPx: number;
+        public circleRadiusPx: number;
+        public outerRightMargin: number;
+        public outerTopMargin: number;
+        public leftTextMarginPx: number;
+        public leftMarginPx: number;
+        public maxWidthBarPx: number;        
+        public xAxisScale: D3.Scale.LinearScale;
+    }
+
+    export class OpinionLegendProperties {
+        public height: number;
+        public valueAGroupLabel;
+        public valueBGroupLabel;
+    }
+
+    export class OpinionHoverProperties {
+        public height: number;
+        public selectedText;
     }
 
     export class OpinionVis2 implements IVisual {
@@ -216,12 +250,12 @@ module powerbi.visuals {
                             description: "Specify the default color for the gap bar.",
                             type: { fill: { solid: { color: true } } },
                             displayName: "Default Color"
+                        },
+                        colorByCategory: {
+                            description: "Color the bars by each statement",
+                            type: { bool: true },
+                            displayName: "Color by Statement"
                         }
-                        //colorByCategory: {
-                        //    description: "Color the bars by each statement",
-                        //    type: { bool: true },
-                        //    displayName: "Color by Statement"
-                        //},
                         //fill: {
                         //    displayName: "Color for the bars",
                         //    type: { fill: { solid: { color: true } } }
@@ -273,13 +307,28 @@ module powerbi.visuals {
         private rectNodesCollectionD3: any[];
         private rectNodesCollectionClasses: StatementResponseV2[];
 
+        private tooltip;
+
+        private fStrA;
+        private fStrB;
+        private fStrC;
+        private fStrD;
+
+        private valAIndex;
+        private valBIndex;
+
+        private minVal;
+        private maxVal;
+
+        private static defaultHeaderMoreDetailsLabel = "Hover on a circle below to focus in on that group";
+
         private colors: IDataColorPalette;
 
         private interactivityService: InteractivityOptions;
         
         public init(options: VisualInitOptions): void {
             this.selectionManager = new SelectionManager({ hostServices: options.host });
-
+            
             this.root = d3.select(options.element.get(0))
                 .append("div")
                 .attr("id", "OpinionNodeContainer")
@@ -356,13 +405,484 @@ module powerbi.visuals {
             if (this.interactivityService) {
                 d3.selectAll(this.rectNodesCollectionD3).style("opacity", 1);
             }
+        }        
+
+        public deriveWindowToDrawIn(dv: DataViewCategorical, heighOfViewPort: number, widthOfViewPort: number) {
+            //firstly we need to draw a lot of things and test their width
+
+            //figure out the max value out of all the data points
+            var maxValGroupA = _.max(dv.values[this.valAIndex].values);
+            var maxValGroupB = _.max(dv.values[this.valBIndex].values);
+            this.maxVal = _.max([maxValGroupA, maxValGroupB]);
+
+            var minValGroupA = _.min(dv.values[this.valAIndex].values);
+            var minValGroupB = _.min(dv.values[this.valBIndex].values);
+            this.minVal = _.min([minValGroupA, minValGroupB]); 
+
+            //we are going to draw the largest value for 
+            //the maximum datapoint value
+            var maxValWidth = 0;
+            var maxValStr = this.root.append("text")
+                .data([this.maxVal])
+                .text(valueFormatter.format(this.maxVal, this.fStrA))
+                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
+                .each(function (d) {
+                    maxValWidth = this.getBBox().width;
+                });
+
+            maxValStr.remove();
+
+            //the minimum datapoint value
+            var minValWidth = 0;
+            var minValStr = this.root.append("text")
+                .data([this.maxVal])
+                .text(valueFormatter.format(this.minVal, this.fStrA))
+                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
+                .each(function (d) {
+                    minValWidth = this.getBBox().width;
+                });
+
+            minValStr.remove();
+
+            //longest group label text
+            var longestSeriesElem: string = _.max(dv.categories[0].values, function (d: string) {
+                return d.length;
+            });
+            var longestSeriesElemWidth = 0;
+            var longestSeriesElemDraw = this.root.append("text")
+                .data([longestSeriesElem])
+                .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "px")
+                .style("font-family", "Segoe UI")
+                .text(longestSeriesElem)
+                .each(function (d) {
+                    longestSeriesElemWidth = this.getBBox().width;
+                });
+            longestSeriesElemDraw.remove();
+
+            //now we set up the default frame
+
+            var fc = new OpinionFrameClass();
+            fc.rowIncrementPx = 30;
+            fc.circleRadiusPx = 8;
+
+            fc.outerRightMargin = 15;
+            fc.outerTopMargin = 15;
+
+            var maxY = fc.outerTopMargin + 30 + fc.rowIncrementPx + ((fc.rowIncrementPx * 2) * dv.categories[0].values.length);
+            if (maxY > heighOfViewPort) {
+                fc.outerRightMargin = 45;
+            }
+
+            fc.leftTextMarginPx = 10;
+            fc.leftMarginPx = fc.leftTextMarginPx + longestSeriesElemWidth + 10 + minValWidth;
+            fc.maxWidthBarPx = (widthOfViewPort - fc.leftMarginPx) - (maxValWidth + fc.outerRightMargin);
+
+            fc.xAxisScale = d3.scale.linear()
+                                    .domain([0, this.maxVal])
+                                    .range([fc.leftMarginPx, fc.leftMarginPx + fc.maxWidthBarPx]);
+            return fc;
+        }
+
+        private setupFormattersAndIndexers(dv: DataViewCategorical) {
+            //now we need to declare the indexes
+            this.valAIndex = 0;
+            this.valBIndex = 1;
+            //extract the values and strings
+            if (dv.values.length > 2) {
+                this.valBIndex = 2;
+            }
+
+            //get our formatters for using later
+            this.fStrA = valueFormatter.getFormatString(dv.values[this.valAIndex].source, this.OpinionVisProperties.general.formatString);
+            this.fStrB = valueFormatter.getFormatString(dv.values[this.valBIndex].source, this.OpinionVisProperties.general.formatString);
+
+            this.fStrC = null;
+            this.fStrD = null;
+            //set the formatter if they put in the details
+            if (dv.values.length > 2) {
+                this.fStrC = valueFormatter.getFormatString(dv.values[1].source, this.OpinionVisProperties.general.formatString);
+                this.fStrD = valueFormatter.getFormatString(dv.values[3].source, this.OpinionVisProperties.general.formatString);
+            }
+        }
+
+        private extractStatementRecord(dv: DataViewCategorical, frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2, idx: number): StatementResponseV2 {
+            var statementStr: string = "";
+            var valA: number = 0;
+            var valB: number = 0;
+            var valADetails = 0;
+            var valBDetails = 0;
+            var valADetailsLabel = null;
+            var valBDetailsLabel = null;
+
+            //extract the values and strings
+            if (dv.values.length > 2) {
+                //in this case we know that the value b index will actually be 3 not 1
+                valADetails = dv.values[1].values[idx];
+                valADetailsLabel = dv.values[1].source.displayName;
+                valBDetails = dv.values[3].values[idx];
+                valBDetailsLabel = dv.values[3].source.displayName;
+            }
+
+            var statementStr: string = dv.categories[0].values[idx];
+            var valA: number = dv.values[this.valAIndex].values[idx];
+            var valB: number = dv.values[this.valBIndex].values[idx];
+
+            var valAStr = valueFormatter.format(valA, this.fStrA);
+            var valBStr = valueFormatter.format(valB, this.fStrB);
+
+            var valADetailsStr = null;
+            var valBDetailsStr = null;
+            if (valADetails !== null) {
+                valADetailsStr = valueFormatter.format(valADetails, this.fStrC);
+            }
+            if (valBDetails !== null) {
+                valBDetailsStr = valueFormatter.format(valBDetails, this.fStrD);
+            }
+
+            //we're going to set up the two nodes and work out their relative positions
+            var LeftCircleX = frame.xAxisScale(valA);
+            var RightCircleX = frame.xAxisScale(valB);
+
+            var LeftNode = new OpinionNodeV2(true, valA < valB ? mtdt.valBGroupLabel : mtdt.valAGroupLabel, valA, valAStr, valADetailsStr, valADetailsLabel, LeftCircleX);
+            var RightNode = new OpinionNodeV2(false, valA < valB ? mtdt.valAGroupLabel : mtdt.valBGroupLabel, valB, valBStr, valBDetailsStr, valBDetailsLabel, RightCircleX);
+                    
+            //get the id and the color for the category
+            var id = SelectionIdBuilder
+                .builder()
+                .withCategory(dv.categories[0], idx)
+                .createSelectionId();
+            var color = this.colors.getColorByIndex(idx);
+            var dd = new StatementResponseV2(id, statementStr, LeftNode, RightNode, color.value);
+                    
+            //if its greater just switch it
+            if (valA > valB) {
+                dd.SwapNodes();
+            }                   
+
+            return dd;
+        }
+
+        private drawLegend(frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2): OpinionLegendProperties {
+            var legendProps = new OpinionLegendProperties();
+            
+            //firstly we need to draw the header with the legend
+            this.root.append("circle")
+                .attr("cx", 15)
+                .attr("cy", 10)
+                .attr("r", frame.circleRadiusPx)
+                .style("fill", "white")
+                .attr("stroke", mtdt.valueGroupColor);
+
+            var width = 0;
+            legendProps.height = 0;
+            legendProps.valueAGroupLabel = this.root.append("text")
+                .data([mtdt])
+                .attr("dx", 15 + frame.circleRadiusPx + 3)
+                .attr("dy", 10 + frame.circleRadiusPx)
+                .style("font-size", "11px")
+                .text(mtdt.valAGroupLabel)
+                .each(function (d) {
+                    d.width = this.getBBox().width;
+                    width = d.width;
+                    d.height = this.getBBox().height;
+                    legendProps.height = d.height;
+                });
+
+            this.root.append("circle")
+                .attr("cx", frame.outerTopMargin + frame.circleRadiusPx + 3 + width + frame.circleRadiusPx + 10)
+                .attr("cy", 10)
+                .attr("r", frame.circleRadiusPx)
+                .style("fill", mtdt.valueGroupColor);
+
+            legendProps.valueBGroupLabel = this.root.append("text")
+                .data([mtdt])
+                .attr("dx", frame.outerTopMargin + frame.circleRadiusPx + 3 + width + frame.circleRadiusPx + 10 + (frame.circleRadiusPx) + 3)
+                .attr("dy", 10 + frame.circleRadiusPx)
+                .style("font-size", "11px")
+                .text(mtdt.valBGroupLabel)
+                .each(function (d) {
+                    d.width = this.getBBox().width;
+                    width = d.width;
+                    d.height = this.getBBox().height;
+                });
+
+            legendProps.valueAGroupLabel.attr("dy", function (d) {
+                return 10 + (d.height / 2) - 3;
+            });
+
+            legendProps.valueBGroupLabel.attr("dy", function (d) {
+                return 10 + (d.height / 2) - 3;
+            });  
+            
+            return legendProps;       
+        }
+
+        private drawHoverInteractiveArea(frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2, legendProperties: OpinionLegendProperties): OpinionHoverProperties {
+            var hp = new OpinionHoverProperties();
+            
+            //lets put the hover legend content in
+            hp.selectedText = this.root.append("text")
+                .attr("dx", frame.leftTextMarginPx)
+                .attr("dy", frame.outerTopMargin + legendProperties.height + 15 + 3)
+                .text(OpinionVis2.defaultHeaderMoreDetailsLabel)
+                .style("font-size", "13px");
+
+            //now we draw the line seperating the legend from the visual
+            this.root.append("line")
+                .attr("x1", frame.leftTextMarginPx)
+                .attr("y1", frame.outerTopMargin + legendProperties.height + 30 + 3)
+                .attr("x2", frame.leftTextMarginPx + frame.leftMarginPx + frame.maxWidthBarPx)
+                .attr("y2", frame.outerTopMargin + legendProperties.height + 30 + 3)
+                .attr("stroke-width", 1)
+                .attr("stroke", mtdt.valueGroupColor);          
+            
+
+            //now we put the vertical tooltip
+            var startYPy = frame.outerTopMargin + legendProperties.height + 40 + 3;
+            startYPy += (frame.circleRadiusPx * 2.5);
+
+            this.tooltip = this.root.append("line")
+                .attr("x1", 30)
+                .attr("y1", frame.outerTopMargin + legendProperties.height + 30 + 3)
+                .attr("x2", 30)
+                .attr("y2", 5)
+                .attr("stroke-width", 1)
+                .attr("stroke", mtdt.valueGroupColor)
+                .style("visibility", "hidden");     
+            
+            hp.height = 40;   
+            
+            return hp;    
+        }
+
+        private drawGroup(frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2, Node: OpinionNodeV2, CentreYPx: number, isOnLeftSide: boolean) {
+            var CircleXOffset = Node.XpX;
+
+            //do the circle then the text                
+            var NodeElem = this.root.append("circle")
+                .data([Node])
+                .attr("cx", CircleXOffset)
+                .attr("cy", CentreYPx)
+                .attr("r", frame.circleRadiusPx)
+                .style("fill", function (d) {
+                    if (Node.IsFilled) {
+                        return mtdt.valueGroupColor;
+                    }
+                    return "white";
+                })
+                .style("stroke", mtdt.valueGroupColor);
+
+            this.circleNodesCollectionD3.push(NodeElem[0][0]);
+
+            var nodeLabelFontColor = this.GetPropertyColor(this.dataView[0], "groupnodedatalabelproperties", "defaultColor", OpinionVis2.groupNodeDataLabelDefaultColor).solid.color;
+            var nodeLabelDefaultFontSize = this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px";
+
+            if (this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "showLabels", OpinionVis2.groupNodeDataLabelShow)) {
+                var LeftDLabel = this.root.append("text")
+                    .data([Node])
+                    .attr("dx", CircleXOffset)
+                    .attr("dy", CentreYPx)
+                    .text(Node.valFormatted)
+                    .style("font-size", nodeLabelDefaultFontSize)
+                    .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
+                    .style("fill", nodeLabelFontColor)
+                    .each(function (d) {
+                        d.width = this.getBBox().width;
+                    });
+
+                if (isOnLeftSide) {
+                    //now we need to adjust the x position of the label basedo n whether its the left or right node
+                    LeftDLabel.attr("dx", function (d) {
+                        return CircleXOffset - d.width - frame.circleRadiusPx - 3;
+                    });
+                }
+                else {
+                    //now we need to adjust the x position of the label basedo n whether its the left or right node
+                    LeftDLabel.attr("dx", function (d) {
+                        return CircleXOffset + frame.circleRadiusPx + 3;
+                    });
+                }
+            }
+        }
+
+        private drawGap(frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2, dd: StatementResponseV2, CentreYPx: number) {
+            var rectWidth = dd.GroupB.XpX - dd.GroupA.XpX;
+            var gap = dd.GroupB.val - dd.GroupA.val;
+            var gapStr = valueFormatter.format(gap, this.fStrA);
+
+            var gapBColor = this.GetPropertyColor(this.dataView[0], "gapbarproperties", "defaultColor", OpinionVis2.gapBarDefaultColor).solid.color;
+            if (this.GetProperty(this.dataView[0], "gapbarproperties", "colorByCategory", OpinionVis2.statementColorByStatement) === true) {
+                gapBColor = dd.color;
+            }
+            var gapBFontOnBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorOnBar", OpinionVis2.gapLabelDefaultColorOnBar).solid.color;
+            var gapBFontBelowBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorBelowBar", OpinionVis2.gapLabelDefaultColorBelowBar).solid.color;
+
+            var rect = this.root.append("rect")
+                .data([dd])
+                .attr("y", CentreYPx - frame.circleRadiusPx)
+                .attr("x", dd.GroupA.XpX)
+                .attr("width", rectWidth)
+                .attr("height", (frame.circleRadiusPx * 2))
+                .style("fill", gapBColor);
+
+            this.rectNodesCollectionD3.push(rect[0][0]);
+
+            var midpointPx = dd.GroupA.XpX + (rectWidth / 2);
+
+            var rectDLabel = this.root.append("text")
+                .data([dd])
+                .attr("dx", midpointPx)
+                .attr("dy", CentreYPx)
+                .text(gapStr)
+                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "px")
+                .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
+                .each(function (d) {
+                    d.width = this.getBBox().width;
+                    d.height = this.getBBox().height;
+                });
+
+            rectDLabel.attr("dx", function (d) {
+                return midpointPx - (d.width / 2);
+            });
+
+            //if the width of the text is larger than the rectangle
+            //we need to push it underneath the rectangle
+            var rectWidthWithRadius = rectWidth - (frame.circleRadiusPx * 2);
+
+            var defaultPosChosen = this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultPosition", OpinionVis2.gapLabelDefaultPosition);
+
+            rectDLabel.attr("dy", function (d) {
+                var rectStart = (CentreYPx - frame.circleRadiusPx);
+                var rectHeight = (frame.circleRadiusPx * 2);
+                if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
+                    return rectStart + rectHeight + (d.height) + 3;
+                }
+                var rectMidPointY = rectStart + (rectHeight / 2);
+                return rectMidPointY + (d.height / 2) - 3;
+            });
+
+            rectDLabel.style("fill", function (d) {
+                if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
+                    return gapBFontBelowBar;
+                } else {
+                    return gapBFontOnBar;
+                }
+            });
+        }
+
+        private drawStatementLabel(frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2, dd: StatementResponseV2, YPosition: number) {
+            this.root.append("text")
+                .attr("dx", frame.leftTextMarginPx)
+                .attr("dy", YPosition)
+                .style("fill", this.GetPropertyColor(this.dataView[0], "statementproperties", "defaultFontColor", OpinionVis2.statementDefaultFontColor).solid.color)
+                .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "px")
+                .style("font-family", "'Segoe UI',wf_segoe-ui_normal,helvetica,arial,sans-serif")
+                .text(dd.statement);
+        }
+
+        private drawDivider(frame: OpinionFrameClass, YPosition: number) {
+            this.root.append("line")
+                .attr("x1", frame.leftTextMarginPx)
+                .attr("y1", YPosition + frame.rowIncrementPx)
+                .attr("x2", frame.leftTextMarginPx + frame.leftMarginPx + frame.maxWidthBarPx)
+                .attr("y2", YPosition + frame.rowIncrementPx)
+                .attr("stroke-width", 2)
+                .style("stroke-dasharray", ("3, 3"))  // <== This line here!!
+                .attr("stroke", "grey");
+        }
+
+        private activateClickOnGapBars() {
+            var self = this;
+            //now we need to do the click animation
+            var percentUnhighlighted = 0.5;
+            var percentHighlighted = 1;
+            d3.selectAll(this.rectNodesCollectionD3).on("click", function (d: StatementResponseV2) {
+                //in the case that nothing is selected, just select the selcted one
+                if (self.selectionManager.getSelectionIds().length === 0) {
+                    self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                        d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
+                        d3.select(this).style("opacity", percentHighlighted);
+                    });
+                }
+                //in the case that there's only one selected id and it's the one clicked
+                //we just completely clear the selection and go to the default state
+                else if (self.selectionManager.getSelectionIds().length === 1 && self.selectionManager.getSelectionIds()[0] === d.identity) {
+                    self.selectionManager.clear();
+                    d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentHighlighted);
+                }
+                else {
+                    //Check to see if the newly selected was previously clicked
+                    if (_.contains(self.selectionManager.getSelectionIds(), d.identity)) {                        
+                        //if they click cntrl key we want to unhighlight it and deselect it
+                        if (d3.event.ctrlKey) {
+                            self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                                d3.select(this).style("opacity", percentUnhighlighted);
+                            });
+                        }
+                        //else we want to clear every selection and just select this one
+                        else {
+                            self.selectionManager.clear();
+                            self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                                d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
+                                d3.select(this).style("opacity", percentHighlighted);
+                            });
+                        }
+                    }
+                    //it hasn't been previously selected
+                    else {
+                        //if they click cntrl key we want to add it to the selection
+                        if (d3.event.ctrlKey) {
+                            self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                                d3.select(this).style("opacity", percentHighlighted);
+                            });
+                        }
+                        //else we want it to clear every selection just select this one
+                        else {
+                            self.selectionManager.clear();
+                            self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
+                                d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
+                                d3.select(this).style("opacity", percentHighlighted);
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        private activateHoverOnGroups(mtdt: OpinionVisualMetaDataV2, lgProps: OpinionLegendProperties, hp: OpinionHoverProperties, valMeasureName: string) {
+            var self = this;
+            //our tool tip content and animations triggered
+            d3.selectAll(this.circleNodesCollectionD3).on("mouseover", function () {
+                return self.tooltip.style("visibility", "visible");
+            }).on("mousemove", function (d) {
+                if (mtdt.valAGroupLabel === d.groupLabel) {
+                    lgProps.valueAGroupLabel.style("text-decoration", "underline");
+                    lgProps.valueAGroupLabel.style("font-weight", "bold");
+                } else {
+                    lgProps.valueBGroupLabel.style("text-decoration", "underline");
+                    lgProps.valueBGroupLabel.style("font-weight", "bold");
+                }
+                var strToDisplay = valMeasureName + ": " + d.valFormatted;
+                if (d.valDetails !== null) {
+                    strToDisplay += " | " + d.valDetailsLabel + ": " + d.valDetails;
+                }
+                hp.selectedText.text(strToDisplay);
+                return self.tooltip.attr("x1", d.XpX).attr("x2", d.XpX);
+            }).on("mouseout", function (d) {
+                lgProps.valueAGroupLabel.style("text-decoration", "");
+                lgProps.valueBGroupLabel.style("text-decoration", "");
+                lgProps.valueAGroupLabel.style("font-weight", "");
+                lgProps.valueBGroupLabel.style("font-weight", "");
+                hp.selectedText.text(OpinionVis2.defaultHeaderMoreDetailsLabel);
+                return self.tooltip.style("visibility", "hidden");
+            });
         }
 
         public update(options: VisualUpdateOptions) {
             var dataView = this.dataView = options.dataViews;
             var viewport = options.viewport;
-            var dataPoints = OpinionVis2.converter(dataView);    
-            
+            var dataPoints = OpinionVis2.converter(dataView);  
+
             //if they've only put 1 of the fields in
             //don't render the visual
             if (dataPoints.values.length > 1) {
@@ -377,513 +897,63 @@ module powerbi.visuals {
                 this.root.attr({
                     'height': viewport.height,
                     'width': viewport.width
-                });
+                });                
 
                 //setup the container with the height
-                $("#OpinionNodeContainer").css("height", viewport.height).css("width", viewport.width).css("overflow","hidden");
+                $(this.root).find("#OpinionNodeContainer").css("height", viewport.height).css("width", viewport.width).css("overflow", "hidden");
 
-                //now we need to declare the indexes
-                var valAIndex = 0;
-                var valBIndex = 1;
-                //extract the values and strings
-                if (dataPoints.values.length > 2) {
-                    valBIndex = 2;
-                }
+                //set up our indexes & formatters
+                this.setupFormattersAndIndexers(dataPoints);
 
-                //get our formatters for using later
-                var fStrA = valueFormatter.getFormatString(dataPoints.values[valAIndex].source, this.OpinionVisProperties.general.formatString);
-                var fStrB = valueFormatter.getFormatString(dataPoints.values[valBIndex].source, this.OpinionVisProperties.general.formatString);
+                //now setup the frame to draw in
+                var frame = this.deriveWindowToDrawIn(dataPoints, viewport.height, viewport.width);    
 
-                var fStrC = null;
-                var fStrD = null;
-                //set the formatter if they put in the details
-                if (dataPoints.values.length > 2) {
-                    fStrC = valueFormatter.getFormatString(dataPoints.values[1].source, this.OpinionVisProperties.general.formatString);
-                    fStrD = valueFormatter.getFormatString(dataPoints.values[3].source, this.OpinionVisProperties.general.formatString);
-                }
-
-                //figure out the max value out of all the data points
-                var maxValGroupA = _.max(dataPoints.values[valAIndex].values);
-                var maxValGroupB = _.max(dataPoints.values[valBIndex].values);
-                var maxVal = _.max([maxValGroupA, maxValGroupB]);
-
-                var minValGroupA = _.min(dataPoints.values[valAIndex].values);
-                var minValGroupB = _.min(dataPoints.values[valBIndex].values);
-                var minVal = _.min([minValGroupA, minValGroupB]); 
-
-                //we are going to draw the largest value for 
-                //the maximum datapoint value
-                var maxValWidth = 0;
-                var maxValStr = this.root.append("text")
-                    .data([maxVal])
-                    .text(valueFormatter.format(maxVal, fStrA))
-                    .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
-                    .each(function (d) {
-                        maxValWidth = this.getBBox().width;
-                    });
-
-                maxValStr.remove();
-
-                //the minimum datapoint value
-                var minValWidth = 0;
-                var minValStr = this.root.append("text")
-                    .data([maxVal])
-                    .text(valueFormatter.format(minVal, fStrA))
-                    .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
-                    .each(function (d) {
-                        minValWidth = this.getBBox().width;
-                    });
-
-                minValStr.remove();
-
-                //longest group label text
-                var longestSeriesElem: string = _.max(dataPoints.categories[0].values, function (d: string) {
-                    return d.length;
-                });
-                var longestSeriesElemWidth = 0;
-                var longestSeriesElemDraw = this.root.append("text")
-                    .data([longestSeriesElem])
-                    .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "px")
-                    .style("font-family", "Segoe UI")
-                    .text(longestSeriesElem)
-                    .each(function (d) {
-                        longestSeriesElemWidth = this.getBBox().width;
-                    });
-                longestSeriesElemDraw.remove();
-
-                //some variables for drawing
-                var rowIncrementPx = 30;
-                var circleRadiusPx = 8;
-
-                //our right margin will change dependant on whether we have scroll bars in place
-                var outerRightMargin = 15;
-                var outerTopMargin = 15;
-                var maxY = outerTopMargin + 30 + rowIncrementPx + ((rowIncrementPx * 2) * dataPoints.categories[0].values.length);
-                if (maxY > viewport.height) {
-                    outerRightMargin = 45;
-                }                
-                
-                var leftTextMarginPx = 10;
-                var leftMarginPx = leftTextMarginPx + longestSeriesElemWidth + 10 + minValWidth;
-                var maxWidthBarPx = (viewport.width - leftMarginPx) - (maxValWidth + outerRightMargin);
-
-                var xScale = d3.scale.linear()
-                    .domain([0, maxVal])
-                    .range([leftMarginPx, leftMarginPx + maxWidthBarPx]);
-
-                var mtdt = new OpinionVisualMetaDataV2(dataPoints.values[valAIndex].source.groupName, dataPoints.values[valBIndex].source.groupName);
-                
                 var valueGroupColor = this.GetPropertyColor(this.dataView[0], "groupnodeproperties", "defaultColor", OpinionVis2.groupNodeDefaultColor).solid.color;
+                var mtdt = new OpinionVisualMetaDataV2(dataPoints.values[this.valAIndex].source.groupName, dataPoints.values[this.valBIndex].source.groupName, valueGroupColor);
 
-                //firstly we need to draw the header with the legend
-                this.root.append("circle")
-                    .attr("cx", 15)
-                    .attr("cy", 10)
-                    .attr("r", circleRadiusPx)
-                    .style("fill", "white")
-                    .attr("stroke", valueGroupColor);
+                var lgProps = this.drawLegend(frame, mtdt);                                
+                var hp = this.drawHoverInteractiveArea(frame, mtdt, lgProps);           
 
-                var width = 0;
-                var valueAGroupLabelHeight = 0;
-                var valueAGroupLabel = this.root.append("text")
-                    .data([mtdt])
-                    .attr("dx", 15 + circleRadiusPx + 3)
-                    .attr("dy", 10 + circleRadiusPx)
-                    .style("font-size", "11px")
-                    .text(mtdt.valAGroupLabel)
-                    .each(function (d) {
-                        d.width = this.getBBox().width;
-                        width = d.width;
-                        d.height = this.getBBox().height;
-                        valueAGroupLabelHeight = d.height;
-                    });
-
-                this.root.append("circle")
-                    .attr("cx", outerTopMargin + circleRadiusPx + 3 + width + circleRadiusPx + 10)
-                    .attr("cy", 10)
-                    .attr("r", circleRadiusPx)
-                    .style("fill", valueGroupColor);
-
-                var valueBGroupLabel = this.root.append("text")
-                    .data([mtdt])
-                    .attr("dx", outerTopMargin + circleRadiusPx + 3 + width + circleRadiusPx + 10 + (circleRadiusPx) + 3)
-                    .attr("dy", 10 + circleRadiusPx)
-                    .style("font-size", "11px")
-                    .text(mtdt.valBGroupLabel)
-                    .each(function (d) {
-                        d.width = this.getBBox().width;
-                        width = d.width;
-                        d.height = this.getBBox().height;
-                    });
-
-                valueAGroupLabel.attr("dy", function (d) {
-                    return 10 + (d.height / 2) - 3;
-                });
-
-                valueBGroupLabel.attr("dy", function (d) {
-                    return 10 + (d.height / 2) - 3;
-                });           
-
-                //lets put the hover legend content in
-                var defaultHeaderMoreDetailsLabel = "Hover on a circle below to focus in on that group";
-                var selectedText = this.root.append("text")
-                    .attr("dx", leftTextMarginPx)
-                    .attr("dy", outerTopMargin + valueAGroupLabelHeight + 15 + 3)
-                    .text(defaultHeaderMoreDetailsLabel)
-                    .style("font-size", "13px");
-
-                //now we draw the line seperating the legend from the visual
-                this.root.append("line")
-                    .attr("x1", leftTextMarginPx)
-                    .attr("y1", outerTopMargin + valueAGroupLabelHeight + 30 + 3)
-                    .attr("x2", leftTextMarginPx + leftMarginPx + maxWidthBarPx)
-                    .attr("y2", outerTopMargin + valueAGroupLabelHeight + 30 + 3)
-                    .attr("stroke-width", 1)
-                    .attr("stroke", valueGroupColor);          
-            
-
-                //now we put the vertical tooltip
-                var startYPy = outerTopMargin + valueAGroupLabelHeight + 40 + 3;
-                startYPy += (circleRadiusPx * 2.5);
-
-                var tooltip = this.root.append("line")
-                    .attr("x1", 30)
-                    .attr("y1", outerTopMargin + valueAGroupLabelHeight + 30 + 3)
-                    .attr("x2", 30)
-                    .attr("y2", 5)
-                    .attr("stroke-width", 1)
-                    .attr("stroke", valueGroupColor)
-                    .style("visibility", "hidden");
+                var startYPy = frame.outerTopMargin + lgProps.height + hp.height + 3;
+                startYPy += (frame.circleRadiusPx * 2.5);     
 
                 var valMeasureName: string = dataPoints.values[0].source.displayName;
 
                 var endIndex = dataPoints.categories[0].values.length;
                 //now lets walk through the values
                 for (var i = 0; i < endIndex; i++) {
-                    var statementStr: string = "";
-                    var valA: number = 0;
-                    var valB: number = 0;
-                    var valADetails = 0;
-                    var valBDetails = 0;
-                    var valADetailsLabel = null;
-                    var valBDetailsLabel = null;
-
-                    //extract the values and strings
-                    if (dataPoints.values.length > 2) {
-                        //in this case we know that the value b index will actually be 3 not 1
-                        valADetails = dataPoints.values[1].values[i];
-                        valADetailsLabel = dataPoints.values[1].source.displayName;
-                        valBDetails = dataPoints.values[3].values[i];
-                        valBDetailsLabel = dataPoints.values[3].source.displayName;
-                    }
-
-                    var statementStr: string = dataPoints.categories[0].values[i];
-                    var valA: number = dataPoints.values[valAIndex].values[i];
-                    var valB: number = dataPoints.values[valBIndex].values[i];     
-
-                    var leftFilled = false;
-                    //if its greater just switch it
-                    if (valA > valB) {
-                        leftFilled = true;
-                        //flip the main value
-                        var tmp = valA;
-                        valA = valB;
-                        valB = tmp;
-                        //flip the details
-                        var tmpDetails = valADetails;
-                        valADetails = valBDetails;
-                        valBDetails = tmpDetails;
-                        //flip the details label
-                        var tmpDetailsLabel = valADetailsLabel;
-                        valADetailsLabel = valBDetailsLabel;
-                        valBDetailsLabel = tmpDetailsLabel;
-                    }
-
-                    var valAStr = valueFormatter.format(valA, fStrA);
-                    var valBStr = valueFormatter.format(valB, fStrB);
-
-                    var valADetailsStr = null;
-                    var valBDetailsStr = null;
-                    if (valADetails !== null) {
-                        valADetailsStr = valueFormatter.format(valADetails, fStrC);
-                    }
-                    if (valBDetails !== null) {
-                        valBDetailsStr = valueFormatter.format(valBDetails, fStrD);
-                    }
-
-                    var gap = valB - valA;
-                    var gapStr = valueFormatter.format(gap, fStrA);
-
+                    //extract the record from the categorical data view
+                    var dd = this.extractStatementRecord(dataPoints, frame, mtdt, i);
                     //now we want to put the text on the page
-                    this.root.append("text")
-                        .attr("dx", leftTextMarginPx)
-                        .attr("dy", startYPy)
-                        .style("fill", this.GetPropertyColor(this.dataView[0], "statementproperties", "defaultFontColor", OpinionVis2.statementDefaultFontColor).solid.color)
-                        .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "px")
-                        .style("font-family", "'Segoe UI',wf_segoe-ui_normal,helvetica,arial,sans-serif")
-                        .text(statementStr);
-                                    
-                    //we're going to set up the two nodes and work out their relative positions
-                    var LeftCircleX = xScale(valA);
-                    var RightCircleX = xScale(valB);
+                    this.drawStatementLabel(frame, mtdt, dd, startYPy);
+                    //draw the the gap
+                    this.drawGap(frame, mtdt, dd, startYPy);
+                    //draw the two circles
+                    this.drawGroup(frame, mtdt, dd.GroupA, startYPy, true);
+                    this.drawGroup(frame, mtdt, dd.GroupB, startYPy, false);
+                    //draw the divider
+                    this.drawDivider(frame, startYPy);                    
 
-                    var label = mtdt.valAGroupLabel;
-                    if (leftFilled) {
-                        label = mtdt.valBGroupLabel;
-                    }
-                    var LeftNode = new OpinionNodeV2(label, valA, valAStr, valADetailsStr, valADetailsLabel, LeftCircleX);
-                    var label = mtdt.valBGroupLabel;
-                    if (leftFilled) {
-                        label = mtdt.valAGroupLabel;
-                    }
-                    var RightNode = new OpinionNodeV2(label, valB, valBStr, valBDetailsStr, valBDetailsLabel, RightCircleX);
-                    
-                    //get the id and the color for the category
-                    var id = SelectionIdBuilder
-                        .builder()
-                        .withCategory(dataPoints.categories[0], i)
-                        .createSelectionId();
-                    var color = this.colors.getColorByIndex(i);                    
-                    var dd = new StatementResponseV2(id,statementStr, LeftNode, RightNode, color.value);
-                                
-                    //determine the two x start positions, then just calculate the width
-                    //do the rectangle between the circles and add the text underneath or on top of
-                    var rectWidth = RightCircleX - LeftCircleX;
-
-                    var gapBColor = this.GetPropertyColor(this.dataView[0], "gapbarproperties", "defaultColor", OpinionVis2.gapBarDefaultColor).solid.color;
-                    var gapBFontOnBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorOnBar", OpinionVis2.gapLabelDefaultColorOnBar).solid.color;
-                    var gapBFontBelowBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorBelowBar", OpinionVis2.gapLabelDefaultColorBelowBar).solid.color;
-
-                    var rect = this.root.append("rect")
-                                        .data([dd])
-                                        .attr("y", startYPy - circleRadiusPx)
-                                        .attr("x", LeftCircleX)
-                                        .attr("width", rectWidth)
-                                        .attr("height", (circleRadiusPx * 2))
-                        .style("fill", gapBColor);
-
-                    this.rectNodesCollectionD3.push(rect[0][0]);
-                    
-                    var midpointPx = LeftCircleX + (rectWidth / 2);
-
-                    var rectDLabel = this.root.append("text")
-                        .data([dd])
-                        .attr("dx", midpointPx)
-                        .attr("dy", startYPy)
-                        .text(gapStr)
-                        .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "px")
-                        .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
-                        .each(function (d) {
-                            d.width = this.getBBox().width;
-                            d.height = this.getBBox().height;
-                        });
-
-                    rectDLabel.attr("dx", function (d) {
-                        return midpointPx - (d.width / 2);
-                    });
-
-                    //if the width of the text is larger than the rectangle
-                    //we need to push it underneath the rectangle
-                    var rectWidthWithRadius = rectWidth - (circleRadiusPx * 2);
-
-                    var defaultPosChosen = this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultPosition", OpinionVis2.gapLabelDefaultPosition);
-
-                    rectDLabel.attr("dy", function (d) {
-                        var rectStart = (startYPy - circleRadiusPx);
-                        var rectHeight = (circleRadiusPx * 2);
-                        if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
-                            return rectStart + rectHeight + (d.height) + 3;
-                        }
-                        var rectMidPointY = rectStart + (rectHeight / 2);
-                        return rectMidPointY + (d.height / 2) - 3;
-                    });
-
-                    rectDLabel.style("fill", function (d) {
-                        if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width) {
-                            return gapBFontBelowBar;
-                        } else {
-                            return gapBFontOnBar;
-                        }
-                    });
-
-                    //do the circle then the text                
-                    var leftCircleNode = this.root.append("circle")
-                        .data([LeftNode])
-                        .attr("cx", LeftCircleX)
-                        .attr("cy", startYPy)
-                        .attr("r", circleRadiusPx)
-                        .style("fill", function (d) {
-                            if (leftFilled) {
-                                return valueGroupColor;
-                            }
-                            return "white";
-                        })
-                        .style("stroke", valueGroupColor);
-
-                    this.circleNodesCollectionD3.push(leftCircleNode[0][0]);
-
-                    var nodeLabelFontColor = this.GetPropertyColor(this.dataView[0], "groupnodedatalabelproperties", "defaultColor", OpinionVis2.groupNodeDataLabelDefaultColor).solid.color;
-                    var nodeLabelDefaultFontSize = this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px";
-
-                    if (this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "showLabels", OpinionVis2.groupNodeDataLabelShow)) {
-                        var LeftDLabel = this.root.append("text")
-                            .data([dd])
-                            .attr("dx", LeftCircleX)
-                            .attr("dy", startYPy)
-                            .text(valAStr)
-                            .style("font-size", nodeLabelDefaultFontSize)
-                            .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
-                            .style("fill", nodeLabelFontColor)
-                            .each(function (d) {
-                                d.width = this.getBBox().width;
-                            });
-
-                        LeftDLabel.attr("dx", function (d) {
-                            return LeftCircleX - d.width - circleRadiusPx - 3;
-                        });
-                    }
-
-                    //do the circle then the text
-                    var rightCircleNode = this.root.append("circle")
-                        .data([RightNode])
-                        .attr("cx", RightCircleX)
-                        .attr("cy", startYPy)
-                        .attr("r", circleRadiusPx)
-                        .style("fill", function (d) {
-                            if (leftFilled) {
-                                return "white";
-                            }
-                            return valueGroupColor;
-                        })
-                        .attr("stroke", valueGroupColor);
-
-                    this.circleNodesCollectionD3.push(rightCircleNode[0][0]);
-
-                    if (this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "showLabels", OpinionVis2.groupNodeDataLabelShow)) {
-                        var RightDLabel = this.root.append("text")
-                            .data([dd])
-                            .attr("dx", RightCircleX)
-                            .attr("dy", startYPy)
-                            .text(valBStr)
-                            .style("fill", nodeLabelFontColor)
-                            .style("font-size", nodeLabelDefaultFontSize)
-                            .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
-                            .each(function (d) {
-                                d.width = this.getBBox().width;
-                            });
-
-                        RightDLabel.attr("dx", function (d) {
-                            return RightCircleX + circleRadiusPx + 3;
-                        });
-                    }
-
-                    this.root.append("line")
-                        .attr("x1", leftTextMarginPx)
-                        .attr("y1", startYPy + rowIncrementPx)
-                        .attr("x2", leftTextMarginPx + leftMarginPx + maxWidthBarPx)
-                        .attr("y2", startYPy + rowIncrementPx)
-                        .attr("stroke-width", 2)
-                        .style("stroke-dasharray", ("3, 3"))  // <== This line here!!
-                        .attr("stroke", "grey");
-
-                    startYPy += rowIncrementPx;
-                    startYPy += rowIncrementPx;
+                    startYPy += frame.rowIncrementPx;
+                    startYPy += frame.rowIncrementPx;
                 }
 
                 //need to reset for the +1 effect from the loop
-                startYPy -= rowIncrementPx;
+                startYPy -= frame.rowIncrementPx;
 
-                tooltip.attr("y2", startYPy);
+                this.tooltip.attr("y2", startYPy);
 
                 //we need to append scroll bars if it went past
                 if (startYPy > viewport.height) {
                     $("#OpinionNodeContainer").css("overflow-y", "scroll");
-                    this.root.attr("height", startYPy + rowIncrementPx); //just add an extra rowIncrement as a buffer
+                    this.root.attr("height", startYPy + frame.rowIncrementPx); //just add an extra rowIncrement as a buffer
                 } else {
                     $("#OpinionNodeContainer").css("overflow-y", "hidden");
                 }                
 
-                //our tool tip content and animations triggered
-                d3.selectAll(this.circleNodesCollectionD3).on("mouseover", function () {
-                    return tooltip.style("visibility", "visible");
-                }).on("mousemove", function (d) {
-                    if (mtdt.valAGroupLabel === d.groupLabel) {
-                        valueAGroupLabel.style("text-decoration", "underline");
-                        valueAGroupLabel.style("font-weight", "bold");
-                    } else {
-                        valueBGroupLabel.style("text-decoration", "underline");
-                        valueBGroupLabel.style("font-weight", "bold");
-                    }
-                    var strToDisplay = valMeasureName + ": " + d.valFormatted;
-                    if (d.valDetails !== null) {
-                        strToDisplay += " | " + d.valDetailsLabel + ": " + d.valDetails;
-                    }
-                    selectedText.text(strToDisplay);
-                    return tooltip.attr("x1", d.XpX).attr("x2", d.XpX);
-                }).on("mouseout", function (d) {
-                    valueAGroupLabel.style("text-decoration", "");
-                    valueBGroupLabel.style("text-decoration", "");
-                    valueAGroupLabel.style("font-weight", "");
-                    valueBGroupLabel.style("font-weight", "");
-                    selectedText.text(defaultHeaderMoreDetailsLabel);
-                    return tooltip.style("visibility", "hidden");
-                });
-
-                //now we need to do the click animation
-                var percentUnhighlighted = 0.5;
-                var percentHighlighted = 1;
-                var self = this;
-                d3.selectAll(this.rectNodesCollectionD3).on("click", function (d: StatementResponseV2) {
-                    //in the case that nothing is selected, just select the selcted one
-                    if (self.selectionManager.getSelectionIds().length === 0) {
-                        self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
-                            d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
-                            d3.select(this).style("opacity", percentHighlighted);
-                        });
-                    }
-                    //in the case that there's only one selected id and it's the one clicked
-                    //we just completely clear the selection and go to the default state
-                    else if (self.selectionManager.getSelectionIds().length === 1 && self.selectionManager.getSelectionIds()[0] === d.identity) {
-                        self.selectionManager.clear();
-                        d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentHighlighted);
-                    }
-                    else {
-                        //Check to see if the newly selected was previously clicked
-                        if (_.contains(self.selectionManager.getSelectionIds(), d.identity)) {                        
-                            //if they click cntrl key we want to unhighlight it and deselect it
-                            if (d3.event.ctrlKey) {
-                                self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
-                                    d3.select(this).style("opacity", percentUnhighlighted);
-                                });
-                            }
-                            //else we want to clear every selection and just select this one
-                            else {
-                                self.selectionManager.clear();
-                                self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
-                                    d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
-                                    d3.select(this).style("opacity", percentHighlighted);
-                                });
-                            }
-                        }
-                        //it hasn't been previously selected
-                        else {
-                            //if they click cntrl key we want to add it to the selection
-                            if (d3.event.ctrlKey) {
-                                self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
-                                    d3.select(this).style("opacity", percentHighlighted);
-                                });
-                            }
-                            //else we want it to clear every selection just select this one
-                            else {
-                                self.selectionManager.clear();
-                                self.selectionManager.select(d.identity, d3.event.ctrlKey).then(ids => {
-                                    d3.selectAll(self.rectNodesCollectionD3).style("opacity", percentUnhighlighted);
-                                    d3.select(this).style("opacity", percentHighlighted);
-                                });
-                            }
-                        }
-                    }
-                });
+                //activate the two interaction ones.
+                this.activateHoverOnGroups(mtdt, lgProps, hp, valMeasureName);
+                this.activateClickOnGapBars();                
             }            
         }
 
@@ -967,8 +1037,8 @@ module powerbi.visuals {
                         displayName: 'Gap Bar',
                         selector: null,
                         properties: {
-                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.gapBarDefaultColor)
-                            //colorByCategory: this.GetProperty(dV, objectname, "colorByCategory", OpinionVis2.statementColorByStatement)
+                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.gapBarDefaultColor),
+                            colorByCategory: this.GetProperty(dV, objectname, "colorByCategory", OpinionVis2.statementColorByStatement)
                         }
                     };
                     enumeration.pushInstance(gapbarproperties);
