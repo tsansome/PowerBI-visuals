@@ -90,9 +90,18 @@ module powerbi.visuals {
         public outerTopMargin: number;
         public leftTextMarginPx: number;
         public leftMarginPx: number;
+        public maxValWidth: number;
         public maxWidthBarPx: number;        
         public xAxisScale: D3.Scale.LinearScale;
         public heightOfStatementLine: number;
+
+        calcGapBars(widthOfViewPort: number, maxVal: number) {
+            this.maxWidthBarPx = (widthOfViewPort - this.leftMarginPx) - (this.maxValWidth + this.outerRightMargin);
+
+            this.xAxisScale = d3.scale.linear()
+                .domain([0, maxVal])
+                .range([this.leftMarginPx, this.leftMarginPx + this.maxWidthBarPx]);
+        }
     }
 
     export class OpinionLegendProperties {
@@ -414,6 +423,7 @@ module powerbi.visuals {
         }        
 
         public deriveWindowToDrawIn(dv: DataViewCategorical, heighOfViewPort: number, widthOfViewPort: number) {
+            var fc = new OpinionFrameClass();            
             //firstly we need to draw a lot of things and test their width
 
             //figure out the max value out of all the data points
@@ -427,14 +437,14 @@ module powerbi.visuals {
 
             //we are going to draw the largest value for 
             //the maximum datapoint value
-            var maxValWidth = 0;
+            fc.maxValWidth = 0;
             var maxValHeight = 0;
             var maxValStr = this.root.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.maxVal, this.fStrA))
                 .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
                 .each(function (d) {
-                    maxValWidth = this.getBBox().width;
+                    fc.maxValWidth = this.getBBox().width;
                     maxValHeight = this.getBBox().height;
                 });
 
@@ -483,9 +493,7 @@ module powerbi.visuals {
                 });
             longestSeriesElemDraw.remove();
 
-            //now we set up the default frame
-
-            var fc = new OpinionFrameClass();
+            //now we set up the default frame            
             fc.rowIncrementPx = 30;
             fc.circleRadiusPx = this.GetProperty(this.dataView[0], "gapbarproperties", "defaultHeight", OpinionVis2.gapBarHeight) / 2;
             fc.gapBetweenBarAndUnderneathLabel = 3;
@@ -497,20 +505,14 @@ module powerbi.visuals {
             fc.heightOfStatementLine = option1 > option2 ? option1: option2;
 
             fc.outerRightMargin = 15;
-            fc.outerTopMargin = 15;
-
-            var maxY = fc.outerTopMargin + 30 + fc.rowIncrementPx + ((fc.rowIncrementPx * 2) * dv.categories[0].values.length);
-            if (maxY > heighOfViewPort) {
-                fc.outerRightMargin = 45;
-            }
+            
+            fc.outerTopMargin = 8;
 
             fc.leftTextMarginPx = 10;
             fc.leftMarginPx = fc.leftTextMarginPx + longestSeriesElemWidth + 10 + minValWidth;
-            fc.maxWidthBarPx = (widthOfViewPort - fc.leftMarginPx) - (maxValWidth + fc.outerRightMargin);
-
-            fc.xAxisScale = d3.scale.linear()
-                                    .domain([0, this.maxVal])
-                                    .range([fc.leftMarginPx, fc.leftMarginPx + fc.maxWidthBarPx]);
+            fc.maxWidthBarPx = (widthOfViewPort - fc.leftMarginPx) - (fc.maxValWidth + fc.outerRightMargin);
+            
+            fc.calcGapBars(widthOfViewPort, this.maxVal);
             return fc;
         }
 
@@ -595,20 +597,28 @@ module powerbi.visuals {
 
         private drawLegend(frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2): OpinionLegendProperties {
             var legendProps = new OpinionLegendProperties();
-            
+
+            var gapBetweenTwoGroupText = 15;
+            var paddingBetweenTextAndCircle = 3;
+
+            var offset = 15;
+
             //firstly we need to draw the header with the legend
             this.root.append("circle")
-                .attr("cx", 15)
+                .attr("cx", offset)
                 .attr("cy", frame.outerTopMargin + frame.circleRadiusPx)
                 .attr("r", frame.circleRadiusPx)
                 .style("fill", "white")
                 .attr("stroke", mtdt.valueGroupColor);
 
+            //need to add the second half of the circle and the padding
+            offset += (frame.circleRadiusPx + paddingBetweenTextAndCircle);
+
             var width = 0;
             var legendTextHeight = 0;
             legendProps.valueAGroupLabel = this.root.append("text")
                 .data([mtdt])
-                .attr("dx", 15 + frame.circleRadiusPx + 3)
+                .attr("dx", offset)
                 .attr("dy", function (d) {
                     return frame.outerTopMargin + (frame.circleRadiusPx * 2) - 3;
                 })
@@ -621,15 +631,19 @@ module powerbi.visuals {
                     legendTextHeight = d.height;
                 });
 
+            offset += (width + gapBetweenTwoGroupText);
+
             this.root.append("circle")
-                .attr("cx", frame.outerTopMargin + frame.circleRadiusPx + 3 + width + frame.circleRadiusPx + 10)
+                .attr("cx", offset)
                 .attr("cy", frame.outerTopMargin + frame.circleRadiusPx)
                 .attr("r", frame.circleRadiusPx)
                 .style("fill", mtdt.valueGroupColor);
 
+            offset += (frame.circleRadiusPx + paddingBetweenTextAndCircle);
+
             legendProps.valueBGroupLabel = this.root.append("text")
                 .data([mtdt])
-                .attr("dx", frame.outerTopMargin + frame.circleRadiusPx + 3 + width + frame.circleRadiusPx + 10 + (frame.circleRadiusPx) + 3)
+                .attr("dx", offset)
                 .attr("dy", function (d) {
                     return frame.outerTopMargin + (frame.circleRadiusPx * 2) - 3;
                 })
@@ -639,13 +653,13 @@ module powerbi.visuals {
                     d.width = this.getBBox().width;
                     width = d.width;
                     d.height = this.getBBox().height;
-                }); 
+                });
 
             var option1 = legendTextHeight + 3;
             var option2 = (frame.circleRadiusPx * 2) + 3;
             legendProps.height = option1 > option2 ? option1 : option2;
-            
-            return legendProps;       
+
+            return legendProps;     
         }
 
         private drawHoverInteractiveArea(frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2, legendProperties: OpinionLegendProperties): OpinionHoverProperties {
@@ -803,13 +817,22 @@ module powerbi.visuals {
         }
 
         private drawStatementLabel(frame: OpinionFrameClass, mtdt: OpinionVisualMetaDataV2, dd: StatementResponseV2, YPosition: number) {
-            this.root.append("text")
+            var statementLabel = this.root.append("text")
+                .data([dd])
                 .attr("dx", frame.leftTextMarginPx)
                 .attr("dy", YPosition)
                 .style("fill", this.GetPropertyColor(this.dataView[0], "statementproperties", "defaultFontColor", OpinionVis2.statementDefaultFontColor).solid.color)
                 .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "px")
                 .style("font-family", "'Segoe UI',wf_segoe-ui_normal,helvetica,arial,sans-serif")
-                .text(dd.statement);
+                .text(dd.statement)
+                .each(function (d) {
+                    d.height = this.getBBox().height;
+                });                 
+
+            //we just need to recenter the text based on its size
+            statementLabel.attr("dy", function (d) {
+                return YPosition + (d.height / 4);
+            });
         }
 
         private drawDivider(frame: OpinionFrameClass, YPosition: number) {
@@ -910,7 +933,11 @@ module powerbi.visuals {
             });
         }
 
-        private activateYScrollBar(frame: OpinionFrameClass, endingHeight: number) {
+        private activateYScrollBar(frame: OpinionFrameClass, endingHeight: number, widthOfViewPort: number) {
+            //update the frames max width bar
+            frame.outerRightMargin = 45;
+            frame.calcGapBars(widthOfViewPort, this.maxVal);
+
             this.opinionContainerRef.style("overflow-y", "scroll");
             this.root.attr("height", endingHeight + frame.heightOfStatementLine); 
         }
@@ -959,32 +986,35 @@ module powerbi.visuals {
               
                 var valMeasureName: string = dataPoints.values[0].source.displayName;
                 
+                //we need to figure out if we need scroll bars or not
+                var endingY = (frame.outerTopMargin + legendArea.height + hoverArea.height) + (frame.heightOfStatementLine * (dataPoints.categories[0].values.length - 1));
+                if (endingY > viewport.height) {
+                    this.activateYScrollBar(frame, endingY, viewport.width);
+                } 
+                else {
+                    this.disableYScrollBar();
+                }
+
                 //now lets walk through the values
                 for (var i = 0; i < dataPoints.categories[0].values.length; i++) {
                     //extract the record from the categorical data view
                     var dd = this.extractStatementRecord(dataPoints, frame, mtdt, i);
-                    var yCenter = startYPy + (frame.heightOfStatementLine / 2);
+                    var yPositionStatement = startYPy + (frame.heightOfStatementLine * 0.5);
+                    var yPositionVisualElem = startYPy + (frame.heightOfStatementLine * 0.4);
                     //now we want to put the text on the page
-                    this.drawStatementLabel(frame, mtdt, dd, yCenter);
+                    this.drawStatementLabel(frame, mtdt, dd, yPositionStatement);
                     //draw the the gap
-                    this.drawGap(frame, mtdt, dd, yCenter);
+                    this.drawGap(frame, mtdt, dd, yPositionVisualElem);
                     //draw the two circles
-                    this.drawGroup(frame, mtdt, dd.GroupA, yCenter, true);
-                    this.drawGroup(frame, mtdt, dd.GroupB, yCenter, false);
+                    this.drawGroup(frame, mtdt, dd.GroupA, yPositionVisualElem, true);
+                    this.drawGroup(frame, mtdt, dd.GroupB, yPositionVisualElem, false);
                     //progress it to the next record                    
                     startYPy += frame.heightOfStatementLine;
                     //draw the divider
                     this.drawDivider(frame, startYPy);
                 }
                 
-                this.tooltip.attr("y2", startYPy);
-
-                //we need to append scroll bars if it went past
-                if (startYPy > viewport.height) {
-                    this.activateYScrollBar(frame, startYPy);
-                } else {
-                    this.disableYScrollBar();
-                }                
+                this.tooltip.attr("y2", startYPy);      
 
                 //activate the two interaction ones.
                 this.activateHoverOnGroups(mtdt, legendArea, hoverArea, valMeasureName);
