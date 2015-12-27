@@ -207,8 +207,8 @@ module powerbi.visuals {
                     properties: {
                         defaultFontSize: {
                             description: "Specify the font size for the statement text.",
-                            type: { numeric: true },
-                            displayName: "Default Font Size"
+                            type: { formatting: { fontSize: true } },
+                            displayName: "Text Size"
                         },
                         defaultFontColor: {
                             description: "Specify the font color for the statement text.",
@@ -223,7 +223,7 @@ module powerbi.visuals {
                         statementSortOrderDefault: {
                             description: "Specify the default sort order for the statements.",
                             type: { text: true },
-                            displayName: "Default Font Size"
+                            displayName: "Order"
                         }
                     }
                 },
@@ -233,7 +233,7 @@ module powerbi.visuals {
                         defaultColor: {
                             description: "Specify the font size for the statement text.",
                             type: { fill: { solid: { color: true } } },
-                            displayName: "Default Color"
+                            displayName: "Color"
                         }
                     }
                 },
@@ -248,12 +248,12 @@ module powerbi.visuals {
                         defaultColor: {
                             description: "Specify the default color for the nodes.",
                             type: { fill: { solid: { color: true } } },
-                            displayName: "Default Color"
+                            displayName: "Color"
                         },
                         defaultFontSize: {
                             description: "Specify the font size for the data label on a node.",
-                            type: { numeric: true },
-                            displayName: "Default Font Size"
+                            type: { formatting: { fontSize: true } },
+                            displayName: "Text Size"
                         }
                     }
                 },
@@ -262,13 +262,13 @@ module powerbi.visuals {
                     properties: {
                         defaultFontSize: {
                             description: "Specify the font size for the labels in the legend.",
-                            type: { numeric: true },
-                            displayName: "Default Font Size"
+                            type: { formatting: { fontSize: true } },
+                            displayName: "Text Size"
                         },
                         defaultRadius: {
                             description: "Specify the radius of the circles in the legend.",
                             type: { numeric: true },
-                            displayName: "Default Radius"
+                            displayName: "Radius"
                         }
                     }
                 },
@@ -278,12 +278,12 @@ module powerbi.visuals {
                         defaultColor: {
                             description: "Specify the default color for the gap bar.",
                             type: { fill: { solid: { color: true } } },
-                            displayName: "Default Color"
+                            displayName: "Color"
                         },
                         defaultHeight: {
-                            description: "Specifiy the size of a bar (px).",
+                            description: "Specifiy the size of a bar (pt).",
                             type: { numeric: true },
-                            displayName: "Default Height"
+                            displayName: "Height"
                         },
                         colorByCategory: {
                             description: "Color the bars by each statement",
@@ -302,22 +302,22 @@ module powerbi.visuals {
                         defaultPosition: {
                             description: "Specify the default positioning for the labels on the bars. (Auto / Below)",
                             type: { text: true },
-                            displayName: "Default Position (Auto / Below)"
+                            displayName: "Position (Auto / Below)"
                         },
                         defaultColorOnBar: {
                             description: "Specify the default color for the text label on the gap bar.",
                             type: { fill: { solid: { color: true } } },
-                            displayName: "Default Color On Bar"
+                            displayName: "Color On Bar"
                         },
                         defaultColorBelowBar: {
                             description: "Specify the default color for the text label below the gap bar.",
                             type: { fill: { solid: { color: true } } },
-                            displayName: "Default Color Below Bar"
+                            displayName: "Color Below Bar"
                         },
                         defaultFontSize: {
                             description: "Specify the font size for the gap label.",
-                            type: { numeric: true },
-                            displayName: "Default Font Size"
+                            type: { formatting: { fontSize: true } },
+                            displayName: "Text Size"
                         }
                     }
                 }
@@ -460,7 +460,7 @@ module powerbi.visuals {
             var maxValStr = this.root.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.maxVal, this.fStrA))
-                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
+                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "pt")
                 .each(function (d) {
                     fc.maxValWidth = this.getBBox().width;
                     maxValHeight = this.getBBox().height;
@@ -474,7 +474,7 @@ module powerbi.visuals {
             var minValStr = this.root.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.minVal, this.fStrA))
-                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px")
+                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "pt")
                 .each(function (d) {
                     minValWidth = this.getBBox().width;
                     minValHeight = 0;
@@ -487,13 +487,14 @@ module powerbi.visuals {
             var gapBarUnderTextStr = this.root.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.maxVal, this.fStrA))
-                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "px")
+                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "pt")
                 .each(function (d) {
                     gapBarUnderTextHeight = this.getBBox().height;
                 });
 
             gapBarUnderTextStr.remove();
 
+            var statementFontSize = this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "pt";
             //longest group label text
             var longestSeriesElem: string = _.max(dv.categories[0].values, function (d: string) {
                 return d.length;
@@ -502,7 +503,7 @@ module powerbi.visuals {
             var longestSeriesElemHeight = 0;
             var longestSeriesElemDraw = this.root.append("text")
                 .data([longestSeriesElem])
-                .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "px")
+                .style("font-size", statementFontSize)
                 .style("font-family", "Segoe UI")
                 .text(longestSeriesElem)
                 .each(function (d) {
@@ -626,7 +627,7 @@ module powerbi.visuals {
             var offset = initialOffset;
 
             var circleRadiusPx = this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultRadius", OpinionVis2.groupNodeLegendDefaultRadius);
-            var fontSize = (this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultFontSize", OpinionVis2.groupNodeLegendDefaultFontSize)).toString() + "px";
+            var fontSize = (this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultFontSize", OpinionVis2.groupNodeLegendDefaultFontSize)).toString() + "pt";
 
             var groupACirclePosition = offset;
             var groupACircle = this.root.append("circle")
@@ -718,7 +719,7 @@ module powerbi.visuals {
                 .attr("dx", frame.leftTextMarginPx)
                 .attr("dy", frame.outerTopMargin + legendProperties.height + 15 + 3)
                 .text(OpinionVis2.defaultHeaderMoreDetailsLabel)
-                .style("font-size", "13px")
+                .style("font-size", "13pt")
                 .each(function (d) {
                     selectedTextHeight = this.getBBox().height;
                 });;
@@ -768,7 +769,7 @@ module powerbi.visuals {
             this.circleNodesCollectionD3.push(NodeElem[0][0]);
 
             var nodeLabelFontColor = this.GetPropertyColor(this.dataView[0], "groupnodedatalabelproperties", "defaultColor", OpinionVis2.groupNodeDataLabelDefaultColor).solid.color;
-            var nodeLabelDefaultFontSize = this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "px";
+            var nodeLabelDefaultFontSize = this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "pt";
 
             if (this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "showLabels", OpinionVis2.groupNodeDataLabelShow)) {
                 var LeftDLabel = this.root.append("text")
@@ -827,7 +828,7 @@ module powerbi.visuals {
                 .attr("dx", midpointPx)
                 .attr("dy", CentreYPx)
                 .text(gapStr)
-                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "px")
+                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "pt")
                 .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
                 .each(function (d) {
                     d.width = this.getBBox().width;
@@ -869,7 +870,7 @@ module powerbi.visuals {
                 .attr("dx", frame.leftTextMarginPx)
                 .attr("dy", YPosition)
                 .style("fill", this.GetPropertyColor(this.dataView[0], "statementproperties", "defaultFontColor", OpinionVis2.statementDefaultFontColor).solid.color)
-                .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "px")
+                .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "pt")
                 .style("font-family", "'Segoe UI',wf_segoe-ui_normal,helvetica,arial,sans-serif")
                 .text(dd.statement)
                 .each(function (d) {
@@ -1015,7 +1016,7 @@ module powerbi.visuals {
                 });                
 
                 //setup the container with the height
-                this.opinionContainerRef.style("height", viewport.height.toString() + "px");
+                this.opinionContainerRef.style("height", viewport.height.toString() + "pt");
 
                 //set up our indexes & formatters
                 this.setupFormattersAndIndexers(dataPoints);
@@ -1069,7 +1070,7 @@ module powerbi.visuals {
             }            
         }
 
-        static statementDefaultFontSize = 11;
+        static statementDefaultFontSize = 9;
         static statementDefaultFontColor = "#777";
         static statementColorByStatement = false;
 
@@ -1077,16 +1078,16 @@ module powerbi.visuals {
         static gapBarDefaultColor = "rgb(1, 184, 170)";
         static gapLabelDefaultColorOnBar = "white";
         static gapLabelDefaultColorBelowBar = "#4884d9";
-        static gapLabelDefaultFontSize = 12;
+        static gapLabelDefaultFontSize = 9;
         static gapLabelDefaultPosition = "Auto";
 
         static groupNodeDefaultColor = "#00394D";
 
         static groupNodeDataLabelShow = true;
         static groupNodeDataLabelDefaultColor = "rgb(119, 119, 119)";
-        static groupNodeDataLabelDefaultFontSize = 12;
+        static groupNodeDataLabelDefaultFontSize = 9;
 
-        static groupNodeLegendDefaultFontSize = 11;
+        static groupNodeLegendDefaultFontSize = 9;
         static groupNodeLegendDefaultRadius = 8;
 
         static statementSortOrderDefault = "asc";
@@ -1224,7 +1225,7 @@ module powerbi.visuals {
             };
             return colorToReturn;
         }
-
+        
         private GetProperty<T>(dataView: DataView, groupPropertyValue: string, propertyValue: string, defaultValue: T) {
             if (dataView) {
                 var objects = dataView.metadata.objects;
