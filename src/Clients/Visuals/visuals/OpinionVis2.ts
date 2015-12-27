@@ -644,9 +644,7 @@ module powerbi.visuals {
             legendProps.valueAGroupLabel = this.root.append("text")
                 .data([mtdt])
                 .attr("dx", groupALabelPosition)
-                .attr("dy", function (d) {
-                    return frame.outerTopMargin + (circleRadiusPx * 2) - 3;
-                })
+                .attr("dy", 1)
                 .style("font-size", fontSize)
                 .text(mtdt.valAGroupLabel)
                 .each(function (d) {
@@ -654,6 +652,11 @@ module powerbi.visuals {
                     width = d.width;
                     d.height = this.getBBox().height;
                     legendTextHeight = d.height;
+                })
+                .attr("dy", function (d) {
+                    //we need to put it in the center
+                    var centreOfCircle = frame.outerTopMargin + circleRadiusPx;
+                    return centreOfCircle + (d.height / 4);
                 });
 
             offset += (width + gapBetweenTwoGroupText + circleRadiusPx);
@@ -671,15 +674,18 @@ module powerbi.visuals {
             legendProps.valueBGroupLabel = this.root.append("text")
                 .data([mtdt])
                 .attr("dx", groupBLabelPosition)
-                .attr("dy", function (d) {
-                    return frame.outerTopMargin + (circleRadiusPx * 2) - 3;
-                })
+                .attr("dy", 1)
                 .style("font-size", fontSize)
                 .text(mtdt.valBGroupLabel)
                 .each(function (d) {
                     d.width = this.getBBox().width;
                     width = d.width;
                     d.height = this.getBBox().height;
+                })
+                .attr("dy", function (d) {
+                    //we need to put it in the center
+                    var centreOfCircle = frame.outerTopMargin + circleRadiusPx;
+                    return centreOfCircle + (d.height / 4);
                 });
 
             offset += (width);
