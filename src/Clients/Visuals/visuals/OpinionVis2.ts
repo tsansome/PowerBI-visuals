@@ -115,7 +115,7 @@ module powerbi.visuals {
 
     export class OpinionHoverProperties {
         public height: number;
-        public selectedText;
+        public selectedText: D3.Selection;
     }
 
     export class OpinionVis2 implements IVisual {
@@ -723,10 +723,13 @@ module powerbi.visuals {
                 .attr("dx", frame.leftTextMarginPx)
                 .attr("dy", frame.outerTopMargin + legendProperties.height + 15 + 3)
                 .text(OpinionVis2.defaultHeaderMoreDetailsLabel)
-                .style("font-size", "10pt")
-                .each(function (d) {
-                    selectedTextHeight = this.getBBox().height;
-                });;
+                .style("font-size", "10pt");
+            
+            this.wrap(hp.selectedText, frame.viewPortWidth - frame.outerRightMargin, frame.leftTextMarginPx);
+
+            hp.selectedText.each(function (d) {
+                selectedTextHeight = this.getBBox().height;
+            });
 
             hp.height = (selectedTextHeight + 15) + 3;
             
@@ -955,7 +958,7 @@ module powerbi.visuals {
             });
         }
 
-        private activateHoverOnGroups(mtdt: OpinionVisualMetaDataV2, lgProps: OpinionLegendProperties, hp: OpinionHoverProperties, valMeasureName: string) {
+        private activateHoverOnGroups(frame: OpinionFrameClass,mtdt: OpinionVisualMetaDataV2, lgProps: OpinionLegendProperties, hp: OpinionHoverProperties, valMeasureName: string) {
             var self = this;
             //our tool tip content and animations triggered
             d3.selectAll(this.circleNodesCollectionD3).on("mouseover", function () {
@@ -972,14 +975,14 @@ module powerbi.visuals {
                 if (d.valDetails !== null) {
                     strToDisplay += " | " + d.valDetailsLabel + ": " + d.valDetails;
                 }
-                hp.selectedText.text(strToDisplay);
+                hp.selectedText.text(strToDisplay).call(self.wrap, frame.viewPortWidth - frame.outerRightMargin, frame.leftTextMarginPx);
                 return self.tooltip.attr("x1", d.XpX).attr("x2", d.XpX);
             }).on("mouseout", function (d) {
                 lgProps.valueAGroupLabel.style("text-decoration", "");
                 lgProps.valueBGroupLabel.style("text-decoration", "");
                 lgProps.valueAGroupLabel.style("font-weight", "");
                 lgProps.valueBGroupLabel.style("font-weight", "");
-                hp.selectedText.text(OpinionVis2.defaultHeaderMoreDetailsLabel);
+                hp.selectedText.text(OpinionVis2.defaultHeaderMoreDetailsLabel).call(self.wrap, frame.viewPortWidth - frame.outerRightMargin, frame.leftTextMarginPx);
                 return self.tooltip.style("visibility", "hidden");
             });
         }
@@ -997,6 +1000,32 @@ module powerbi.visuals {
             this.opinionContainerRef.style("overflow-y", "hidden");
         }
 
+        private wrap(text, width, xoffset) {
+            text.each(function () {
+                var text = d3.select(this),
+                    words = text.text().split(/\s+/).reverse(),
+                    word,
+                    line = [],
+                    y = text.attr("y"),
+                    dy = parseFloat(text.attr("dy")),
+                    tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy),
+                    previousHeight = 0,
+                    offSetHeight = 0;
+                while (word = words.pop()) {
+                    line.push(word);
+                    tspan.text(line.join(" "));
+                    if (tspan[0][0].getComputedTextLength() > width) {
+                        offSetHeight += previousHeight;
+                        line.pop();
+                        tspan.text(line.join(" "));
+                        line = [word];
+                        tspan = text.append("tspan").attr("x", xoffset).attr("y", y).attr("dy", offSetHeight).text(word);
+                    }
+                    previousHeight = 15;
+                }
+        });
+    }
+        
         public update(options: VisualUpdateOptions) {
             var dataView = this.dataView = options.dataViews;
             var viewport = options.viewport;
@@ -1078,7 +1107,7 @@ module powerbi.visuals {
                 this.opinionContainerRefSVG.attr("height", startYPy);
 
                 //activate the two interaction ones.
-                this.activateHoverOnGroups(mtdt, legendArea, hoverArea, valMeasureName);
+                this.activateHoverOnGroups(frame,mtdt,legendArea,hoverArea,valMeasureName);
                 this.activateClickOnGapBars();                
             }            
         }
