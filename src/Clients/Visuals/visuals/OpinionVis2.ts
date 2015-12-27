@@ -83,6 +83,9 @@ module powerbi.visuals {
     }
 
     export class OpinionFrameClass {
+        public viewPortWidth: number;
+        public viewPortHeight: number;
+
         public rowIncrementPx: number;
         public gapBetweenBarAndUnderneathLabel: number;
         public circleRadiusPx: number;
@@ -251,6 +254,21 @@ module powerbi.visuals {
                             description: "Specify the font size for the data label on a node.",
                             type: { numeric: true },
                             displayName: "Default Font Size"
+                        }
+                    }
+                },
+                groupnodelegendproperties: {
+                    displayName: "Group Legend",
+                    properties: {
+                        defaultFontSize: {
+                            description: "Specify the font size for the labels in the legend.",
+                            type: { numeric: true },
+                            displayName: "Default Font Size"
+                        },
+                        defaultRadius: {
+                            description: "Specify the radius of the circles in the legend.",
+                            type: { numeric: true },
+                            displayName: "Default Radius"
                         }
                     }
                 },
@@ -493,7 +511,10 @@ module powerbi.visuals {
                 });
             longestSeriesElemDraw.remove();
 
-            //now we set up the default frame            
+            //now we set up the default frame   
+            fc.viewPortWidth = widthOfViewPort;
+            fc.viewPortHeight = heighOfViewPort;
+                     
             fc.rowIncrementPx = 30;
             fc.circleRadiusPx = this.GetProperty(this.dataView[0], "gapbarproperties", "defaultHeight", OpinionVis2.gapBarHeight) / 2;
             fc.gapBetweenBarAndUnderneathLabel = 3;
@@ -600,29 +621,33 @@ module powerbi.visuals {
 
             var gapBetweenTwoGroupText = 15;
             var paddingBetweenTextAndCircle = 3;
+            
+            var initialOffset = 15;
+            var offset = initialOffset;
 
-            var offset = 15;
+            var circleRadiusPx = this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultRadius", OpinionVis2.groupNodeLegendDefaultRadius);
+            var fontSize = (this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultFontSize", OpinionVis2.groupNodeLegendDefaultFontSize)).toString() + "px";
 
-            //firstly we need to draw the header with the legend
-            this.root.append("circle")
-                .attr("cx", offset)
-                .attr("cy", frame.outerTopMargin + frame.circleRadiusPx)
-                .attr("r", frame.circleRadiusPx)
+            var groupACirclePosition = offset;
+            var groupACircle = this.root.append("circle")
+                .attr("cx", groupACirclePosition)
+                .attr("cy", frame.outerTopMargin + circleRadiusPx)
+                .attr("r", circleRadiusPx)
                 .style("fill", "white")
                 .attr("stroke", mtdt.valueGroupColor);
-
-            //need to add the second half of the circle and the padding
-            offset += (frame.circleRadiusPx + paddingBetweenTextAndCircle);
-
+            
+            offset += (circleRadiusPx + paddingBetweenTextAndCircle);
+            
+            var groupALabelPosition = offset;
             var width = 0;
             var legendTextHeight = 0;
             legendProps.valueAGroupLabel = this.root.append("text")
                 .data([mtdt])
-                .attr("dx", offset)
+                .attr("dx", groupALabelPosition)
                 .attr("dy", function (d) {
-                    return frame.outerTopMargin + (frame.circleRadiusPx * 2) - 3;
+                    return frame.outerTopMargin + (circleRadiusPx * 2) - 3;
                 })
-                .style("font-size", "11px")
+                .style("font-size", fontSize)
                 .text(mtdt.valAGroupLabel)
                 .each(function (d) {
                     d.width = this.getBBox().width;
@@ -631,23 +656,25 @@ module powerbi.visuals {
                     legendTextHeight = d.height;
                 });
 
-            offset += (width + gapBetweenTwoGroupText);
+            offset += (width + gapBetweenTwoGroupText + circleRadiusPx);
 
-            this.root.append("circle")
-                .attr("cx", offset)
-                .attr("cy", frame.outerTopMargin + frame.circleRadiusPx)
-                .attr("r", frame.circleRadiusPx)
+            var groupBCirclePosition = offset;
+            var groupBCircle = this.root.append("circle")
+                .attr("cx", groupBCirclePosition)
+                .attr("cy", frame.outerTopMargin + circleRadiusPx)
+                .attr("r", circleRadiusPx)
                 .style("fill", mtdt.valueGroupColor);
 
-            offset += (frame.circleRadiusPx + paddingBetweenTextAndCircle);
+            offset += (circleRadiusPx + paddingBetweenTextAndCircle);
 
+            var groupBLabelPosition = offset;
             legendProps.valueBGroupLabel = this.root.append("text")
                 .data([mtdt])
-                .attr("dx", offset)
+                .attr("dx", groupBLabelPosition)
                 .attr("dy", function (d) {
-                    return frame.outerTopMargin + (frame.circleRadiusPx * 2) - 3;
+                    return frame.outerTopMargin + (circleRadiusPx * 2) - 3;
                 })
-                .style("font-size", "11px")
+                .style("font-size", fontSize)
                 .text(mtdt.valBGroupLabel)
                 .each(function (d) {
                     d.width = this.getBBox().width;
@@ -655,10 +682,24 @@ module powerbi.visuals {
                     d.height = this.getBBox().height;
                 });
 
-            var option1 = legendTextHeight + 3;
-            var option2 = (frame.circleRadiusPx * 2) + 3;
-            legendProps.height = option1 > option2 ? option1 : option2;
+            offset += (width);
 
+            //now lastly i want to center the legend
+            //work out its total width
+            var totalWidth = offset - initialOffset;
+            //now we are going to translate all the svg elements
+            var startIngPointX = (frame.viewPortWidth / 2) - (totalWidth / 2);
+            var translateX = startIngPointX - initialOffset;
+            //now do the translation
+            groupACircle.attr("cx", groupACirclePosition + translateX);
+            legendProps.valueAGroupLabel.attr("dx", groupALabelPosition + translateX);
+            groupBCircle.attr("cx", groupBCirclePosition + translateX);
+            legendProps.valueBGroupLabel.attr("dx", groupBLabelPosition + translateX);
+
+            var option1 = legendTextHeight + 3;
+            var option2 = (circleRadiusPx * 2) + 3;
+            legendProps.height = option1 > option2 ? option1 : option2;
+            
             return legendProps;     
         }
 
@@ -1039,6 +1080,9 @@ module powerbi.visuals {
         static groupNodeDataLabelDefaultColor = "rgb(119, 119, 119)";
         static groupNodeDataLabelDefaultFontSize = 12;
 
+        static groupNodeLegendDefaultFontSize = 11;
+        static groupNodeLegendDefaultRadius = 8;
+
         static statementSortOrderDefault = "asc";
        
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
@@ -1084,7 +1128,7 @@ module powerbi.visuals {
                     break;
                 case 'groupnodedatalabelproperties':
                     var objectname = 'groupnodedatalabelproperties';
-                    var gapbarproperties: VisualObjectInstance = {
+                    var groupnodedatalabelproperties: VisualObjectInstance = {
                         objectName: objectname,
                         displayName: 'Group Node Data Label',
                         selector: null,
@@ -1094,7 +1138,20 @@ module powerbi.visuals {
                             defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize)
                         }
                     };
-                    enumeration.pushInstance(gapbarproperties);
+                    enumeration.pushInstance(groupnodedatalabelproperties);
+                    break;
+                case 'groupnodelegendproperties':
+                    var objectname = 'groupnodelegendproperties';
+                    var groupnodelegendproperties: VisualObjectInstance = {
+                        objectName: objectname,
+                        displayName: 'Group Legend',
+                        selector: null,
+                        properties: {
+                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.groupNodeLegendDefaultFontSize),
+                            defaultRadius: this.GetProperty(dV, objectname, "defaultRadius", OpinionVis2.groupNodeLegendDefaultRadius)
+                        }
+                    };
+                    enumeration.pushInstance(groupnodelegendproperties);
                     break;
                 case 'gapbarproperties':
                     var objectname = 'gapbarproperties';
