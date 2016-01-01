@@ -333,7 +333,7 @@ module powerbi.visuals.plugins {
     export var opinionVis2: IVisualPlugin = {
         name: 'opinionVis2',
         capabilities: OpinionVis2Capabilities,
-        create: () => new OpinionVis2()
+        create: () => new GapAnalysis()
     };
 
     export var streamGraph: IVisualPlugin = {

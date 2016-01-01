@@ -58,7 +58,6 @@ module powerbi.visuals {
         public valDetailsLabel: string;
         public XpX: number;        
         public IsGroupA: boolean;
-        public IsFilled: boolean;
         public constructor(IsGroupA:boolean, GroupLabel: string, valAInput: number, valAFormatted: string, valADetails:string, valADetailsLabel:string, XpX: number) {
             this.groupLabel = GroupLabel;
             this.val = valAInput;
@@ -67,7 +66,6 @@ module powerbi.visuals {
             this.valFormatted = valAFormatted;
             this.valDetailsLabel = valADetailsLabel;
             this.IsGroupA = IsGroupA;
-            this.IsFilled = this.IsGroupA;
         }
     }
 
@@ -118,7 +116,7 @@ module powerbi.visuals {
         public selectedText: D3.Selection;
     }
 
-    export class OpinionVis2 implements IVisual {
+    export class GapAnalysis implements IVisual {
 
         public static capabilities: VisualCapabilities = {
             dataRoles: [
@@ -388,7 +386,7 @@ module powerbi.visuals {
                 });
                 var multiplier = -1;
                 //we need to look at the sort property to see whether we should do ascending or descending
-                var sortOrder = OpinionVis2.statementSortOrderDefault;
+                var sortOrder = GapAnalysis.statementSortOrderDefault;
                 if (dataView) {
                     var objects = dataView[0].metadata.objects;
                     if (objects) {
@@ -400,7 +398,7 @@ module powerbi.visuals {
                         }
                     }
                 }
-                if (sortOrder === OpinionVis2.statementSortOrderDefault || sortOrder === "ascending") {
+                if (sortOrder === GapAnalysis.statementSortOrderDefault || sortOrder === "ascending") {
                     multiplier = 1;
                 }
                 oldVals = _.sortBy(oldVals, (d) => {
@@ -464,7 +462,7 @@ module powerbi.visuals {
             var maxValStr = this.opinionContainerRefSVG.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.maxVal, this.fStrA))
-                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "pt")
+                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", GapAnalysis.groupNodeDataLabelDefaultFontSize).toString() + "pt")
                 .each(function (d) {
                     fc.maxValWidth = this.getBBox().width;
                     maxValHeight = this.getBBox().height;
@@ -478,7 +476,7 @@ module powerbi.visuals {
             var minValStr = this.opinionContainerRefSVG.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.minVal, this.fStrA))
-                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "pt")
+                .style("font-size", this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", GapAnalysis.groupNodeDataLabelDefaultFontSize).toString() + "pt")
                 .each(function (d) {
                     minValWidth = this.getBBox().width;
                     minValHeight = 0;
@@ -491,14 +489,14 @@ module powerbi.visuals {
             var gapBarUnderTextStr = this.opinionContainerRefSVG.append("text")
                 .data([this.maxVal])
                 .text(valueFormatter.format(this.maxVal, this.fStrA))
-                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "pt")
+                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", GapAnalysis.gapLabelDefaultFontSize).toString() + "pt")
                 .each(function (d) {
                     gapBarUnderTextHeight = this.getBBox().height;
                 });
 
             gapBarUnderTextStr.remove();
 
-            var statementFontSize = this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "pt";
+            var statementFontSize = this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", GapAnalysis.statementDefaultFontSize).toString() + "pt";
             //longest group label text
             var longestSeriesElem: string = _.max(dv.categories[0].values, function (d: string) {
                 return d.length;
@@ -521,7 +519,7 @@ module powerbi.visuals {
             fc.viewPortHeight = heighOfViewPort;
                      
             fc.rowIncrementPx = 30;
-            fc.circleRadiusPx = this.GetProperty(this.dataView[0], "gapbarproperties", "defaultHeight", OpinionVis2.gapBarHeight) / 2;
+            fc.circleRadiusPx = this.GetProperty(this.dataView[0], "gapbarproperties", "defaultHeight", GapAnalysis.gapBarHeight) / 2;
             fc.gapBetweenBarAndUnderneathLabel = 3;
 
             //we need to define the total height of a statmen record
@@ -602,8 +600,8 @@ module powerbi.visuals {
             var LeftCircleX = frame.xAxisScale(valA);
             var RightCircleX = frame.xAxisScale(valB);
 
-            var LeftNode = new OpinionNodeV2(true, valA < valB ? mtdt.valBGroupLabel : mtdt.valAGroupLabel, valA, valAStr, valADetailsStr, valADetailsLabel, LeftCircleX);
-            var RightNode = new OpinionNodeV2(false, valA < valB ? mtdt.valAGroupLabel : mtdt.valBGroupLabel, valB, valBStr, valBDetailsStr, valBDetailsLabel, RightCircleX);
+            var LeftNode = new OpinionNodeV2(true, mtdt.valAGroupLabel, valA, valAStr, valADetailsStr, valADetailsLabel, LeftCircleX);
+            var RightNode = new OpinionNodeV2(false, mtdt.valBGroupLabel, valB, valBStr, valBDetailsStr, valBDetailsLabel, RightCircleX);
                     
             //get the id and the color for the category
             var id = SelectionIdBuilder
@@ -630,8 +628,8 @@ module powerbi.visuals {
             var initialOffset = 15;
             var offset = initialOffset;
 
-            var circleRadiusPx = this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultRadius", OpinionVis2.groupNodeLegendDefaultRadius);
-            var fontSize = (this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultFontSize", OpinionVis2.groupNodeLegendDefaultFontSize)).toString() + "pt";
+            var circleRadiusPx = this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultRadius", GapAnalysis.groupNodeLegendDefaultRadius);
+            var fontSize = (this.GetProperty(this.dataView[0], "groupnodelegendproperties", "defaultFontSize", GapAnalysis.groupNodeLegendDefaultFontSize)).toString() + "pt";
 
             var groupACirclePosition = offset;
             var groupACircle = this.legendAndHoverContainerRefSVG.append("circle")
@@ -722,7 +720,7 @@ module powerbi.visuals {
             hp.selectedText = this.legendAndHoverContainerRefSVG.append("text")
                 .attr("dx", frame.leftTextMarginPx)
                 .attr("dy", frame.outerTopMargin + legendProperties.height + 15 + 3)
-                .text(OpinionVis2.defaultHeaderMoreDetailsLabel)
+                .text(GapAnalysis.defaultHeaderMoreDetailsLabel)
                 .style("font-size", "10pt");
             
             this.wrap(hp.selectedText, frame.viewPortWidth - frame.outerRightMargin, frame.leftTextMarginPx);
@@ -765,19 +763,19 @@ module powerbi.visuals {
                 .attr("cy", CentreYPx)
                 .attr("r", frame.circleRadiusPx)
                 .style("fill", function (d) {
-                    if (Node.IsFilled) {
-                        return mtdt.valueGroupColor;
+                    if (Node.IsGroupA) {
+                        return "white";   
                     }
-                    return "white";
+                    return mtdt.valueGroupColor;
                 })
                 .style("stroke", mtdt.valueGroupColor);
 
             this.circleNodesCollectionD3.push(NodeElem[0][0]);
 
-            var nodeLabelFontColor = this.GetPropertyColor(this.dataView[0], "groupnodedatalabelproperties", "defaultColor", OpinionVis2.groupNodeDataLabelDefaultColor).solid.color;
-            var nodeLabelDefaultFontSize = this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize).toString() + "pt";
+            var nodeLabelFontColor = this.GetPropertyColor(this.dataView[0], "groupnodedatalabelproperties", "defaultColor", GapAnalysis.groupNodeDataLabelDefaultColor).solid.color;
+            var nodeLabelDefaultFontSize = this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "defaultFontSize", GapAnalysis.groupNodeDataLabelDefaultFontSize).toString() + "pt";
 
-            if (this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "showLabels", OpinionVis2.groupNodeDataLabelShow)) {
+            if (this.GetProperty(this.dataView[0], "groupnodedatalabelproperties", "showLabels", GapAnalysis.groupNodeDataLabelShow)) {
                 var LeftDLabel = this.opinionContainerRefSVG.append("text")
                     .data([Node])
                     .attr("dx", CircleXOffset)
@@ -810,12 +808,12 @@ module powerbi.visuals {
             var gap = dd.GroupB.val - dd.GroupA.val;
             var gapStr = valueFormatter.format(gap, this.fStrA);
 
-            var gapBColor = this.GetPropertyColor(this.dataView[0], "gapbarproperties", "defaultColor", OpinionVis2.gapBarDefaultColor).solid.color;
-            if (this.GetProperty(this.dataView[0], "gapbarproperties", "colorByCategory", OpinionVis2.statementColorByStatement) === true) {
+            var gapBColor = this.GetPropertyColor(this.dataView[0], "gapbarproperties", "defaultColor", GapAnalysis.gapBarDefaultColor).solid.color;
+            if (this.GetProperty(this.dataView[0], "gapbarproperties", "colorByCategory", GapAnalysis.statementColorByStatement) === true) {
                 gapBColor = dd.color;
             }
-            var gapBFontOnBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorOnBar", OpinionVis2.gapLabelDefaultColorOnBar).solid.color;
-            var gapBFontBelowBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorBelowBar", OpinionVis2.gapLabelDefaultColorBelowBar).solid.color;
+            var gapBFontOnBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorOnBar", GapAnalysis.gapLabelDefaultColorOnBar).solid.color;
+            var gapBFontBelowBar = this.GetPropertyColor(this.dataView[0], "gaplabelproperties", "defaultColorBelowBar", GapAnalysis.gapLabelDefaultColorBelowBar).solid.color;
 
             var rect = this.opinionContainerRefSVG.append("rect")
                 .data([dd])
@@ -834,7 +832,7 @@ module powerbi.visuals {
                 .attr("dx", midpointPx)
                 .attr("dy", CentreYPx)
                 .text(gapStr)
-                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize).toString() + "pt")
+                .style("font-size", this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultFontSize", GapAnalysis.gapLabelDefaultFontSize).toString() + "pt")
                 .style("font-family", "wf_standard-font,helvetica,arial,sans-serif")
                 .each(function (d) {
                     d.width = this.getBBox().width;
@@ -849,7 +847,7 @@ module powerbi.visuals {
             //we need to push it underneath the rectangle
             var rectWidthWithRadius = rectWidth - (frame.circleRadiusPx * 2);
 
-            var defaultPosChosen = this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultPosition", OpinionVis2.gapLabelDefaultPosition);
+            var defaultPosChosen = this.GetProperty(this.dataView[0], "gaplabelproperties", "defaultPosition", GapAnalysis.gapLabelDefaultPosition);
 
             rectDLabel.attr("dy", function (d) {
                 var rectStart = (CentreYPx - frame.circleRadiusPx);
@@ -875,8 +873,8 @@ module powerbi.visuals {
                 .data([dd])
                 .attr("dx", frame.leftTextMarginPx)
                 .attr("dy", YPosition)
-                .style("fill", this.GetPropertyColor(this.dataView[0], "statementproperties", "defaultFontColor", OpinionVis2.statementDefaultFontColor).solid.color)
-                .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", OpinionVis2.statementDefaultFontSize).toString() + "pt")
+                .style("fill", this.GetPropertyColor(this.dataView[0], "statementproperties", "defaultFontColor", GapAnalysis.statementDefaultFontColor).solid.color)
+                .style("font-size", this.GetProperty(this.dataView[0], "statementproperties", "defaultFontSize", GapAnalysis.statementDefaultFontSize).toString() + "pt")
                 .style("font-family", "'Segoe UI',wf_segoe-ui_normal,helvetica,arial,sans-serif")
                 .text(dd.statement)
                 .each(function (d) {
@@ -963,8 +961,8 @@ module powerbi.visuals {
             //our tool tip content and animations triggered
             d3.selectAll(this.circleNodesCollectionD3).on("mouseover", function () {
                 return self.tooltip.style("visibility", "visible");
-            }).on("mousemove", function (d) {
-                if (mtdt.valAGroupLabel === d.groupLabel) {
+            }).on("mousemove", function (d: OpinionNodeV2) {
+                if (d.IsGroupA) {
                     lgProps.valueAGroupLabel.style("text-decoration", "underline");
                     lgProps.valueAGroupLabel.style("font-weight", "bold");
                 } else {
@@ -972,7 +970,7 @@ module powerbi.visuals {
                     lgProps.valueBGroupLabel.style("font-weight", "bold");
                 }
                 var strToDisplay = valMeasureName + ": " + d.valFormatted;
-                if (d.valDetails !== null) {
+                if (d.valDetails !== null && d.valDetailsLabel !== null) {
                     strToDisplay += " | " + d.valDetailsLabel + ": " + d.valDetails;
                 }
                 hp.selectedText.text(strToDisplay).call(self.wrap, frame.viewPortWidth - frame.outerRightMargin, frame.leftTextMarginPx);
@@ -982,7 +980,7 @@ module powerbi.visuals {
                 lgProps.valueBGroupLabel.style("text-decoration", "");
                 lgProps.valueAGroupLabel.style("font-weight", "");
                 lgProps.valueBGroupLabel.style("font-weight", "");
-                hp.selectedText.text(OpinionVis2.defaultHeaderMoreDetailsLabel).call(self.wrap, frame.viewPortWidth - frame.outerRightMargin, frame.leftTextMarginPx);
+                hp.selectedText.text(GapAnalysis.defaultHeaderMoreDetailsLabel).call(self.wrap, frame.viewPortWidth - frame.outerRightMargin, frame.leftTextMarginPx);
                 return self.tooltip.style("visibility", "hidden");
             });
         }
@@ -1029,7 +1027,7 @@ module powerbi.visuals {
         public update(options: VisualUpdateOptions) {
             var dataView = this.dataView = options.dataViews;
             var viewport = options.viewport;
-            var dataPoints = OpinionVis2.converter(dataView);  
+            var dataPoints = GapAnalysis.converter(dataView);  
 
             //if they've only put 1 of the fields in
             //don't render the visual
@@ -1049,7 +1047,7 @@ module powerbi.visuals {
                 //now setup the frame to draw in
                 var frame = this.deriveWindowToDrawIn(dataPoints, viewport.height, viewport.width);    
 
-                var valueGroupColor = this.GetPropertyColor(this.dataView[0], "groupnodeproperties", "defaultColor", OpinionVis2.groupNodeDefaultColor).solid.color;
+                var valueGroupColor = this.GetPropertyColor(this.dataView[0], "groupnodeproperties", "defaultColor", GapAnalysis.groupNodeDefaultColor).solid.color;
                 var mtdt = new OpinionVisualMetaDataV2(dataPoints.values[this.valAIndex].source.groupName, dataPoints.values[this.valBIndex].source.groupName, valueGroupColor);
 
                 var legendArea = this.drawLegend(frame, mtdt);                                
@@ -1145,8 +1143,8 @@ module powerbi.visuals {
                         displayName: 'Statement',
                         selector: null,
                         properties: {
-                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.statementDefaultFontSize),
-                            defaultFontColor: this.GetPropertyColor(dV, objectname, "defaultFontColor", OpinionVis2.statementDefaultFontColor)
+                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", GapAnalysis.statementDefaultFontSize),
+                            defaultFontColor: this.GetPropertyColor(dV, objectname, "defaultFontColor", GapAnalysis.statementDefaultFontColor)
                         }
                     };
                     enumeration.pushInstance(statementproperties);
@@ -1158,7 +1156,7 @@ module powerbi.visuals {
                         displayName: 'Statement sort',
                         selector: null,
                         properties: {
-                            statementSortOrderDefault: this.GetProperty(dV, objectname, "statementSortOrderDefault", OpinionVis2.statementSortOrderDefault)
+                            statementSortOrderDefault: this.GetProperty(dV, objectname, "statementSortOrderDefault", GapAnalysis.statementSortOrderDefault)
                         }
                     };
                     enumeration.pushInstance(statementproperties);
@@ -1170,7 +1168,7 @@ module powerbi.visuals {
                         displayName: 'Group Node',
                         selector: null,
                         properties: {
-                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.groupNodeDefaultColor)
+                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", GapAnalysis.groupNodeDefaultColor)
                         }
                     };
                     enumeration.pushInstance(groupnodeproperties);
@@ -1182,9 +1180,9 @@ module powerbi.visuals {
                         displayName: 'Group Node Data Label',
                         selector: null,
                         properties: {
-                            showLabels: this.GetProperty(dV, objectname, "showLabels", OpinionVis2.groupNodeDataLabelShow),
-                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.groupNodeDataLabelDefaultColor),
-                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.groupNodeDataLabelDefaultFontSize)
+                            showLabels: this.GetProperty(dV, objectname, "showLabels", GapAnalysis.groupNodeDataLabelShow),
+                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", GapAnalysis.groupNodeDataLabelDefaultColor),
+                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", GapAnalysis.groupNodeDataLabelDefaultFontSize)
                         }
                     };
                     enumeration.pushInstance(groupnodedatalabelproperties);
@@ -1196,8 +1194,8 @@ module powerbi.visuals {
                         displayName: 'Group Legend',
                         selector: null,
                         properties: {
-                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.groupNodeLegendDefaultFontSize),
-                            defaultRadius: this.GetProperty(dV, objectname, "defaultRadius", OpinionVis2.groupNodeLegendDefaultRadius)
+                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", GapAnalysis.groupNodeLegendDefaultFontSize),
+                            defaultRadius: this.GetProperty(dV, objectname, "defaultRadius", GapAnalysis.groupNodeLegendDefaultRadius)
                         }
                     };
                     enumeration.pushInstance(groupnodelegendproperties);
@@ -1209,9 +1207,9 @@ module powerbi.visuals {
                         displayName: 'Gap Bar',
                         selector: null,
                         properties: {
-                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", OpinionVis2.gapBarDefaultColor),
-                            defaultHeight: this.GetProperty(dV, objectname, "defaultHeight", OpinionVis2.gapBarHeight),
-                            colorByCategory: this.GetProperty(dV, objectname, "colorByCategory", OpinionVis2.statementColorByStatement)
+                            defaultColor: this.GetPropertyColor(dV, objectname, "defaultColor", GapAnalysis.gapBarDefaultColor),
+                            defaultHeight: this.GetProperty(dV, objectname, "defaultHeight", GapAnalysis.gapBarHeight),
+                            colorByCategory: this.GetProperty(dV, objectname, "colorByCategory", GapAnalysis.statementColorByStatement)
                         }
                     };
                     enumeration.pushInstance(gapbarproperties);
@@ -1235,10 +1233,10 @@ module powerbi.visuals {
                         displayName: 'Gap Label',
                         selector: null,
                         properties: {
-                            defaultPosition: this.GetProperty(dV, objectname, "defaultPosition", OpinionVis2.gapLabelDefaultPosition),
-                            defaultColorOnBar: this.GetPropertyColor(dV, objectname, "defaultColorOnBar", OpinionVis2.gapLabelDefaultColorOnBar),
-                            defaultColorBelowBar: this.GetPropertyColor(dV, objectname, "defaultColorBelowBar", OpinionVis2.gapLabelDefaultColorBelowBar),
-                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", OpinionVis2.gapLabelDefaultFontSize)
+                            defaultPosition: this.GetProperty(dV, objectname, "defaultPosition", GapAnalysis.gapLabelDefaultPosition),
+                            defaultColorOnBar: this.GetPropertyColor(dV, objectname, "defaultColorOnBar", GapAnalysis.gapLabelDefaultColorOnBar),
+                            defaultColorBelowBar: this.GetPropertyColor(dV, objectname, "defaultColorBelowBar", GapAnalysis.gapLabelDefaultColorBelowBar),
+                            defaultFontSize: this.GetProperty(dV, objectname, "defaultFontSize", GapAnalysis.gapLabelDefaultFontSize)
                         }
                     };
                     enumeration.pushInstance(gaplabelproperties);
