@@ -2,7 +2,7 @@
  *  Power BI Visualizations
  *
  *  Copyright (c) Microsoft Corporation
- *  All rights reserved. 
+ *  All rights reserved.
  *  MIT License
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -11,20 +11,18 @@
  *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *  copies of the Software, and to permit persons to whom the Software is
  *  furnished to do so, subject to the following conditions:
- *   
- *  The above copyright notice and this permission notice shall be included in 
+ *
+ *  The above copyright notice and this permission notice shall be included in
  *  all copies or substantial portions of the Software.
- *   
- *  THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
- *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
- *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
- *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ *
+ *  THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-
-/// <reference path="../../_references.ts"/>
 
 module powerbi.visuals.samples {
     import ValueFormatter = powerbi.visuals.valueFormatter;
@@ -141,6 +139,12 @@ module powerbi.visuals.samples {
         private legend: ILegend;
 
         public converter(dataView: DataView, colors: IDataColorPalette): StreamData {
+            if (!dataView ||
+                !dataView.categorical ||
+                !dataView.categorical.values ||
+                !dataView.categorical.categories) {
+                    return null;
+            }                
             var catDv: DataViewCategorical = dataView.categorical,
                 values: DataViewValueColumns = catDv.values,
                 dataPoints: StreamDataPoint[][] = [],
@@ -273,23 +277,27 @@ module powerbi.visuals.samples {
                 return;
             };
 
-            this.viewport = options.viewport;
+            this.viewport = {
+				width: Math.max(0, options.viewport.width),
+				height: Math.max(0, options.viewport.height)
+			};
 
             var duration: number = options.suppressAnimations ? 0 : 250,
                 dataView: DataView = this.dataView = options.dataViews[0],
-                data: StreamData = this.converter(dataView, this.colors),
-                dataPoints: StreamDataPoint[][] = data.dataPoints;
+                data: StreamData = this.converter(dataView, this.colors);            
 
-            if (dataPoints.length === 0) {
+            if (!data || !data.dataPoints || !data.dataPoints.length) {
                 this.svg.selectAll(StreamGraph.Layer.selector).remove();
 
                 return;
             }
+            
+            var dataPoints: StreamDataPoint[][] = data.dataPoints;
 
             this.legend.changeOrientation(LegendPosition.Top);
             this.legend.drawLegend(data.legendData, this.viewport);
 
-            var height: number = options.viewport.height - this.margin.top;
+            var height: number = Math.max(0, options.viewport.height - this.margin.top);
 
             this.svg.attr({
                 'width': this.viewport.width,

@@ -24,11 +24,12 @@
  *  THE SOFTWARE.
  */
 
-/// <reference path="../../_references.ts"/>
+// -/// <reference path="../../_references.ts"/>
 
 module powerbi.visuals.samples {
     import SelectionManager = utility.SelectionManager;
     import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
+    import getAnimationDuration = AnimatorCommon.GetAnimationDuration;
 
     export interface DotPlotConstructorOptions {
         animator?: IGenericAnimator;
@@ -145,6 +146,10 @@ module powerbi.visuals.samples {
         private static DefaultStrokeWidth: number = 1;
         private static FrequencyText: string = "Frequency";
 
+        private durationAnimations: number = 200;
+        private MinOpacity: number = 0.3;
+        private MaxOpacity: number = 1;
+
         private static round10(value: number, digits: number = 2) {
             var scale = Math.pow(10, digits);
             return (Math.round(scale * value) / scale);
@@ -179,6 +184,7 @@ module powerbi.visuals.samples {
 
             var catDv: DataViewCategorical = dataView.categorical;
             var series: DataViewValueColumns = catDv.values;
+            var categoryColumn = catDv.categories[0];
             var category: any[] = catDv.categories[0].values;
 
             if (!series[0].source.type.integer) {
@@ -228,16 +234,16 @@ module powerbi.visuals.samples {
                 for (var k = 0, kLen = data.length; k < kLen; k++) {
                     var y = dotsScale(data[k].value);
 
-                    for (var level = 0; level < y; level++) {
-                        var id = SelectionIdBuilder
-                            .builder()
-                            .withSeries(dataView.categorical.values, dataView.categorical.values[i])
+                    var categorySelectionId = SelectionIdBuilder.builder()
+                            .withCategory(categoryColumn, k)
                             .createSelectionId();
+
+                    for (var level = 0; level < y; level++) {                        
                         dataPoints.push({
                             x: data[k].key,
                             y: level,
                             color: color,
-                            identity: id,
+                            identity: categorySelectionId,
                             tooltipInfo: DotPlot.getTooltipData(data[k].value)
                         });
                     }
@@ -305,6 +311,11 @@ module powerbi.visuals.samples {
 
         public update(options: VisualUpdateOptions): void {
             if (!options.dataViews || !options.dataViews[0]) return;
+
+            this.durationAnimations = getAnimationDuration(
+                this.animator,
+                options.suppressAnimations);
+
             var dataView = this.dataView = options.dataViews[0];
             var viewport = this.viewport = options.viewport;
             this.svg
@@ -364,7 +375,44 @@ module powerbi.visuals.samples {
 
             this.renderTooltip(selection);
 
+            this.setSelectHandler(selection);
+
             selection.exit().remove();
+        }
+
+        private setSelectHandler(dotSelection: D3.UpdateSelection): void {
+            this.setSelection(dotSelection);
+
+            dotSelection.on("click", (data: DotPlotDatapoint) => {
+                this.selectionManager.select(data.identity, d3.event.ctrlKey).then((selectionIds: SelectionId[]) => {
+                    this.setSelection(dotSelection, selectionIds);
+                });
+
+                d3.event.stopPropagation();
+            });
+
+            this.svg.on("click", () => {
+                this.selectionManager.clear();
+                this.setSelection(dotSelection);
+            });
+        }
+
+        private setSelection(selection: D3.UpdateSelection, selectionIds?: SelectionId[]): void {
+            selection.transition()
+                .duration(this.durationAnimations)
+                .style("fill-opacity", this.MaxOpacity);
+
+            if (!selectionIds || !selectionIds.length) {
+                return;
+            }
+
+            selection
+                .filter((dotSelectionData: DotPlotDatapoint) => {
+                    return !selectionIds.some((selectionId: SelectionId) => {return dotSelectionData.identity === selectionId;});
+                })
+                .transition()
+                .duration(this.durationAnimations)
+                .style("fill-opacity", this.MinOpacity);
         }
 
         private renderTooltip(selection: D3.UpdateSelection): void {

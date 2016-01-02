@@ -118,6 +118,17 @@ module powerbi.visuals.samples {
         private selectionManager: SelectionManager;
         private dataView: DataView;
 
+        private static CenterTextFontHeightCoefficient = 0.4;
+        private static CenterTextFontWidthCoefficient = 1.9;
+        private static GetCenterTextProperties(fontSize: number, text?: string): TextProperties {
+            return {
+                fontFamily: 'Segoe UI, wf_segoe-ui_normal, helvetica, arial, sans-serif',
+                fontWeight: 'bold',
+                fontSize: jsCommon.PixelConverter.toString(fontSize),
+                text: text
+            };
+        }
+
         public static converter(dataView: DataView, colors: IDataColorPalette): AsterDatapoint[] {
             if (!dataView.categorical
                 || !dataView.categorical.categories
@@ -134,8 +145,9 @@ module powerbi.visuals.samples {
 
             var formatStringProp = <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' };
             var categorySourceFormatString = valueFormatter.getFormatString(cat.source, formatStringProp);
+            var minValue: number = Math.min(0, d3.min(values[0].values));
 
-            for (var i = 0, len = catValues.length; i < len; i++) {
+            for (var i = 0, length = Math.min(colors.getAllColors().length, catValues.length); i < length; i++) {
                 var formattedCategoryValue = valueFormatter.format(catValues[i], categorySourceFormatString);
 
                 var tooltipInfo: TooltipDataItem[] = TooltipBuilder.createTooltipInfo(
@@ -162,8 +174,8 @@ module powerbi.visuals.samples {
                 }
 
                 dataPoints.push({
-                    sliceHeight: values[0].values[i],
-                    sliceWidth: values.length > 1 ? values[1].values[i] : 1,
+                    sliceHeight: values[0].values[i] - minValue,
+                    sliceWidth: Math.max(0, values.length > 1 ? values[1].values[i] : 1),
                     label: catValues[i],
                     color: colors.getColorByIndex(i).value,
                     selector: SelectionId.createWithId(cat.identity[i]),
@@ -218,11 +230,11 @@ module powerbi.visuals.samples {
 
             var pie = d3.layout.pie()
                 .sort(null)
-                .value(d => (d && d.sliceWidth ? d.sliceWidth : 1) / totalWeight);
+                .value(d => (d && !isNaN(d.sliceWidth) ? d.sliceWidth : 0) / totalWeight);
 
             var arc = d3.svg.arc()
                 .innerRadius(innerRadius)
-                .outerRadius(d => (radius - innerRadius) * (d && d.data && d.data.sliceHeight ? d.data.sliceHeight : 1) / maxScore + innerRadius + 1);
+                .outerRadius(d => (radius - innerRadius) * (d && d.data && !isNaN(d.data.sliceHeight) ? d.data.sliceHeight : 1) / maxScore + innerRadius + 1);
 
             var selectionManager = this.selectionManager;
 
@@ -248,7 +260,16 @@ module powerbi.visuals.samples {
                 })
                 .attr('fill', d => d.data.color)
                 .transition().duration(duration)
-                .attr('d', arc);
+                .attrTween('d', function (data) {
+                    if (!this.oldData) {
+                        this.oldData = data;
+                        return () => arc(data);
+                    }
+
+                    var interpolation = d3.interpolate(this.oldData, data);
+                    this.oldData = interpolation(0);
+                    return (x) => arc(interpolation(x));
+                });
 
             selection.exit().remove();
 
@@ -289,20 +310,22 @@ module powerbi.visuals.samples {
             return '';
         }
         private drawCenterText(innerRadius: number) {
-            var text = this.getCenterText(this.dataView);
-
+            var centerTextProperties: TextProperties
+                = AsterPlot.GetCenterTextProperties(innerRadius * AsterPlot.CenterTextFontHeightCoefficient, this.getCenterText(this.dataView));
             this.centerText
                 .style({
                     'line-height': 1,
-                    'font-weight': 'bold',
-                    'font-size': innerRadius * 0.4 + 'px',
+                    'font-weight': centerTextProperties.fontWeight,
+                    'font-size': centerTextProperties.fontSize,
                     'fill': this.getLabelFill(this.dataView).solid.color
                 })
                 .attr({
                     'dy': '0.35em',
                     'text-anchor': 'middle'
                 })
-                .text(text);
+                .text(TextMeasurementService.getTailoredTextOrDefault(
+                    centerTextProperties,
+                    innerRadius * AsterPlot.CenterTextFontWidthCoefficient));
         }
 
         private getShowOuterline(dataView: DataView): boolean {

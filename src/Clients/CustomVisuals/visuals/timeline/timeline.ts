@@ -23,7 +23,6 @@
 *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 *  THE SOFTWARE.
 */
-
 module powerbi.visuals.samples {
     import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
 
@@ -41,6 +40,11 @@ module powerbi.visuals.samples {
         textYPosition: number;
         cellColor: Fill;
         cellColorOut: Fill;
+        isInited: boolean;
+        startXpoint: number;
+        startYpoint: number;
+        elementWidth: number;
+        element: any;
     }
 
     export interface TimelineData {
@@ -58,6 +62,9 @@ module powerbi.visuals.samples {
         selectionEndDate?: Date;
         cursorDataPoints: CursorDatapoint[];
         granuralityChanged: boolean;
+        periodChanged: boolean;
+        scrollMovement: boolean;
+        dafaultSelection: string;
     }
 
     export interface CursorDatapoint {
@@ -75,6 +82,18 @@ module powerbi.visuals.samples {
         fillPart: number;
         dx: number;
         dx2: number;
+    }
+
+    export class EnumPeriods {
+        public static getPerieds() {
+            var IEnumType = createEnumType([
+                { value: 'day', displayName: 'Day' },
+                { value: 'month', displayName: 'Month' },
+                { value: 'quarter', displayName: 'Quarter' },
+                { value: 'year', displayName: 'Year' },
+            ]);
+            return IEnumType;
+        }
     }
 
     export class Timeline implements IVisual {
@@ -99,6 +118,15 @@ module powerbi.visuals.samples {
                 }
             }],
             objects: {
+                periodSwitcher: {
+                    displayName: 'Period',
+                    properties: {
+                        periodSwitcherType: {
+                            displayName: 'Granurality',
+                            type: { enumeration: EnumPeriods.getPerieds() }
+                        },
+                    }
+                },
                 general: {
                     displayName: data.createDisplayNameGetter('Visual_General'),
                     properties: {
@@ -133,15 +161,6 @@ module powerbi.visuals.samples {
                         fontColor: {
                             displayName: data.createDisplayNameGetter('Visual_FontColor'),
                             type: { fill: { solid: { color: true } } }
-                        },
-                    }
-                },
-                granularity: {
-                    displayName: 'Granularity',
-                    properties: {
-                        types: {
-                            displayName: 'Type',
-                            type: { text: true }
                         },
                     }
                 },
@@ -251,8 +270,8 @@ module powerbi.visuals.samples {
         public init(options: VisualInitOptions): void {
             this.hostServices = options.host;
             var dafaultSelection = "month";
-            var dafaultSelectionIndex = 2;
-            this.timelineData = { granuralityChanged: false, elementsCount: 0, granularity: dafaultSelection, timelineDatapoints: [], cursorDataPoints: new Array<CursorDatapoint>() };
+            var dafaultSelectionIndex = this.selectorNames.indexOf(dafaultSelection);
+            this.timelineData = { granuralityChanged: false, periodChanged: false, scrollMovement: false, dafaultSelection: dafaultSelection, elementsCount: 0, granularity: dafaultSelection, timelineDatapoints: [], cursorDataPoints: new Array<CursorDatapoint>() };
             this.timelineData.cursorDataPoints.push({ dx: 0, cursorIndex: 0 });
             this.timelineData.cursorDataPoints.push({ dx: 0, cursorIndex: 1 });
             var msie = Timeline.isIE();
@@ -270,7 +289,12 @@ module powerbi.visuals.samples {
                 textYPosition: 0,
                 cellsYPosition: 0,
                 cellColor: { solid: { color: '#ADD8E6' } },
-                cellColorOut: { solid: { color: '#A4C7F2' } }
+                cellColorOut: { solid: { color: '#A4C7F2' } },
+                isInited: false,
+                startXpoint: 10,
+                startYpoint: 20,
+                elementWidth: 30,
+                element: element,
             };
 
             this.timelineFormat.textYPosition = this.timelineFormat.topMargin * 2 + this.timelineFormat.timeRangeSize;
@@ -284,8 +308,9 @@ module powerbi.visuals.samples {
             this.timelineFormat.cellsYPosition = this.timelineFormat.topMargin * 3 + this.timelineFormat.textSize * 2 + this.timelineFormat.timeRangeSize;
 
             var timelineContainer = d3.select(element.get(0)).append('div').classed(Timeline.TimelineContainer.class, true).style({
+                'position': 'relative',
                 'overflow-y': 'auto',
-                'position': 'relative'
+                'margin-top': '45px'
             });
             var header = timelineContainer.append('div').classed(Timeline.Header.class, true);
             this.header = header;
@@ -301,7 +326,7 @@ module powerbi.visuals.samples {
                 .classed(Timeline.Clear.class, true)
                 .attr('title', 'clear')
                 .style({
-                    'top': '8px',
+                    'top': '30px',
                     'right': '5px',
                     'position': 'absolute',
                     'background-image': "url(\"https://raw.githubusercontent.com/Microsoft/PowerBI-visuals/master/src/Clients/Visuals/images/sprite-src/slicer_reset.png\")",
@@ -318,9 +343,17 @@ module powerbi.visuals.samples {
                                 properties: {
                                     "filter": undefined
                                 }
+                            },
+                            <VisualObjectInstance>{
+                                objectName: "legend",
+                                selector: undefined,
+                                properties: {
+                                    "position": undefined
+                                }
                             }
                         ]
                     };
+
                     this.hostServices.persistProperties(objects);
                     this.hostServices.onSelect({ data: [] });
                 });
@@ -347,15 +380,15 @@ module powerbi.visuals.samples {
                 'position': 'absolute',
                 'width': '120px',
                 'height': '45px',
-                'top': '0px',
+                'top': '20px',
                 'right': '17px'
             });
             var slicerSVG = slicerSelectorDiv.append('svg').attr('width', 120).attr('height', 45);
             this.selectorContainer = slicerSVG.append('g');
 
-            var startXpoint = 10;
-            var startYpoint = 20;
-            var elementWidth = 30;
+            var startXpoint = this.timelineFormat.startXpoint;
+            var startYpoint = this.timelineFormat.startYpoint;
+            var elementWidth = this.timelineFormat.elementWidth;
 
             var fillRect = this.selectorContainer.append('rect');
             var selectorPeriods = this.selector;
@@ -406,11 +439,26 @@ module powerbi.visuals.samples {
                 .attr('height', 23)
                 .attr('fill', 'transparent')
                 .style({ 'cursor': 'pointer' })
-                //.style({"stroke":'#aaa', 'stroke-width':'2'})
                 .on('click', (d) => {
-                    this.selectPriod(d, startXpoint + selectorPeriods.indexOf(d) * elementWidth);
+                    this.timelineData.periodChanged = true;
+                    this.selectPeriod(this.selector.indexOf(d));
+                    this.setSelection(this.timelineData);
                 });
-
+            selRects.on("mouseover", (d) => {
+                if (dragPeriodRectState) {
+                    this.timelineData.periodChanged = true;
+                    this.selectPeriod(this.selector.indexOf(d));
+                }
+            });
+            var dragPeriodRectState = false;
+            var dragPeriodRect = d3.behavior.drag()
+                .on("dragstart", function(e, b) {
+                    dragPeriodRectState = true;
+                    d3.event.sourceEvent.stopPropagation();
+                })
+                .on("dragend", function(e, b) {
+                    dragPeriodRectState = false;
+                });
             this.periodSlicerRect = this.selectorContainer
                 .append('rect')
                 .attr('x', startXpoint - 6 + dafaultSelectionIndex * elementWidth)
@@ -420,32 +468,53 @@ module powerbi.visuals.samples {
                 .attr('height', 23)
                 .style({ "stroke": '#aaa', 'stroke-width': '2' })
                 .attr("fill", "transparent");
+            this.periodSlicerRect.call(dragPeriodRect);
         }
-
-        public selectPriod(periodName, dx) {
-            this.periodSlicerRect.transition()
-                .attr("x", dx - 7);
-            var longName = this.selectorNames[this.selector.indexOf(periodName)];
+        public redrawPeriod(periodNameIndex) {
+            var dx = this.timelineFormat.startXpoint + periodNameIndex * this.timelineFormat.elementWidth;
+            this.periodSlicerRect.transition().attr("x", dx - 7);
+            var longName = this.selectorNames[periodNameIndex];
             this.selectedText.text(longName);
             this.timelineData.granularity = longName;
             this.timelineData.granuralityChanged = true;
+            this.timelineData.scrollMovement = false;
+        }
+
+        public selectPeriod(periodNameIndex) {
+            this.redrawPeriod(periodNameIndex);
             this.update(this.options);
         }
 
-        public static converter(timelineData: TimelineData, timelineFormat: TimelineFormat): void {
-            var showHeader = false,
-                dataView = timelineData.dataView;
+        private static isDataNotMatch(dataView): boolean {
+            if (dataView.categorical.categories.length <= 0) return true;
+            if (dataView.categorical.categories[0] === undefined) return true;
+            if (dataView.categorical.categories[0].identityFields === undefined) return true;
+            if (dataView.categorical.categories[0].identityFields.length <= 0) return true;
+            return false;
+        }
 
-            if (!dataView ||
-                !dataView.metadata ||
-                !dataView.categorical ||
-                !dataView.categorical.categories ||
-                dataView.categorical.categories.length <= 0 ||
-                dataView.categorical.categories[0] === undefined ||
-                dataView.categorical.categories[0].identityFields === undefined ||
-                dataView.categorical.categories[0].identityFields.length <= 0) {
+        private static printDataNotMatchText(element): void {
+            d3.select(element.get(0))
+                .append('div').style({
+                    'position': 'absolute',
+                    'width': '200px',
+                    'height': '45px',
+                    'top': '0px',
+                    'right': '50%',
+                    'margin-right': '-100px',
+                    'color': '#ff0000'
+                }).append("text").text('data not match.');
+        }
+
+        public static converter(timelineData: TimelineData, timelineFormat: TimelineFormat): void {
+            var showHeader = false;
+            var dataView = timelineData.dataView;
+
+            if (!dataView.categorical
+                || !dataView.metadata
+                || !dataView.categorical.categories
+                || dataView.categorical.categories.length !== 1)
                 return;
-            }
 
             if (dataView && dataView.metadata && dataView.metadata.objects) {
                 var header = dataView.metadata.objects['header'];
@@ -453,9 +522,13 @@ module powerbi.visuals.samples {
                     showHeader = <boolean>header['show'];
                 }
             }
-
             timelineFormat.showHeader = showHeader;
             timelineData.categorySourceName = dataView.categorical.categories[0].source.displayName;
+
+            if (this.isDataNotMatch(dataView)) {
+                this.printDataNotMatchText(timelineFormat.element);
+                return;
+            }
 
             timelineData.columnIdentity = dataView.categorical.categories[0].identityFields[0];
             var timesLine = timelineData.dataView.categorical.categories[0].values;
@@ -470,7 +543,8 @@ module powerbi.visuals.samples {
             timelineData.selectionEndDate = new Date(timesLine[timesLine.length - 1].getTime());
             //timelineData.selectionEndDate.setHours(23,59,59,999);
             var item: any = dataView.metadata.objects;
-            if (dataView.metadata.objects && item.general && item.general.filter
+
+            if (dataView && dataView.metadata && dataView.metadata.objects && item.general && item.general.filter
                 && item.general.filter.whereItems && item.general.filter.whereItems[0]
                 && item.general.filter.whereItems && item.general.filter.whereItems[0].condition) {
                 var filterStartDate = item.general.filter.whereItems[0].condition.lower.value;
@@ -482,7 +556,6 @@ module powerbi.visuals.samples {
             //    timelineData.selectionStartDate = new Date(timelineData.startDate.getTime());
             // if(timelineData.endDate < timelineData.selectionEndDate)
             //    timelineData.selectionEndDate = timelineData.endDate;
-
             // timelineData.selectionEndDate.setHours(23,59,59,999);
 
             var rangeTextColor: Fill = { solid: { color: '#333333' } };
@@ -521,19 +594,28 @@ module powerbi.visuals.samples {
                     break;
                 case "quarter":
                     timelineData.elementsCount = (timelineData.endDate.getFullYear() - timelineData.startDate.getFullYear()) * 12;
-                    timelineData.elementsCount += timelineData.endDate.getMonth() - timelineData.startDate.getMonth();
+                    timelineData.elementsCount += (timelineData.endDate.getMonth() - timelineData.startDate.getMonth()) + 1;
                     timelineData.elementsCount = timelineData.elementsCount <= 0 ? 0 : timelineData.elementsCount;
-                    timelineData.elementsCount = Math.ceil(timelineData.elementsCount / 3);
+                    timelineData.elementsCount = Math.ceil(timelineData.elementsCount / 3) - 1;
                     break;
                 case "year":
                     timelineData.elementsCount = timelineData.endDate.getFullYear() - timelineData.startDate.getFullYear();
                     break;
             }
+
             timelineData.timelineDatapoints = [];
+
             var realIndex = 0;
             for (var i = 0, len = timelineData.elementsCount; i <= len; i++) {
                 var dateStart: Date;
                 var dateEnd: Date;
+                var strHrs = timelineData.startDate.getHours(),
+                    strMin = timelineData.startDate.getMinutes(),
+                    strSec = timelineData.startDate.getSeconds();
+                var endHrs = timelineData.endDate.getHours(),
+                    endMin = timelineData.endDate.getMinutes(),
+                    endSec = timelineData.endDate.getSeconds();
+
                 switch (timelineData.granularity) {
                     case "day":
                         dateStart = new Date(timelineData.startDate.getTime());
@@ -543,25 +625,23 @@ module powerbi.visuals.samples {
                     case "month":
                         var y = timelineData.startDate.getFullYear();
                         var m = timelineData.startDate.getMonth();
-                        dateStart = new Date(y, m + i, 1);
-                        dateEnd = new Date(y, m + i + 1, 0);
+                        dateStart = new Date(y, m + i, 1, strHrs, strMin, strSec);
+                        dateEnd = new Date(y, m + i + 1, 0, endHrs, endMin, endSec);
                         break;
                     case "quarter":
                         var y = timelineData.startDate.getFullYear();
                         var m = timelineData.startDate.getMonth();
                         var q = Math.floor(m / 3);
                         m = q * 3;
-                        dateStart = new Date(y, m + (i * 3), 1);
-                        dateEnd = new Date(y, m + 3 + (i * 3), 0);
+                        dateStart = new Date(y, m + (i * 3), 1, strHrs, strMin, strSec);
+                        dateEnd = new Date(y, m + 3 + (i * 3), 0, endHrs, endMin, endSec);
                         break;
                     case "year":
                         var y = timelineData.startDate.getFullYear() + i;
-                        dateStart = new Date(y, 0, 1);
-                        dateEnd = new Date(y, 12, 0);
+                        dateStart = new Date(y, 0, 1, strHrs, strMin, strSec);
+                        dateEnd = new Date(y, 12, 0, endHrs, endMin, endSec);
                         break;
                 }
-                // dateEnd.setHours(23,59,59,999);
-                var partValue = 0;
                 var dX = timelineFormat.cellWidth * i;
                 var dX2 = timelineFormat.cellWidth * (i + 1);
 
@@ -571,76 +651,115 @@ module powerbi.visuals.samples {
                     if (dateEnd.getTime() === timelineData.selectionEndDate.getTime())
                         timelineData.cursorDataPoints[1].dx = dX2;
                 }
-                var isPartial = false;
-                var partSized = 0;
-                if (dateStart.getTime() < timelineData.selectionStartDate.getTime() && timelineData.selectionStartDate.getTime() <= dateEnd.getTime()) {
-                    partValue = (dateEnd.getTime() - timelineData.selectionStartDate.getTime()) / (dateEnd.getTime() - dateStart.getTime()); // the part
-                    isPartial = true;
-                    var partValueStart = 1 - partValue;
-                    var selPrevDate = new Date(timelineData.selectionStartDate.getTime() - 24 * 60 * 60 * 1000);//prev day
+                var dateStartTime: number = dateStart.getTime(),
+                    dateEndTime: number = dateEnd.getTime(),
+                    dateStartSelectTime: number = timelineData.selectionStartDate.getTime(),
+                    dateEndSelectTime: number = timelineData.selectionEndDate.getTime(),
+                    cellWidth: number = timelineFormat.cellWidth;
+
+                var addBlock = function(isAdd, block, i, realIndex, dateStart, dateEnd) {
                     var datapoint: TimelineDatapoint = {
-                        isAdditional: true,
+                        isAdditional: isAdd,
                         dateStart: dateStart,
-                        dateEnd: selPrevDate,
-                        label: dataView.categorical.categories[0].values[i],
-                        index: realIndex,
-                        unitIndex: i,
-                        fillPart: partValueStart,
-                        dx: dX,
-                        dx2: dX + timelineFormat.cellWidth * partValueStart
-                    };
-                    partSized = timelineFormat.cellWidth * partValue;
-                    dX = datapoint.dx2;
-                    timelineData.cursorDataPoints[0].dx = dX;
-                    timelineData.timelineDatapoints.push(datapoint);
-                    dateStart = new Date(timelineData.selectionStartDate.getTime());
-                    realIndex = realIndex + 1;
-                }
-                var partialDatapointEnd: TimelineDatapoint = undefined;
-                if (dateStart.getTime() <= timelineData.selectionEndDate.getTime() && timelineData.selectionEndDate.getTime() < dateEnd.getTime()) {
-                    isPartial = true;
-                    var partValueEnd = (dateEnd.getTime() - timelineData.selectionEndDate.getTime()) / (dateEnd.getTime() - (timelineData.selectionStartDate.getTime() > dateStart.getTime() ? timelineData.selectionStartDate.getTime() : dateStart.getTime())); // the part
-                    partValue = 1 - partValueEnd;
-                    var selNextDate = new Date(timelineData.selectionEndDate.getTime() + 24 * 60 * 60 * 1000);//prev day
-                    partialDatapointEnd = {
-                        isAdditional: true,
-                        dateStart: selNextDate,
                         dateEnd: dateEnd,
                         label: dataView.categorical.categories[0].values[i],
-                        index: realIndex,
                         unitIndex: i,
-                        fillPart: partValueEnd,
-                        dx: dX + (timelineFormat.cellWidth - partSized) - (timelineFormat.cellWidth - partSized) * partValueEnd,
-                        dx2: dX2
+                        index: realIndex,
+                        fillPart: block.width,
+                        dx: block.dXStr,
+                        dx2: block.dXEnd
                     };
-                    timelineData.cursorDataPoints[1].dx = partialDatapointEnd.dx;
-                    dateEnd = new Date(timelineData.selectionEndDate.getTime());
-                }
-                var datapoint: TimelineDatapoint = {
-                    isAdditional: false,
-                    dateStart: dateStart,
-                    dateEnd: dateEnd,
-                    label: dataView.categorical.categories[0].values[i],
-                    index: realIndex,
-                    unitIndex: i,
-                    fillPart: partValue,
-                    dx: dX,
-                    dx2: dX2
+                    timelineData.timelineDatapoints.push(datapoint);
                 };
-                timelineData.timelineDatapoints.push(datapoint);
 
-                if (partialDatapointEnd) {
-                    realIndex = realIndex + 1;
-                    timelineData.timelineDatapoints.push(partialDatapointEnd);
-                    datapoint = partialDatapointEnd;
+                // split function returns 2 parts of the block, separating by some value (time date) 
+                // between ragne of start and end of it (btw. start date  — till —  end date)  
+                var splitBlock = function(startDate, endDate, splitDate, blockWidth, startDX) {
+                    // removing 1,333333 calculations error 
+                    // and null val if it is close to edge border of block.
+                    var isEdge = function(val) {
+                        return ((val < 2) ? 0 : Math.round(val));
+                    };
+
+                    var part1Prcnt = (((splitDate - startDate) * 100) / (endDate - startDate)) || 0,    // %
+                        part1Width = isEdge((blockWidth * part1Prcnt) / 100),                     // px
+                        part1DXStr = Math.round(startDX),                                           // x1 start px
+                        part1DXEnd = Math.round(startDX + part1Width);                                // x2 end px
+
+                    var part2Width = isEdge(blockWidth - part1Width),                               // px
+                        part2Prcnt = (part2Width * 100) / blockWidth,                                 // %
+                        part2DXStr = Math.round(part1DXEnd),                                        // x1 start px
+                        part2DXEnd = Math.round(part1DXEnd + part2Width);                             // x2 end px
+
+                    var result = {
+                        part1: { prcnt: part1Prcnt, width: part1Width, dXStr: part1DXStr, dXEnd: part1DXEnd },
+                        part2: { prcnt: part2Prcnt, width: part2Width, dXStr: part2DXStr, dXEnd: part2DXEnd }
+                    };
+                    return result;
+                };
+
+                //for FULL_BLOCK
+                addBlock(false, {
+                    prcnt: 100,
+                    width: cellWidth,
+                    dXStr: dX,
+                    dXEnd: dX2,
+                }, i, realIndex++, dateStart, dateEnd);
+
+                if (dateStart <= timelineData.selectionStartDate)
+                    timelineData.cursorDataPoints[0].dx = dX;
+
+                if (dateEnd <= timelineData.selectionEndDate)
+                    timelineData.cursorDataPoints[1].dx = dX2;
+
+                if ((dateStartTime < dateStartSelectTime && dateEndSelectTime < dateEndTime)) {
+                    if (dateEndSelectTime > dateEndTime) dateEndSelectTime = dateEndTime;
+                    var firstPairBlockParts = splitBlock(dateStartTime, dateEndTime, dateStartSelectTime, cellWidth, dX);
+                    var secondPairBlockParts = splitBlock(dateStartSelectTime, dateEndTime, dateEndSelectTime, firstPairBlockParts.part2.width, firstPairBlockParts.part2.dXStr);
+
+                    addBlock(true, firstPairBlockParts.part1, i, realIndex++, new Date(dateStartTime), new Date(dateEndTime));
+                    addBlock(true, secondPairBlockParts.part1, i, realIndex++, new Date(dateStartSelectTime), new Date(dateEndSelectTime));
+                    addBlock(true, secondPairBlockParts.part2, i, realIndex++, new Date(dateStartTime), new Date(dateEndTime));
+
+                    timelineData.cursorDataPoints[0].dx = firstPairBlockParts.part1.dXEnd;
+                    timelineData.cursorDataPoints[1].dx = secondPairBlockParts.part2.dXStr;
+                    
+                    // split current block on 2 parts if START_SELECTION_TIME 
+                    // or END_SELECTION_TIME in RANGE of one
+                } else {                    
+                    // for START_SELECTION_TIME
+                    if (dateStartTime < dateStartSelectTime && dateStartSelectTime < dateEndTime) {
+                        var firstPairBlockParts = splitBlock(dateStartTime, dateEndTime, dateStartSelectTime, cellWidth, dX);
+
+                        addBlock(true, firstPairBlockParts.part1, i, realIndex++, new Date(dateStartTime), new Date(dateEndTime));
+                        addBlock(true, firstPairBlockParts.part2, i, realIndex++, new Date(dateStartSelectTime), new Date(dateEndTime));
+
+                        if (timelineData.granularity !== 'day')
+                            timelineData.cursorDataPoints[0].dx = firstPairBlockParts.part1.dXEnd;
+                    }
+                    // for END_SELECTION_TIME
+                    if (dateStartTime < dateEndSelectTime && dateEndSelectTime < dateEndTime) {
+                        var firstPairBlockParts = splitBlock(dateStartTime, dateEndTime, dateEndSelectTime, cellWidth, dX);
+
+                        addBlock(true, firstPairBlockParts.part1, i, realIndex++, new Date(dateStartTime), new Date(dateEndSelectTime));
+                        addBlock(true, firstPairBlockParts.part2, i, realIndex++, new Date(dateStartTime), new Date(dateEndTime));
+
+                        if (timelineData.granularity !== 'day')
+                            timelineData.cursorDataPoints[1].dx = firstPairBlockParts.part1.dXEnd;
+                    }
+                    if (dateStartSelectTime === dateStartTime && timelineData.granularity !== 'day') {
+                        timelineData.cursorDataPoints[0].dx = dX;
+                    }
+                    if (dateStartSelectTime === dateEndTime && timelineData.granularity !== 'day') {
+                        timelineData.cursorDataPoints[0].dx = dX + cellWidth;
+                    }
+                    if (dateEndSelectTime === dateStartTime && timelineData.granularity !== 'day') {
+                        timelineData.cursorDataPoints[1].dx = dX;
+                    }
+                    if (dateEndSelectTime === dateEndTime && timelineData.granularity !== 'day') {
+                        timelineData.cursorDataPoints[1].dx = dX + cellWidth;
+                    }
                 }
-
-                if (datapoint.dateStart <= timelineData.selectionStartDate)
-                    timelineData.cursorDataPoints[0].dx = datapoint.dx;
-
-                if (datapoint.dateEnd <= timelineData.selectionEndDate)
-                    timelineData.cursorDataPoints[1].dx = datapoint.dx2;
-
                 realIndex = realIndex + 1;
             }
 
@@ -650,7 +769,6 @@ module powerbi.visuals.samples {
         }
 
         public update(options: VisualUpdateOptions) {
-
             this.timelineData.granuralityChanged = true;
             this.options = options;
             if (!options.dataViews || !options.dataViews[0]) return; // or clear the view, display an error, etc.
@@ -660,7 +778,38 @@ module powerbi.visuals.samples {
 
             this.timelineData.dataView = options.dataViews[0];
             this.timelineData.options = options;
-            //this.selectorContainer.attr('transform','translate('+(this.timelineData.options.viewport.width-130)+','+17+')')     
+
+            var gran: any = undefined;
+
+            if (!this.timelineFormat.isInited) {
+                if (this.timelineData.dataView.metadata){
+                    if (this.timelineData.dataView.metadata.objects !== undefined) {
+                        gran = this.timelineData.dataView.metadata.objects['granularity'];
+                        if (gran !== undefined) {
+                            if (this.timelineData.dafaultSelection === this.timelineData.granularity) {
+                                this.timelineData.granularity = gran.types;
+                                var preiodNameIndex = this.selectorNames.indexOf(gran.types);
+                                this.redrawPeriod(preiodNameIndex);
+                                this.timelineFormat.isInited = true;
+                            }
+                        }
+                    }
+                }
+            }
+            if (this.timelineData.dataView.metadata) {
+                if (this.timelineData.dataView.metadata.objects !== undefined) {
+                    if (this.timelineData.dataView.metadata.objects['periodSwitcher'] !== undefined) {
+                        if (!this.timelineData.periodChanged) {
+                            var periodName: any = this.timelineData.dataView.metadata.objects['periodSwitcher']['periodSwitcherType'];
+                            var preiodNameIndex = this.selectorNames.indexOf(periodName);
+                            this.redrawPeriod(preiodNameIndex);
+                        } else {
+                            var preiodNameIndex = this.selectorNames.indexOf(this.timelineData.granularity);
+                            this.redrawPeriod(preiodNameIndex);
+                        }
+                    }
+                }
+            }
 
             Timeline.converter(this.timelineData, this.timelineFormat);
             this.render(this.timelineData, this.timelineFormat);
@@ -697,7 +846,8 @@ module powerbi.visuals.samples {
                     'overflow-y': 'auto'
                 });
 
-            var svgWidth = timelineFormat.leftMargin + timelineFormat.cellWidth * timelineData.timelineDatapoints.length + timelineFormat.rightMargin;
+            var timelineDatapointsCount = timelineData.timelineDatapoints.filter((d) => { if (!d.isAdditional) return true; });
+            var svgWidth = timelineFormat.leftMargin + timelineFormat.cellWidth * timelineDatapointsCount.length + timelineFormat.rightMargin;
             if (this.timelineData.options.viewport.width > svgWidth)
                 svgWidth = this.timelineData.options.viewport.width;
 
@@ -720,12 +870,13 @@ module powerbi.visuals.samples {
             var cellSelection = this.mainGroupElement.selectAll(Timeline.Cell.selector)
                 .data(dataPoints);
             cellSelection
-                .attr('fill', d => Timeline.getCellColor(d, this.timelineData, this.timelineFormat));
+                .attr('fill', d =>
+                    Timeline.getCellColor(d, this.timelineData, this.timelineFormat)
+                );
         }
         public currentlyMouceOverElement;
         public cellMouseOver(datapoint) {
             this.currentlyMouceOverElement = datapoint;
-            //console.log("over here" + this.currentlyMouceOverElement.index);
         }
 
         public renderCells(timelineData: TimelineData, timelineFormat: TimelineFormat): D3.UpdateSelection {
@@ -740,13 +891,16 @@ module powerbi.visuals.samples {
                 .transition().duration(duration)
                 .attr('height', timelineFormat.cellHeight)
                 .attr('width', (d) => {
-                    return d.fillPart > 0 ? timelineFormat.cellWidth * d.fillPart : timelineFormat.cellWidth;
+                    return d.fillPart;
+                    // return d.fillPart > 0 ? timelineFormat.cellWidth * d.fillPart : timelineFormat.cellWidth;
                 })
                 .attr('x', (d) => {
                     return d.dx;
                 })
                 .attr('y', timelineFormat.cellsYPosition);
             cellSelection.on('click', (d: TimelineDatapoint) => {
+                this.timelineData.periodChanged = true;
+
                 d3.event.preventDefault();
                 var cursorDataPoints = this.timelineData.cursorDataPoints;
                 var keyEvent: any = d3.event;
@@ -779,12 +933,11 @@ module powerbi.visuals.samples {
         }
 
         public dragstarted(d, that) {
-            //console.log('drag start');
+            that.timelineData.periodChanged = true;
             that.timelineData.dragging = true;
         }
 
         public dragged(d, that) {
-            //console.log('dragged');
             if (that.timelineData.dragging === true) {
                 var xScale = 1;
                 var yScale = 1;
@@ -810,14 +963,12 @@ module powerbi.visuals.samples {
                 ) {
                     that.timelineData.selectionStartDate = exactDataPoint.dateStart;
                     that.timelineData.cursorDataPoints[0].dx = exactDataPoint.dx;
-                    console.log("cursor 0 dindex:" + d.dx + " selecetiondateStart:" + that.timelineData.selectionStartDate);
                 }
                 if (d.cursorIndex === 1 && exactDataPoint
                     && exactDataPoint.dx >= that.timelineData.cursorDataPoints[0].dx
                 ) {
                     that.timelineData.selectionEndDate = exactDataPoint.dateEnd;
                     that.timelineData.cursorDataPoints[1].dx = exactDataPoint.dx2;
-                    console.log("cursor 1 dindex:" + d.dx + " selecetiondateEnd:" + that.timelineData.selectionEndDate);
                 }
                 this.fillCells();
                 this.renderCursors(this.timelineData, this.timelineFormat);
@@ -825,7 +976,6 @@ module powerbi.visuals.samples {
         }
 
         public dragended(d, that) {
-            //console.log('drag end');
             this.setSelection(that.timelineData);
         }
 
@@ -850,16 +1000,24 @@ module powerbi.visuals.samples {
             )
                 .attr('fill', 'grey')
                 .attr("transform", function(d) {
-                    //console.log("translate(" + d.dx + "," + (timelineFormat.cellHeight / 2 + timelineFormat.cellsYPosition) + ")");
                     return "translate(" + d.dx + "," + (timelineFormat.cellHeight / 2 + timelineFormat.cellsYPosition) + ")";
                 });
             cursorSelection.call(this.drag);
             cursorSelection.exit().remove();
 
-            var offsetScrollWidth = this.body[0][0].scrollLeft;
-            var fullViewPortWidth = Number(offsetScrollWidth) + Number(timelineData.options.viewport.width);
+            if (!timelineData.scrollMovement) {
+                var offsetScrollWidth = this.body[0][0].scrollLeft;
+                var fullViewPortWidth = Number(offsetScrollWidth) + Number(timelineData.options.viewport.width);
 
-            if (timelineData.cursorDataPoints[0].dx < offsetScrollWidth || timelineData.cursorDataPoints[0].dx > fullViewPortWidth) {
+                if ((timelineData.cursorDataPoints[0].dx >= offsetScrollWidth) && (timelineData.cursorDataPoints[0].dx <= fullViewPortWidth)) {
+                    timelineData.scrollMovement = true;
+                    return cursorSelection;
+                }
+                if ((timelineData.cursorDataPoints[1].dx >= offsetScrollWidth) && (timelineData.cursorDataPoints[1].dx <= fullViewPortWidth)) {
+                    timelineData.scrollMovement = true;
+                    return cursorSelection;
+                }
+                timelineData.scrollMovement = true;
                 this.body[0][0].scrollLeft = timelineData.cursorDataPoints[0].dx;
             }
             return cursorSelection;
@@ -875,17 +1033,24 @@ module powerbi.visuals.samples {
             cellTextSelection.enter()
                 .append('text')
                 .classed(Timeline.CellTextLevel1.class, true)
-                .text(function(d) {
+                .text(function(d, i) {
                     switch (timelineData.granularity) {
                         case 'day':
-                            if (d.dateStart.getDate() === 1) {
+                            if (i === 0 || (cellTextSelection[0].length - 1) === i || ((d.dateStart.getDate() === 1) && (i - 1) > 0) && ((i + 1) !== (cellTextSelection[0].length - 1))) {
                                 return Timeline.monthNames[d.dateStart.getMonth()] + " " + d.dateStart.getFullYear();
                             } else {
                                 return "";
                             }
                             break;
+                        case 'month':
+                            if (d.dateStart.getMonth() === 0 || i === 0 || (cellTextSelection[0].length - 1) === i) {
+                                return d.dateStart.getFullYear();
+                            } else {
+                                return "";
+                            }
+                            break;
                         case 'quarter':
-                            if (d.dateStart.getDate() === 1) {
+                            if ((i % 4) === 0 || i === 0 || (cellTextSelection[0].length - 1) === i) {
                                 return d.dateStart.getFullYear();
                             } else {
                                 return "";
@@ -970,7 +1135,7 @@ module powerbi.visuals.samples {
         }
 
         public getTimeRangeColorFill(dataView: DataView): Fill {
-            if (dataView && dataView.metadata &&dataView.metadata.objects) {
+            if (dataView && dataView.metadata && dataView.metadata.objects) {
                 var label = dataView.metadata.objects['timeRangeColor'];
                 if (label) {
                     return <Fill>label['fill'];
@@ -992,7 +1157,6 @@ module powerbi.visuals.samples {
         }
 
         public setSelection(timelineData: TimelineData) {
-
             var filterExpr = powerbi.data.SQExprBuilder.between(timelineData.columnIdentity, powerbi.data.SQExprBuilder.dateTime(timelineData.selectionStartDate), powerbi.data.SQExprBuilder.dateTime(timelineData.selectionEndDate));
             var filter = powerbi.data.SemanticFilter.fromSQExpr(filterExpr);
 
@@ -1002,14 +1166,26 @@ module powerbi.visuals.samples {
                         objectName: "general",
                         selector: undefined,
                         properties: {
-                            "filter": filter
+                            "filter": filter,
                         }
                     }
                 ]
             };
             this.hostServices.persistProperties(objects);
             this.hostServices.onSelect({ data: [] });
+            this.hostServices.persistProperties(this.enumerateperiodSwitcher());
         }
+
+        private enumerateperiodSwitcher(): VisualObjectInstance[] {
+            return [{
+                selector: null,
+                objectName: 'periodSwitcher',
+                properties: {
+                    periodSwitcherType: this.timelineData.granularity,
+                }
+            }];
+        }
+
         // This function retruns the values to be displayed in the property pane for each object.
         // Usually it is a bind pass of what the property pane gave you, but sometimes you may want to do
         // validation and return other values/defaults
@@ -1017,6 +1193,11 @@ module powerbi.visuals.samples {
             var instances: VisualObjectInstance[] = [];
 
             switch (options.objectName) {
+                case 'periodSwitcher':
+                    if (this.timelineData.periodChanged)
+                        this.timelineData.periodChanged = false;
+                    return this.enumerateperiodSwitcher();
+
                 case 'cellColor':
                     var cellColor: VisualObjectInstance = {
                         objectName: 'cellColor',
@@ -1026,9 +1207,7 @@ module powerbi.visuals.samples {
                             fill: this.timelineFormat.cellColor
                         }
                     };
-
                     instances.push(cellColor);
-
                     break;
 
                 case 'cellColorOut':
@@ -1040,10 +1219,9 @@ module powerbi.visuals.samples {
                             fill: this.timelineFormat.cellColorOut
                         }
                     };
-
                     instances.push(cellColorOut);
-
                     break;
+
                 case 'timeRangeColor':
                     var timeRangeColor: VisualObjectInstance = {
                         objectName: 'timeRangeColor',
@@ -1056,8 +1234,8 @@ module powerbi.visuals.samples {
                     instances.push(timeRangeColor);
                     break;
             }
-
             return instances;
         }
     }
 }
+    

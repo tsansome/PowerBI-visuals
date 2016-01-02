@@ -663,31 +663,34 @@ module powerbi.visuals.samples {
                     .classed(ChordChart.sliceTicksClass.class, true);
 
                 let tickPairs = tickShapes.selectAll('g' + ChordChart.tickPairClass.selector)
-                    .data(function(d) {
+                    .data(function (d) {
                         let k = (d.endAngle - d.startAngle) / d.value;
-
-                        return d3.range(0, d.value, d.value - 1).map(function(v, i) {
+                        let range = d3.range(0, d.value, d.value - 1 < 0.15 ? 0.15 : d.value - 1);
+                        let retval = 
+                        range.map(function (v, i) {
                             let divider: number = 1000;
                             let unitStr: string = 'k';
-
-                            if (chordData.tickUnit >= 1000 * 1000) {
+                            
+                            if( chordData.tickUnit >= 1000 * 1000) {
                                 divider = 1000 * 1000;
-                                unitStr = 'm';
+                                unitStr = 'm'; 
                             }
-                            else if (chordData.tickUnit >= 1000) {
+                            else if( chordData.tickUnit >= 1000) {
                                 divider = 1000;
                                 unitStr = 'k';
                             } else {
                                 divider = 1;
                                 unitStr = '';
-                            }
-
-                            return {
+                            } 
+                            let retv =         
+                             {
                                 angle: v * k + d.startAngle,
                                 label: Math.floor(v / divider) + unitStr
                             };
-
+                            return retv;
+                            
                         });
+                        return retval;
                     });
 
                 tickPairs.enter().insert('g')

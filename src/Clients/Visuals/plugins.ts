@@ -218,13 +218,6 @@ module powerbi.visuals.plugins {
         create: () => new Treemap()
     };
 
-    export let sunburst: IVisualPlugin = {
-        name: 'sunburst',
-        watermarkKey: 'defaultWatermark',
-        capabilities: capabilities.sunburst,
-        create: () => new samples.Sunburst()
-    };
-
     export let pieChart: IVisualPlugin = {
         name: 'pieChart',
         watermarkKey: 'pie',
@@ -285,7 +278,6 @@ module powerbi.visuals.plugins {
         capabilities: capabilities.waterfallChart,
         create: () => new CartesianChart({ chartType: CartesianChartType.Waterfall })
     };
-
     export let cheerMeter: IVisualPlugin = {
         name: 'cheerMeter',
         capabilities: CheerMeter.capabilities,
@@ -316,7 +308,7 @@ module powerbi.visuals.plugins {
         capabilities: OwlGauge.capabilities,
         create: () => new OwlGauge()
     };
-    
+
     export var nodeLink: IVisualPlugin = {
         name: 'nodeLink',
         watermarkKey: 'nodeLink',
@@ -342,6 +334,43 @@ module powerbi.visuals.plugins {
         capabilities: samples.StreamGraph.capabilities,
         create: () => new samples.StreamGraph()
     };
+    export let cheerMeter: IVisualPlugin = {
+        name: 'cheerMeter',
+        capabilities: CheerMeter.capabilities,
+        create: () => new CheerMeter()
+    };
+
+    export let consoleWriter: IVisualPlugin = {
+        name: 'consoleWriter',
+        capabilities: samples.consoleWriterCapabilities,
+        create: () => new samples.ConsoleWriter()
+    };
+
+    export let helloIVisual: IVisualPlugin = {
+        name: 'helloIVisual',
+        capabilities: samples.HelloIVisual.capabilities,
+        create: () => new samples.HelloIVisual()
+    };
+
+    export let asterPlot: IVisualPlugin = {
+        name: 'asterPlot',
+        capabilities: samples.AsterPlot.capabilities,
+        create: () => new samples.AsterPlot()
+    };
+
+    export let owlGauge: IVisualPlugin = {
+        name: 'owlGauge',
+        watermarkKey: 'gauge',
+        capabilities: OwlGauge.capabilities,
+        create: () => new OwlGauge()
+    };
+
+    export let streamGraph: IVisualPlugin = {
+        name: 'streamGraph',
+        watermarkKey: 'lineChart',
+        capabilities: samples.StreamGraph.capabilities,
+        create: () => new samples.StreamGraph()
+    };
 
     export let scriptVisual: IVisualPlugin = {
         name: 'scriptVisual',
@@ -349,65 +378,11 @@ module powerbi.visuals.plugins {
         capabilities: capabilities.scriptVisual,
         create: () => new ScriptVisual({ canRefresh: false })
     };
-    
-    export var radarChart: IVisualPlugin = {
-        name: 'radarChart',
-        capabilities: samples.RadarChart.capabilities,
-        create: () => new samples.RadarChart()
-    };
-
-    export var dotPlot: IVisualPlugin = {
-        name: 'dotPlot',
-        capabilities: samples.DotPlot.capabilities,
-        create: () => new samples.DotPlot()
-    };
-
-    export var histogram: IVisualPlugin = {
-        name: "histogram",
-        capabilities: samples.Histogram.capabilities,
-        create: () => new samples.Histogram()
-    };
-
-    export var areaRangeChart: IVisualPlugin = {
-        name: 'areaRangeChart',
-        capabilities: samples.AreaRangeChart.capabilities,
-        create: () => new samples.AreaRangeChart()
-    };
-
-    export var chicletSlicer: IVisualPlugin = {
-        name: 'chicletSlicer',
-        capabilities: samples.ChicletSlicer.capabilities,
-        create: () => new samples.ChicletSlicer()
-    };
-
-    export var timeline: IVisualPlugin = {
-        name: 'timeline',
-        capabilities: samples.Timeline.capabilities,
-        create: () => new samples.Timeline()
-    };
-
-    export var tornadoChart: IVisualPlugin = {
-        name: "tornadoChart",
-        capabilities: samples.TornadoChart.capabilities,
-        create: () => new samples.TornadoChart()
-    };
 
     export let kpi: IVisualPlugin = {
         name: 'kpi',
         watermarkKey: 'kpi',
         capabilities: capabilities.kpi,
         create: () => new KPIStatusWithHistory()
-    };
-
-    export var sankeyDiagram: IVisualPlugin = {
-        name: "sankeyDiagram",
-        capabilities: samples.SankeyDiagram.capabilities,
-        create: () => new samples.SankeyDiagram()
-    };
-
-    export var wordCloud: IVisualPlugin = {
-        name: "wordCloud",
-        capabilities: samples.WordCloud.capabilities,
-        create: () => new samples.WordCloud()
     };
 }
