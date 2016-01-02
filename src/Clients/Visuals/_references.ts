@@ -78,7 +78,6 @@
 /// <reference path="capabilities/matrix.capabilities.ts"/>
 /// <reference path="capabilities/treemap.capabilities.ts"/>
 /// <reference path="capabilities/card.capabilities.ts"/>
-/// <reference path="capabilities/nodeLink.capabilities.ts"/>
 /// <reference path="capabilities/waterfallChart.capabilities.ts"/>
 /// <reference path="capabilities/sunburst.capabilities.ts"/>
 /// <reference path="capabilities/kpiStatusWithHistory.capabilities.ts"/>
@@ -193,18 +192,16 @@
 /// <reference path="visuals/treemap.ts"/>
 /// <reference path="visuals/card.ts"/>
 /// <reference path="visuals/owlGauge.ts"/>
-/// <reference path="visuals/samples/streamGraph.ts"/>
-/// <reference path="visuals/samples/sunburst.ts"/>
-/// <reference path="visuals/samples/radarChart.ts"/>
-/// <reference path="visuals/samples/dotPlot.ts"/>
-/// <reference path="visuals/samples/timeline.ts"/>
-/// <reference path="visuals/samples/areaRangeChart.ts"/>
-/// <reference path="visuals/samples/chicletSlicer.ts"/>
 /// <reference path="warnings/visualWarnings.ts"/>
 /// <reference path="cartesian/waterfallChart.ts"/>
 /// <reference path="tooltip.ts"/>
 /// <reference path="styles/visualStyles.ts"/>
 /// <reference path="visuals/donutChart.ts"/>
 /// <reference path="visuals/scriptVisual.ts"/>
+
+/// <reference path="visuals/nodeLink.ts"/>
+/// <reference path="visuals/GapAnalysis.ts"/>
+/// <reference path="capabilities/nodeLink.capabilities.ts"/>
+/// <reference path="capabilities/gapAnalysis.capabilities.ts"/>
 
 /// <reference path="plugins.ts"/>

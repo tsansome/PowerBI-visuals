@@ -278,36 +278,6 @@ module powerbi.visuals.plugins {
         capabilities: capabilities.waterfallChart,
         create: () => new CartesianChart({ chartType: CartesianChartType.Waterfall })
     };
-    export let cheerMeter: IVisualPlugin = {
-        name: 'cheerMeter',
-        capabilities: CheerMeter.capabilities,
-        create: () => new CheerMeter()
-    };
-
-    export let consoleWriter: IVisualPlugin = {
-        name: 'consoleWriter',
-        capabilities: samples.consoleWriterCapabilities,
-        create: () => new samples.ConsoleWriter()
-    };
-
-    export let helloIVisual: IVisualPlugin = {
-        name: 'helloIVisual',
-        capabilities: samples.HelloIVisual.capabilities,
-        create: () => new samples.HelloIVisual()
-    };
-
-    export let asterPlot: IVisualPlugin = {
-        name: 'asterPlot',
-        capabilities: samples.AsterPlot.capabilities,
-        create: () => new samples.AsterPlot()
-    };
-
-    export let owlGauge: IVisualPlugin = {
-        name: 'owlGauge',
-        watermarkKey: 'gauge',
-        capabilities: OwlGauge.capabilities,
-        create: () => new OwlGauge()
-    };
 
     export var nodeLink: IVisualPlugin = {
         name: 'nodeLink',
@@ -315,63 +285,19 @@ module powerbi.visuals.plugins {
         capabilities: nodeLinkCapabilities,
         create: () => new NodeLink()
     };
-
-    export var opinionVis: IVisualPlugin = {
-        name: 'opinionVis',
-        capabilities: OpinionVisCapabilities,
-        create: () => new OpinionVis()
-    };
-
-    export var opinionVis2: IVisualPlugin = {
-        name: 'opinionVis2',
-        capabilities: OpinionVis2Capabilities,
+    
+    export var gapAnalysis: IVisualPlugin = {
+        name: 'gapAnalysis',
+        capabilities: GapAnalysisCapabilities,
         create: () => new GapAnalysis()
     };
-
-    export var streamGraph: IVisualPlugin = {
-        name: 'streamGraph',
-        watermarkKey: 'lineChart',
-        capabilities: samples.StreamGraph.capabilities,
-        create: () => new samples.StreamGraph()
-    };
+    
     export let cheerMeter: IVisualPlugin = {
         name: 'cheerMeter',
         capabilities: CheerMeter.capabilities,
         create: () => new CheerMeter()
     };
-
-    export let consoleWriter: IVisualPlugin = {
-        name: 'consoleWriter',
-        capabilities: samples.consoleWriterCapabilities,
-        create: () => new samples.ConsoleWriter()
-    };
-
-    export let helloIVisual: IVisualPlugin = {
-        name: 'helloIVisual',
-        capabilities: samples.HelloIVisual.capabilities,
-        create: () => new samples.HelloIVisual()
-    };
-
-    export let asterPlot: IVisualPlugin = {
-        name: 'asterPlot',
-        capabilities: samples.AsterPlot.capabilities,
-        create: () => new samples.AsterPlot()
-    };
-
-    export let owlGauge: IVisualPlugin = {
-        name: 'owlGauge',
-        watermarkKey: 'gauge',
-        capabilities: OwlGauge.capabilities,
-        create: () => new OwlGauge()
-    };
-
-    export let streamGraph: IVisualPlugin = {
-        name: 'streamGraph',
-        watermarkKey: 'lineChart',
-        capabilities: samples.StreamGraph.capabilities,
-        create: () => new samples.StreamGraph()
-    };
-
+    
     export let scriptVisual: IVisualPlugin = {
         name: 'scriptVisual',
         watermarkKey: 'scriptvisual',
