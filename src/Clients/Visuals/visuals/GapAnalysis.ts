@@ -29,6 +29,26 @@
 module powerbi.visuals {
     import SelectionManager = utility.SelectionManager;
     
+    module SortOrderEnum {
+        export var ASCENDING: string = 'Ascending';
+        export var DESCENDING: string = 'Descending';
+
+        export var type: IEnumType = createEnumType([
+            { value: ASCENDING, displayName: ASCENDING },
+            { value: DESCENDING, displayName: DESCENDING }
+        ]);
+    }
+
+    module GapLabelPositionEnum {
+        export var AUTO: string = 'Auto';
+        export var BELOW: string = 'Below';
+
+        export var type: IEnumType = createEnumType([
+            { value: AUTO, displayName: AUTO },
+            { value: BELOW, displayName: BELOW }
+        ]);
+    }
+
     export class StatementResponseV2 {
         public identity: any;
         public statement: string;
@@ -220,7 +240,7 @@ module powerbi.visuals {
                     properties: {
                         statementSortOrderDefault: {
                             description: "Specify the default sort order for the statements.",
-                            type: { text: true },
+                            type: { enumeration: SortOrderEnum.type },
                             displayName: "Order"
                         }
                     }
@@ -299,7 +319,7 @@ module powerbi.visuals {
                     properties: {
                         defaultPosition: {
                             description: "Specify the default positioning for the labels on the bars. (Auto / Below)",
-                            type: { text: true },
+                            type: { enumeration: GapLabelPositionEnum.type },
                             displayName: "Position (Auto / Below)"
                         },
                         defaultColorOnBar: {
@@ -378,11 +398,15 @@ module powerbi.visuals {
         public static converter(dataView: DataView[]): DataViewCategorical {
             if (dataView.length > 1 && dataView[1].categorical !== null && dataView[1].categorical.values.length !== 0) {                
                 var cate = dataView[1].categorical;
-                var oldVals = _.map(cate.values[0].values, (dV,idx) => {
+                //we need to match the old indexes against the original matrix
+                var oldVals = _.map(cate.values[0].values, (dV, idx) => {
+                    var oldKey = _.findIndex(dataView[0].categorical.categories[0].values, function (d: string) {
+                        return cate.categories[0].values[idx] === d;
+                    });
                     return {
                         vv: dV,
-                        oldIndex: idx
-                    };
+                        oldIndex: oldKey
+                    }
                 });
                 var multiplier = -1;
                 //we need to look at the sort property to see whether we should do ascending or descending
@@ -394,11 +418,11 @@ module powerbi.visuals {
                         if (groupProperty) {
                             var object = <string>groupProperty["statementSortOrderDefault"];
                             if (object !== undefined)
-                                sortOrder = object.toLowerCase();
+                                sortOrder = object;
                         }
                     }
                 }
-                if (sortOrder === GapAnalysis.statementSortOrderDefault || sortOrder === "ascending") {
+                if (sortOrder === SortOrderEnum.ASCENDING) {
                     multiplier = 1;
                 }
                 oldVals = _.sortBy(oldVals, (d) => {
@@ -852,7 +876,7 @@ module powerbi.visuals {
             rectDLabel.attr("dy", function (d) {
                 var rectStart = (CentreYPx - frame.circleRadiusPx);
                 var rectHeight = (frame.circleRadiusPx * 2);
-                if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width || d.height > (frame.circleRadiusPx*2)) {
+                if (defaultPosChosen === GapLabelPositionEnum.BELOW || rectWidthWithRadius < d.width || d.height > (frame.circleRadiusPx*2)) {
                     return rectStart + rectHeight + (d.height) + frame.gapBetweenBarAndUnderneathLabel;
                 }
                 var rectMidPointY = rectStart + (rectHeight / 2);
@@ -860,7 +884,7 @@ module powerbi.visuals {
             });
 
             rectDLabel.style("fill", function (d) {
-                if (defaultPosChosen.toLowerCase() === "below" || rectWidthWithRadius < d.width || d.height > (frame.circleRadiusPx * 2)) {
+                if (defaultPosChosen === GapLabelPositionEnum.BELOW || rectWidthWithRadius < d.width || d.height > (frame.circleRadiusPx * 2)) {
                     return gapBFontBelowBar;
                 } else {
                     return gapBFontOnBar;
@@ -1119,7 +1143,7 @@ module powerbi.visuals {
         static gapLabelDefaultColorOnBar = "white";
         static gapLabelDefaultColorBelowBar = "#4884d9";
         static gapLabelDefaultFontSize = 9;
-        static gapLabelDefaultPosition = "Auto";
+        static gapLabelDefaultPosition = GapLabelPositionEnum.AUTO;
 
         static groupNodeDefaultColor = "#00394D";
 
@@ -1130,7 +1154,7 @@ module powerbi.visuals {
         static groupNodeLegendDefaultFontSize = 9;
         static groupNodeLegendDefaultRadius = 8;
 
-        static statementSortOrderDefault = "asc";
+        static statementSortOrderDefault = SortOrderEnum.DESCENDING;
        
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
             var enumeration = new ObjectEnumerationBuilder();
@@ -1151,7 +1175,7 @@ module powerbi.visuals {
                     break;
                 case 'statementsortproperties':
                     var objectname = 'statementsortproperties';
-                    var statementproperties: VisualObjectInstance = {
+                    var statementsortproperties: VisualObjectInstance = {
                         objectName: objectname,
                         displayName: 'Statement sort',
                         selector: null,
@@ -1159,7 +1183,7 @@ module powerbi.visuals {
                             statementSortOrderDefault: this.GetProperty(dV, objectname, "statementSortOrderDefault", GapAnalysis.statementSortOrderDefault)
                         }
                     };
-                    enumeration.pushInstance(statementproperties);
+                    enumeration.pushInstance(statementsortproperties);
                     break;
                 case 'groupnodeproperties':
                     var objectname = 'groupnodeproperties';
