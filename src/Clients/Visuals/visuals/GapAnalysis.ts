@@ -118,8 +118,12 @@ module powerbi.visuals {
         public xAxisScale: D3.Scale.LinearScale;
         public heightOfStatementLine: number;
 
+        //the position in a row
+        public seriesPositionInRow: number;
+        public gapBarPositionInRow: number;
+
         public ScrollBarXAxis: boolean;
-     
+        
         calcGapBars(widthOfViewPort: number, maxVal: number) {
             this.maxWidthBarPx = (widthOfViewPort - this.leftMarginPx) - (this.maxValWidth + this.outerRightMargin);
 
@@ -418,10 +422,10 @@ module powerbi.visuals {
         }
 
         public static converter(dataView: DataView[]): DataViewCategorical {
-            if (dataView === undefined) {
+            if (dataView == null || dataView.length === 0 || dataView[0].categorical == null || dataView[0].categorical.values == null || dataView[0].categorical.values.length === 0) {
                 return null;
             }
-            if (dataView.length > 1 && dataView[1].categorical !== null && dataView[1].categorical.values.length !== 0) {                
+            if (dataView.length > 1 && (dataView[1].categorical != null) && (dataView[1].categorical.values != null) && dataView[1].categorical.values.length !== 0) {                
                 var cate = dataView[1].categorical;
                 //we need to match the old indexes against the original matrix
                 var oldVals = _.map(cate.values[0].values, (dV, idx) => {
@@ -482,7 +486,7 @@ module powerbi.visuals {
                 }
                 
             }
-            if (dataView.length > 0) {
+            if (dataView.length > 0 && (dataView[0].categorical != null)) {
                 return dataView[0].categorical;
             } else {
                 return null;
@@ -568,6 +572,9 @@ module powerbi.visuals {
             longestSeriesElemDraw.remove();
                       
             //now we set up the default frame   
+            fc.seriesPositionInRow = 0.4;
+            fc.gapBarPositionInRow = 0.5;
+
             fc.viewPortWidth = widthOfViewPort;
             fc.viewPortHeight = heighOfViewPort;
                      
@@ -1052,7 +1059,8 @@ module powerbi.visuals {
             this.opinionContainerRef.style("overflow-y", "hidden");
         }
 
-        private activateXScrollBar() {
+        private activateXScrollBar(frame: OpinionFrameClass) {
+            frame.seriesPositionInRow = 0.3;
             this.opinionRowsContainerRef.attr("width", 150);
             this.opinionRowsContainerRef.style("overflow-x", "scroll");
         }
@@ -1100,7 +1108,7 @@ module powerbi.visuals {
 
             //if they've only put 1 of the fields in
             //don't render the visual
-            if (options.dataViews.length > 0 && dataPoints.values.length > 1) {
+            if (dataPoints != null && options.dataViews.length > 0 && dataPoints.values != null && dataPoints.values.length > 1) {
                 this.circleNodesCollectionD3 = [];
                 this.rectNodesCollectionD3 = [];
                 this.rectNodesCollectionClasses = [];
@@ -1147,6 +1155,12 @@ module powerbi.visuals {
                     this.disableYScrollBar();
                 }
 
+                if (frame.ScrollBarXAxis) {
+                    this.activateXScrollBar(frame);
+                } else {
+                    this.disableXScrollBar();
+                }
+
                 this.opinionSeriesContainerRef.style("width", frame.leftMarginRowContainerStartPx + "px");
                 this.opinionRowsContainerRef.style("width", (frame.viewPortWidth - frame.leftMarginRowContainerStartPx - frame.outerRightMargin) + "px");
 
@@ -1160,8 +1174,8 @@ module powerbi.visuals {
                     if (dd.GroupB.XpX > maxXNode) {
                         maxXNode = dd.GroupB.XpX;
                     }
-                    var yPositionStatement = startYPy + (frame.heightOfStatementLine * 0.4);
-                    var yPositionVisualElem = startYPy + (frame.heightOfStatementLine * 0.4);
+                    var yPositionStatement = startYPy + (frame.heightOfStatementLine * frame.seriesPositionInRow);
+                    var yPositionVisualElem = startYPy + (frame.heightOfStatementLine * frame.gapBarPositionInRow);
                     //now we want to put the text on the page
                     this.drawStatementLabel(frame, mtdt, dd, yPositionStatement);
                     //draw the the gap
@@ -1180,12 +1194,6 @@ module powerbi.visuals {
                 this.opinionSeriesContainerRefSVG.attr("height", startYPy);
                 this.opinionSeriesContainerRefSVG.attr("width", frame.leftMarginRowContainerStartPx);
                 this.opinionRowsContainerRefSVG.attr("width", maxXNode + frame.maxValWidth + frame.outerRightMargin);
-                
-                if (frame.ScrollBarXAxis) {
-                    this.activateXScrollBar();
-                } else {
-                    this.disableXScrollBar();
-                }
 
                 //activate the two interaction ones.
                 this.activateHoverOnGroups(frame,mtdt,legendArea,hoverArea,valMeasureName);
