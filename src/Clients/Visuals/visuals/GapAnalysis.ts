@@ -315,7 +315,7 @@ module powerbi.visuals {
                         },
                         defaultHeight: {
                             description: "Specifiy the size of a bar.",
-                            type: { numeric: true },
+                            type: { formatting: { fontSize: true } },
                             displayName: "Height"
                         },
                         colorByCategory: {
