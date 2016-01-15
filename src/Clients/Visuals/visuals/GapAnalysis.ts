@@ -314,7 +314,7 @@ module powerbi.visuals {
                             displayName: "Color"
                         },
                         defaultHeight: {
-                            description: "Specifiy the size of a bar (pt).",
+                            description: "Specifiy the size of a bar.",
                             type: { numeric: true },
                             displayName: "Height"
                         },
@@ -424,11 +424,25 @@ module powerbi.visuals {
         public static converter(dataView: DataView[]): DataViewCategorical {
             if (dataView == null || dataView.length === 0 || dataView[0].categorical == null || dataView[0].categorical.values == null || dataView[0].categorical.values.length === 0) {
                 return null;
+            }            
+            //we need to look at the sort property to see whether we should do ascending or descending
+            var sortOrder = GapAnalysis.statementSortOrderDefault;
+            if (dataView) {
+                var objects = dataView[0].metadata.objects;
+                if (objects) {
+                    var groupProperty = objects["statementsortproperties"];
+                    if (groupProperty) {
+                        var object = <string>groupProperty["statementSortOrderDefault"];
+                        if (object !== undefined)
+                            sortOrder = object;
+                    }
+                }
             }
-            if (dataView.length > 1 && (dataView[1].categorical != null) && (dataView[1].categorical.values != null) && dataView[1].categorical.values.length !== 0) {                
-                var cate = dataView[1].categorical;
+            var oldVals;
+            if (dataView.length > 1 && (dataView[1].categorical != null) && (dataView[1].categorical.values != null) && dataView[1].categorical.values.length !== 0) {
+                var cate = dataView[1].categorical;   
                 //we need to match the old indexes against the original matrix
-                var oldVals = _.map(cate.values[0].values, (dV, idx) => {
+                var oldVals2 = _.map(cate.values[0].values, (dV, idx) => {
                     var oldKey = _.findIndex(dataView[0].categorical.categories[0].values, function (d: string) {
                         return cate.categories[0].values[idx] === d;
                     });
@@ -437,54 +451,55 @@ module powerbi.visuals {
                         oldIndex: oldKey
                     };
                 });
-                var multiplier = -1;
-                //we need to look at the sort property to see whether we should do ascending or descending
-                var sortOrder = GapAnalysis.statementSortOrderDefault;
-                if (dataView) {
-                    var objects = dataView[0].metadata.objects;
-                    if (objects) {
-                        var groupProperty = objects["statementsortproperties"];
-                        if (groupProperty) {
-                            var object = <string>groupProperty["statementSortOrderDefault"];
-                            if (object !== undefined)
-                                sortOrder = object;
-                        }
-                    }
-                }
-                if (sortOrder === SortOrderEnum.ASCENDING) {
-                    multiplier = 1;
-                }
-                oldVals = _.sortBy(oldVals, (d) => {
+                var multiplier = sortOrder === SortOrderEnum.ASCENDING ? 1 : -1;
+                oldVals = _.sortBy(oldVals2, (d) => {
                     return d.vv * multiplier;
-                });        
-                
-                var dV = dataView[0].categorical;
-                //now reorder the default values not the extra details
-                var categories: any[] = [];
-                var valuesA: any[] = [];
-                var valuesB: any[] = [];
+                });
+            }
+            //we just sort alphabetically
+            else {
+                var cate = dataView[0].categorical;
+                oldVals2 = _.map(cate.categories[0].values, (dV, idx) => {
+                    return {
+                        vv: dV,
+                        oldIndex: idx
+                    };
+                });
+                if (sortOrder === SortOrderEnum.ASCENDING) {
+                    oldVals = _.sortBy(oldVals2, (d) => {
+                        return d.vv;
+                    });
+                } else {
+                    oldVals = _.sortBy(oldVals2, (d) => {
+                        return d.vv;
+                    }).reverse();
+                }                
+            }
+            var dV = dataView[0].categorical;
+            //now reorder the default values not the extra details
+            var categories: any[] = [];
+            var valuesA: any[] = [];
+            var valuesB: any[] = [];
+            for (var i = 0; i < oldVals.length; i++) {
+                var cc = oldVals[i];
+                categories.push(dV.categories[0].values[cc.oldIndex]);
+                valuesA.push(dV.values[0].values[cc.oldIndex]);
+                valuesB.push(dV.values[1].values[cc.oldIndex]);
+            }
+            dataView[0].categorical.categories[0].values = categories;
+            dataView[0].categorical.values[0].values = valuesA;
+            dataView[0].categorical.values[1].values = valuesB;
+            //just check if the extra details has been brought in
+            if (dataView[0].categorical.values.length > 2) {
+                var valuesADetails: any[] = [];
+                var valuesBDetails: any[] = [];
                 for (var i = 0; i < oldVals.length; i++) {
                     var cc = oldVals[i];
-                    categories.push(dV.categories[0].values[cc.oldIndex]);
-                    valuesA.push(dV.values[0].values[cc.oldIndex]);
-                    valuesB.push(dV.values[1].values[cc.oldIndex]);
+                    valuesADetails.push(dV.values[2].values[cc.oldIndex]);
+                    valuesBDetails.push(dV.values[3].values[cc.oldIndex]);
                 }
-                dataView[0].categorical.categories[0].values = categories;
-                dataView[0].categorical.values[0].values = valuesA;
-                dataView[0].categorical.values[1].values = valuesB;
-                //just check if the extra details has been brought in
-                if (dataView[0].categorical.values.length > 2) {
-                    var valuesADetails: any[] = [];
-                    var valuesBDetails: any[] = [];
-                    for (var i = 0; i < oldVals.length; i++) {
-                        var cc = oldVals[i];
-                        valuesADetails.push(dV.values[2].values[cc.oldIndex]);
-                        valuesBDetails.push(dV.values[3].values[cc.oldIndex]);
-                    }
-                    dataView[0].categorical.values[2].values = valuesADetails;
-                    dataView[0].categorical.values[3].values = valuesBDetails;
-                }
-                
+                dataView[0].categorical.values[2].values = valuesADetails;
+                dataView[0].categorical.values[3].values = valuesBDetails;
             }
             if (dataView.length > 0 && (dataView[0].categorical != null)) {
                 return dataView[0].categorical;
