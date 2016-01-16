@@ -57,6 +57,7 @@ module powerbi {
 
         /** Specifies a constraint on the number of data rows supported by the visual. */
         rowCount?: AcceptabilityNumberRange;
+
         /** Indicates whether the data rows include empty groups  */
         includeEmptyGroups?: boolean;
     }
@@ -76,7 +77,8 @@ module powerbi {
     export interface DataViewTreeMapping extends HasDataVolume {
         nodes?: DataViewRoleForMappingWithReduction;
         values?: DataViewRoleForMapping;
-	    /** Specifies a constraint on the depth of the tree supported by the visual. */
+
+        /** Specifies a constraint on the depth of the tree supported by the visual. */
 	    depth?: AcceptabilityNumberRange;
     }
 
@@ -88,6 +90,7 @@ module powerbi {
 
     /* tslint:disable:no-unused-expression */
     export type DataViewRoleMapping = DataViewRoleBindMapping | DataViewRoleForMapping;
+
     /* tslint: enable */
 
     export interface DataViewRoleBindMapping {
@@ -165,6 +168,7 @@ module powerbi {
     export interface AcceptabilityNumberRange {
         /** Specifies a preferred range of values for the constraint. */
         preferred?: NumberRange;
+
         /** Specifies a supported range of values for the constraint. Defaults to preferred if not specified. */
         supported?: NumberRange;
     }

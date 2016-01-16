@@ -2502,7 +2502,7 @@ module powerbitests {
                             originalValueAbsolute: Number.MAX_VALUE,
                             identity: selectionIds[1],
                             key: selectionIds[1].getKey(),
-                            tooltipInfo: [{ displayName: "year", value: "2012" }, { displayName: "sales", value: "$179769313486231600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" }],
+                            tooltipInfo: [{ displayName: "year", value: "2012" }, { displayName: "sales", value: "$Infinity" }],
                             lastSeries: undefined,
                             chartType: undefined,
                             labelSettings: defaultLabelSettings,
@@ -2587,7 +2587,7 @@ module powerbitests {
                             originalValueAbsolute: Number.MAX_VALUE,
                             identity: selectionIds[1],
                             key: selectionIds[1].getKey(),
-                            tooltipInfo: [{ displayName: "year", value: "2012" }, { displayName: "sales", value: "-$179769313486231600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" }],
+                            tooltipInfo: [{ displayName: "year", value: "2012" }, { displayName: "sales", value: "-$Infinity" }],
                             lastSeries: undefined,
                             chartType: undefined,
                             labelSettings: defaultLabelSettings,
@@ -3379,7 +3379,6 @@ module powerbitests {
             for (let i = 0, len = 25; i < len; i++) {
                 let identity: powerbi.visuals.SelectionId = SelectionId.createWithId(mocks.dataViewScopeIdentity("" + i));
                 let dataPoint: powerbi.visuals.ColumnChartDataPoint = {
-                    
                     // use fractional pow to create x values that get closer together (testing minInterval)
                     categoryValue: new Date(2000, 1, 1).getTime() + Math.pow(i, 0.66) * 86000000,
                     value: i % 5,
@@ -3423,7 +3422,6 @@ module powerbitests {
                 let identity: powerbi.visuals.SelectionId = SelectionId.createWithId(mocks.dataViewScopeIdentity("" + i));
                 idx = Math.floor(i / 2);
                 let dataPoint: powerbi.visuals.ColumnChartDataPoint = {
-                    
                     // use fractional pow to create x values that get closer together (testing minInterval)
                     categoryValue: new Date(2000, 1, 1).getTime() + Math.pow(idx, 0.66) * 86000000,
                     value: i % 5,
@@ -3636,7 +3634,6 @@ module powerbitests {
                     expect(powerbitests.helpers.isInRange(width, 11, 15)).toBe(true);
                 }
                 else {
-                    
                     // 179.(6) in Mac OS and 178.8 in Windows
                     expect(powerbitests.helpers.isInRange(x, 180, 185)).toBe(true);
                     
@@ -4061,7 +4058,7 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('2.50');
+                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('2.5');
                 done();
             }, DefaultWaitForRender);
         });
@@ -4339,7 +4336,8 @@ module powerbitests {
                 dataView.metadata.objects = { legend: { show: true, position: 'Top' } };
 
                 v.onDataChanged({
-                    dataViews: [dataView]
+                    dataViews: [dataView],
+                    suppressAnimations: false,
                 });
 
                 setTimeout(() => {
@@ -4347,11 +4345,13 @@ module powerbitests {
                     
                     //change legend position
                     dataView.metadata.objects = { legend: { show: true, position: 'Right' } };
+                    spyOn(v, 'renderPlotArea').and.callThrough();
                     v.onDataChanged({
                         dataViews: [dataView]
                     });
                     setTimeout(() => {
                         expect($('.legend').attr('orientation')).toBe(LegendPosition.Right.toString());
+                        expect(v['renderPlotArea'].calls.mostRecent().args[2]/*suppressAnimation*/).toBe(true);
 
                         dataView.metadata.objects = { legend: { show: true, position: 'TopCenter', showTitle: true } };
                         v.onDataChanged({
@@ -5046,7 +5046,7 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('2.50');
+                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('2.5');
                 done();
             }, DefaultWaitForRender);
         });
@@ -5622,7 +5622,6 @@ module powerbitests {
                 let labelText = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text').first().text();
                 expect(labelText.length).toBeLessThan(30);
                 expect(labelText.substr(labelText.length - 1)).toBe('…');
-
                 done();
             }, DefaultWaitForRender);
         });
@@ -6120,7 +6119,7 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('2.50');
+                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('2.5');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6990,7 +6989,7 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('2.50');
+                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('2.5');
                 done();
             }, DefaultWaitForRender);
         });
@@ -10900,7 +10899,6 @@ module powerbitests {
             ];
 
             let dataView: powerbi.DataView = {
-                
                 //setting display units to 1, in order to avoid auto scaling
                 metadata: metadata(columnsWithMultipleFormats, 1, 0),
                 categorical: {

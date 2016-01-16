@@ -35,6 +35,7 @@ module powerbitests {
     import AxisType = powerbi.visuals.axisType;
     import VisualObjectInstanceEnumerationObject = powerbi.VisualObjectInstanceEnumerationObject;
     import PixelConverter = jsCommon.PixelConverter;
+    import CompiledDataViewMapping = powerbi.data.CompiledDataViewMapping;
 
     powerbitests.mocks.setLocale();
 
@@ -48,6 +49,10 @@ module powerbitests {
 
             expect(powerbi.visuals.visualPluginFactory.create().getPlugin("lineStackedColumnComboChart").capabilities)
                 .toBe(ComboChart.capabilities);
+        });
+
+        it('ColumnChart registered customizeQuery', () => {
+            expect(powerbi.visuals.visualPluginFactory.create().getPlugin('comboChart').customizeQuery).toBe(ComboChart.customizeQuery);
         });
 
         it("capabilities should include dataViewMappings", () => {
@@ -70,6 +75,69 @@ module powerbitests {
         it("Capabilities should include implicitSort", () => {
             expect(ComboChart.capabilities.sorting.default).toBeDefined();
         });
+
+        it('CustomizeQuery removes series when there are no column values', () => {
+            let dataViewMappings = createCompiledDataViewMapping(false);
+
+            ComboChart.customizeQuery({
+                dataViewMappings: dataViewMappings
+            });
+
+            expect((<powerbi.data.CompiledDataViewGroupedRoleMapping>dataViewMappings[0].categorical.values).group.by.items).toBeUndefined();
+        });
+
+        it('CustomizeQuery does not remove series when there are column values', () => {
+            let dataViewMappings = createCompiledDataViewMapping(true);
+
+            ComboChart.customizeQuery({
+                dataViewMappings: dataViewMappings
+            });
+
+            expect((<powerbi.data.CompiledDataViewGroupedRoleMapping>dataViewMappings[0].categorical.values).group.by.items).toBeDefined();
+        });
+
+        function createCompiledDataViewMapping(includeColumnValues: boolean): CompiledDataViewMapping[] {
+            let result: CompiledDataViewMapping[] = [{
+                metadata: {
+                },
+                categorical: {
+                    categories: {
+                        for: {
+                            in: { role: 'Category', items: [{ queryName: "c1" }] }
+                        },
+                        dataReductionAlgorithm: { top: {} },
+                    },
+                    values: {
+                        group: {
+                            by: { role: 'Series', items: [{ queryName: 's1' }] },
+                            select: [
+                                { for: { in: { role: 'Y', items: [{ queryName: 'y1' }] } } },
+                            ],
+                        }
+                    }
+                }
+            }, {
+                metadata: {
+                },
+                categorical: {
+                    categories: {
+                        for: {
+                            in: { role: 'Category', items: [{ queryName: "c1" }] }
+                        },
+                    },
+                    values: {
+                        select: [
+                            { for: { in: { role: 'Y', items: [{ queryName: 'y1' }] } } },
+                        ],
+                    }
+                }
+                }];
+
+            if (!includeColumnValues) {
+                (<powerbi.data.CompiledDataViewRoleForMapping>(<powerbi.data.CompiledDataViewGroupedRoleMapping>result[0].categorical.values).group.select[0]).for.in.items = undefined;
+            }
+            return result;
+        }
     });
 
     describe("ComboChart DOM validation", () => {
@@ -1563,8 +1631,7 @@ module powerbitests {
             return build(dataViewBuilder);
         }
 
-        export function buildDataViewSuperLongLabels(isGeneral = false): powerbi.DataView {
-            
+        export function buildDataViewSuperLongLabels(isGeneral = false): powerbi.DataView {    
             // must share the same values as the general dataView, only category labels should change.
             let dataView: powerbi.DataView = buildDataViewDefault(isGeneral);
 

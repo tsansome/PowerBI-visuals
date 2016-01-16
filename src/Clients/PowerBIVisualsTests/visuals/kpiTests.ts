@@ -29,7 +29,7 @@
 module powerbitests {
     import KPIStatusWithHistory = powerbi.visuals.KPIStatusWithHistory;
     import kpiCapabilities = powerbi.visuals.KPIStatusWithHistoryCapabilities;
-    import IVisualHostServices = powerbi.IVisualHostServices;    
+    import IVisualHostServices = powerbi.IVisualHostServices;
 
     describe("Kpi", () => {
         const viewport: powerbi.IViewport = {
@@ -50,19 +50,19 @@ module powerbitests {
 
         // ---- Sample data ----
 
-        //function buildUpdateOptions(viewport: powerbi.IViewport, object: powerbi.DataView): powerbi.VisualUpdateOptions {
-        //    return {
-        //        viewport: viewport,
-        //        dataViews: [object],
-        //    };
-        //};
+        function buildUpdateOptions(viewport: powerbi.IViewport, object: powerbi.DataView): powerbi.VisualUpdateOptions {
+            return {
+                viewport: viewport,
+                dataViews: [object],
+            };
+        };
 
         describe("", () => {
             let host: IVisualHostServices;
-            let $element: JQuery;            
+            let $element: JQuery;
             let initOptions: powerbi.VisualInitOptions;
             let kpi: KPIStatusWithHistory;
-            
+
             beforeEach(() => {
                 host = mocks.createVisualHostServices();
                 $element = helpers.testDom("500", "500");
@@ -73,147 +73,162 @@ module powerbitests {
                     viewport: viewport,
                     style: style
                 };
-                
+
                 kpi = new KPIStatusWithHistory();
                 kpi.init(initOptions);
             });
-            
+
             describe("update", () => {
                 it("show green trend", () => {
-                    //let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForGreenTrend());
-                    //kpi.update(visualUpdateOptions);
-                                              
-                    //let area = $element.find('path');
-                    ////helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.GREEN);                                                                       
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForGreenTrend());
+                    kpi.update(visualUpdateOptions);
 
-                    //let text = $element.find('text');
-                    //helpers.assertColorsMatch(text.css('fill'), KPIStatusWithHistory.textStatusColor.GREEN);                      
-                    //expect(text.text()).toBe("25.00");        
+                    let area = $element.find('path');
+                    helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.GREEN);
 
-                    //let arrow = $element.find('path').next();                     
-                    //helpers.assertColorsMatch(arrow.css('fill'), "#3bb44a"); 
-                    
-                    expect("18.00").toBe("18.00");         
+                    let text = $element.find('text').get(0);
+
+                    helpers.assertColorsMatch(text.getAttribute('fill'), KPIStatusWithHistory.textStatusColor.GREEN);
+                    expect(text.textContent).toBe("25.00");
                 });
 
-                //it("show red trend", () => {
-                    
-                //    expect("18.00").toBe("18.00");                        
-                //});
+                it("show red trend", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForRedTrend());
+                    kpi.update(visualUpdateOptions);
 
-                //it("show gray trend when no goal define", () => {
-                //    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForNoGoalTrend());
-                //    kpi.update(visualUpdateOptions);               
+                    let area = $element.find('path');
+                    helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.RED);
 
-                //    let area = $element.find('path');
-                //    //helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.NOGOAL);
+                    let text = $element.find('text').get(0);
 
-                //    let text = $element.find('text');
-                    //helpers.assertColorsMatch(text.css('fill'), KPIStatusWithHistory.textStatusColor.NOGOAL);
-                    //expect(text.text()).toBe("18.00");        
+                    helpers.assertColorsMatch(text.getAttribute('fill'), KPIStatusWithHistory.textStatusColor.RED);
+                });
 
-                    //let arrow = $element.find('path').next();                    
-                    //expect(arrow.css('visibility')).toBe("hidden");  
-                    
-                //    expect("18.00").toBe("18.00");                       
-                //});
-               
-                //it("show green arrow without trend", () => {
-                //    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForGreenNoTrend());
-                //    kpi.update(visualUpdateOptions);
+                it("show gray trend when no goal defined", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForNoGoalTrend());
+                    kpi.update(visualUpdateOptions);
 
-                //    let area = $element.find('path');
-                //    expect(area.css('visibility')).toBe("hidden");   
+                    let area = $element.find('path');
+                    helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.NOGOAL);
 
-                //    let text = $element.find('text');
-                //    helpers.assertColorsMatch(text.css('fill'), "#333");
-                //    expect(text.text()).toBe("20.00");        
+                    let text = $element.find('text').get(0);
+                    helpers.assertColorsMatch(text.getAttribute('fill'), KPIStatusWithHistory.textStatusColor.NOGOAL);
+                });
 
-                //    let arrow = $element.find('path').next();                    
-                //    helpers.assertColorsMatch(arrow.css('fill'), "#3bb44a");                             
-                //});
+                it("show gray trend when no goal defined after mix of changes", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForGreenTrend());
+                    kpi.update(visualUpdateOptions);
 
-                //it("show red arrow without trend", () => {
-                //    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForRedNoTrend());
-                //    kpi.update(visualUpdateOptions);
+                    visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForRedTrend());
+                    kpi.update(visualUpdateOptions);
 
-                //    let area = $element.find('path');
-                //    expect(area.css('visibility')).toBe("hidden");
+                    visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForNoGoalTrend());
+                    kpi.update(visualUpdateOptions);
 
-                //    let text = $element.find('text');
-                //    helpers.assertColorsMatch(text.css('fill'), "#333");
-                //    expect(text.text()).toBe("10.00");        
+                    let area = $element.find('path');
+                    helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.NOGOAL);
 
-                //    let arrow = $element.find('path').next();                    
-                //    helpers.assertColorsMatch(arrow.css('fill'), "#ee0000");
-                //});
+                    let text = $element.find('text').get(0);
+                    helpers.assertColorsMatch(text.getAttribute('fill'), KPIStatusWithHistory.textStatusColor.NOGOAL);
+                    expect(text.textContent).toBe("12.00");
+                });
 
-                //it("show red arrow without trend after mix of changes", () => {
-                //    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForRedNoTrend());
-                //    kpi.update(visualUpdateOptions);
+                it("show green trend after mix of changes", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForRedNoTrend());
+                    kpi.update(visualUpdateOptions);
 
-                //    visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForGreenNoTrend());
-                //    kpi.update(visualUpdateOptions);
+                    visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForNoGoalTrend());
+                    kpi.update(visualUpdateOptions);
 
-                //    visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForRedNoTrend());
-                //    kpi.update(visualUpdateOptions);
+                    visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForGreenTrend());
+                    kpi.update(visualUpdateOptions);
 
-                //    let area = $element.find('path');
-                //    expect(area.css('visibility')).toBe("hidden");
+                    let area = $element.find('path');
+                    helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.GREEN);
 
-                //    let text = $element.find('text');
-                //    helpers.assertColorsMatch(text.css('fill'), "#333");
-                //    expect(text.text()).toBe("10.00");        
+                    let text = $element.find('text').get(0);
+                    helpers.assertColorsMatch(text.getAttribute('fill'), KPIStatusWithHistory.textStatusColor.GREEN);
+                    expect(text.textContent).toBe("25.00");
+                });
 
-                //    let arrow = $element.find('path').next();                    
-                //    helpers.assertColorsMatch(arrow.css('fill'), "#ee0000");
-                //});
+                it("Visual is empty if indicator is missing", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewWithMissingIndicator());
+                    kpi.update(visualUpdateOptions);
 
-                //it("show gray trend when no goal define after mix of changes", () => {
-                    //let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForGreenTrend());
-                    //kpi.update(visualUpdateOptions);
+                    let area = $element.find('path');
+                    expect(area.css('visibility')).toBe("hidden");
 
-                    //visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForRedTrend());
-                    //kpi.update(visualUpdateOptions);
-                          
-                    //visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForNoGoalTrend());
-                    //kpi.update(visualUpdateOptions);
+                    let svg = $element.find('svg');
+                    expect(svg.css('visibility')).toBe("hidden");
+                });
 
-                    //let area = $element.find('path');
-                    //helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.NOGOAL);
+                it("Visual is empty if indicator is missing WITH GOAL", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewWithMissingIndicatorWITHGoal());
+                    kpi.update(visualUpdateOptions);
 
-                    //let text = $element.find('text');
-                    //helpers.assertColorsMatch(text.css('fill'), KPIStatusWithHistory.textStatusColor.NOGOAL);
-                    //expect(text.text()).toBe("18.00");        
+                    let area = $element.find('path');
+                    expect(area.css('visibility')).toBe("hidden");
 
-                    //let arrow = $element.find('path').next();                    
-                    //expect(arrow.css('visibility')).toBe("hidden");
+                    let svg = $element.find('svg');
+                    expect(svg.css('visibility')).toBe("hidden");
+                });
 
-                //    expect("18.00").toBe("18.00");        
-                //});
+                it("Visual is empty if trendline is missing", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewWithMissingTrendline());
+                    kpi.update(visualUpdateOptions);
 
-                //it("show green trend after mix of changes", () => {
-                    //let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForRedNoTrend());
-                    //kpi.update(visualUpdateOptions);
+                    let area = $element.find('path');
+                    expect(area.css('visibility')).toBe("hidden");
 
-                    //visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForNoGoalTrend());
-                    //kpi.update(visualUpdateOptions);
+                    let svg = $element.find('svg');
+                    expect(svg.css('visibility')).toBe("hidden");
+                });
 
-                    //visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForGreenTrend());
-                    //kpi.update(visualUpdateOptions);
+                it("Visual is empty if trendline is missing WITH GOAL", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewWithMissingTrendlineWITHGoal());
+                    kpi.update(visualUpdateOptions);
 
-                    //let area = $element.find('path');
-                    //helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.GREEN);
+                    let area = $element.find('path');
+                    expect(area.css('visibility')).toBe("hidden");
 
-                    //let text = $element.find('text');
-                    //helpers.assertColorsMatch(text.css('fill'), KPIStatusWithHistory.textStatusColor.GREEN);
-                    //expect(text.text()).toBe("25.00");        
+                    let svg = $element.find('svg');
+                    expect(svg.css('visibility')).toBe("hidden");
+                });
 
-                    //let arrow = $element.find('path').next();                    
-                    //helpers.assertColorsMatch(arrow.css('fill'), "#3bb44a");
+                it("Visual is empty if trendline and indicator are missing", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewWithMissingTrendlineAndIndicator());
+                    kpi.update(visualUpdateOptions);
 
-                //    expect("18.00").toBe("18.00");        
-                //});
+                    let area = $element.find('path');
+                    expect(area.css('visibility')).toBe("hidden");
+
+                    let svg = $element.find('svg');
+                    expect(svg.css('visibility')).toBe("hidden");
+                });
+
+                it("Visual is empty if trendline and indicator are missing BUT there are goals", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewWithMissingTrendlineAndIndicatorBUTWithGoals());
+                    kpi.update(visualUpdateOptions);
+
+                    let area = $element.find('path');
+                    expect(area.css('visibility')).toBe("hidden");
+
+                    let svg = $element.find('svg');
+                    expect(svg.css('visibility')).toBe("hidden");
+                });
+
+                it("Visual shows yellow trend if between 2 goals", () => {
+                    let visualUpdateOptions = buildUpdateOptions(viewport, kpiHelper.buildDataViewForYellowTrend());
+                    kpi.update(visualUpdateOptions);
+
+                    let area = $element.find('path');
+                    helpers.assertColorsMatch(area.css('fill'), KPIStatusWithHistory.statusColor.YELLOW);
+
+                    let text = $element.find('text').get(0);
+
+                    helpers.assertColorsMatch(text.getAttribute('fill'), KPIStatusWithHistory.textStatusColor.YELLOW);
+                    expect(text.textContent).toBe("12.00");
+                });
             });
         });
     });

@@ -242,7 +242,6 @@ module powerbitests {
             });
 
             it("has correct positions", () => {
-                
                 // values: [100, -200, 0, 300, null, NaN]
                 let positions = [0, 100, -100, -100, 200, 200, 0];  // The last position represents the total and is always 0.
 
@@ -252,7 +251,6 @@ module powerbitests {
             });
 
             it("has correct values", () => {
-                
                 // values: [100, -200, 0, 300, null, NaN]
                 let valuesWithTotal = [100, -200, 0, 300, 0, 0, 200];
                 expect(dataPoints.map(d => d.value)).toEqual(valuesWithTotal);
@@ -277,7 +275,6 @@ module powerbitests {
             });
 
             it("should have tooltip data", () => {
-                
                 // categoryValues: [2015, 2016, 2017, 2018, 2019, 2020]
                 // measureValues: [100, -200, 0, 300, null, NaN];
                 expect(dataPoints[0].tooltipInfo).toEqual([{ displayName: "year", value: "2015" }, { displayName: "sales", value: "$100" }]);
@@ -336,7 +333,6 @@ module powerbitests {
             let dataBuilder: WaterfallDataBuilder;
 
             beforeEach(() => {
-                
                 // More data than usual to force scrolling.
                 dataBuilder = new WaterfallDataBuilder();
                 let dataView = dataBuilder
@@ -877,7 +873,6 @@ module powerbitests {
         }
 
         function getTicks(axis: string): JQuery {
-            
             // axis should be either 'x' or 'y'.
             return $('.waterfallChart .axisGraphicsContext .' + axis + '.axis .tick');
         }
@@ -1012,7 +1007,8 @@ module powerbitests {
 
         private _cartesianHost: powerbi.visuals.ICartesianVisualHost = {
             updateLegend: data => { },
-            getSharedColors: () => null
+            getSharedColors: () => null,
+            triggerRender: (suppressAnimations: boolean) => { },
         };
 
         private _visual: powerbi.IVisual;

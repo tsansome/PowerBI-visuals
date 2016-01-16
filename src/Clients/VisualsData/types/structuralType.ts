@@ -37,6 +37,7 @@ module powerbi {
         expression?: DefaultValueTypeDescriptor;
         image?: ImageTypeDescriptor;
         paragraphs?: ParagraphsTypeDescriptor;
+
         //border?: BorderTypeDescriptor;
         //etc.
     }

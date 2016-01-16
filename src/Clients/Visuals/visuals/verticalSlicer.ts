@@ -65,7 +65,8 @@ module powerbi.visuals {
 
         // SlicerDefaultValueHandler
         public getDefaultValue(): data.SQConstantExpr {
-            return SlicerUtil.DefaultValueHandler.getDefaultValue(this.dataView);
+            if (this.data && this.data.defaultValue)
+                return this.data.defaultValue.value;
         }
 
         public getIdentityFields(): data.SQExpr[] {
@@ -135,8 +136,10 @@ module powerbi.visuals {
             this.currentViewport = options.viewport;
             let dataView = options.dataView;
 
-            if (!(dataView && data))
+            if (!dataView || !data) {
+                this.listView.empty();
                 return;
+            }
 
             this.dataView = dataView;
             this.renderAsImage = options.renderAsImage;
@@ -187,6 +190,7 @@ module powerbi.visuals {
                 // Style Slicer Header
                 let domHelper = this.domHelper;
                 domHelper.styleSlicerHeader(this.header, settings, data.categorySourceName);
+                this.header.attr('title', data.categorySourceName);
 
                 let labelText = rowSelection.selectAll(SlicerUtil.Selectors.LabelText.selector);
                 labelText.html((d: SlicerDataPoint) => {
@@ -195,6 +199,7 @@ module powerbi.visuals {
                     else
                         return `<img src="${d.value}" />`;
                 });
+                labelText.attr('title', (d: SlicerDataPoint) => d.tooltip);
                 domHelper.setSlicerTextStyle(labelText, settings);
 
                 let slicerCheckbox = rowSelection.selectAll(Selectors.Input.selector).selectAll('span');

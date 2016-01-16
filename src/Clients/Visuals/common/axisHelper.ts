@@ -27,7 +27,6 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
-    import ArrayExtensions = jsCommon.ArrayExtensions;
     import ITextAsSVGMeasurer = powerbi.ITextAsSVGMeasurer;
 
     /**
@@ -871,13 +870,20 @@ module powerbi.visuals {
                 }
                 if (useTickIntervalForDisplayUnits && isScalar && tickValues.length > 1) {
                     let value1 = axisDisplayUnits ? axisDisplayUnits : tickValues[1] - tickValues[0];
-                    formatter = valueFormatter.create({
+
+                    let options: ValueFormatterOptions = {
                         format: formatString,
                         value: value1,
                         value2: 0, //force tickInterval or display unit to be used
                         allowFormatBeautification: true,
-                        precision: axisPrecision,
-                    });
+                    };
+
+                    if (axisPrecision)
+                        options.precision = axisPrecision;
+                    else
+                        options.detectAxisPrecision = true;
+
+                    formatter = valueFormatter.create(options);
                 }
                 else {
                     // do not use display units, just the basic value formatter
@@ -962,8 +968,8 @@ module powerbi.visuals {
             return [minY, maxY];
         }
 
-        function createOrdinalDomain(data: CartesianSeries[]): number[] {
-            if (ArrayExtensions.isUndefinedOrEmpty(data))
+        function createOrdinalDomain(data: CartesianSeries[]): number[]{
+            if (_.isEmpty(data))
                 return [];
 
             return data[0].data.map(d => d.categoryIndex);

@@ -130,6 +130,23 @@ module powerbi.visuals {
             }
 
             /**
+             * calculate Polygon Area.
+             *
+             * @return the area of the polygon (as number).
+             */
+            public static calculateAbsolutePolygonArea(polygonPoints: IPoint[]): number {
+                let i, j = 1;
+                let area = 0.0;
+
+                for (i = 0; i < polygonPoints.length; i++) {
+                    area += polygonPoints[i].x * polygonPoints[j].y - polygonPoints[j].x * polygonPoints[i].y;
+                    j = (j + 1) % polygonPoints.length;
+                }
+                area *= 0.5;
+                return area;
+            }
+
+            /**
             * Check if label text is outside of polygon bounding box.
             * 
             * @return true/false is there is any conflict (at least one point inside the shape).
@@ -150,13 +167,7 @@ module powerbi.visuals {
                 let area, tempPoint, cx, cy, i, j: number;
                 
                 /* First calculate the polygon's signed area A */
-                area = 0.0;
-                j = 1;
-                for (i = 0; i < this.polygonPoints.length; i++) {
-                    area += this.polygonPoints[i].x * this.polygonPoints[j].y - this.polygonPoints[j].x * this.polygonPoints[i].y;
-                    j = (j + 1) % this.polygonPoints.length;
-                }
-                area *= 0.5;
+                area = Polygon.calculateAbsolutePolygonArea(this.polygonPoints);
 
                 /* Now calculate the centroid coordinates Cx and Cy */
                 cx = cy = 0.0;

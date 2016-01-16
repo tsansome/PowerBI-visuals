@@ -64,13 +64,11 @@ module powerbitests.helpers {
      * @param {number} delay Time to wait in milliseconds
      */
     export function executeWithDelay(fn: Function, delay: number): void {
-        
         // Uninstalling jasmine.clock() to enable using the following timer
         jasmine.clock().uninstall();
         
         // Waiting until scroll takes effect
         setTimeout(() => {
-            
             // Calling the assert function
             fn();
         }, delay);
@@ -169,7 +167,6 @@ module powerbitests.helpers {
     }
 
     export function getLocalTimeFromUTCBase(utcYear: number, utcMonth: number, utcDay: number, utcHours: number, utcMinutes: number, utcSeconds: number): Date {
-        
         // IMPORTANT: We need to dynamically calculate the UTC offset to use for our test date instead of hard-coding the offset so that:
         // i) It doesn't break when daylight savings changes the UTC offset
         // ii) The test works even if your machine is not in the US Pacific Time zone :)

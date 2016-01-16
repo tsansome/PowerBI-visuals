@@ -104,7 +104,6 @@ module powerbi.visuals {
             text: {
                 x: (d: FunnelPercent) => number;
                 y: (d: FunnelPercent) => number;
-                dy: (d: FunnelPercent) => string;
                 style: () => string;
                 transform: (d: FunnelPercent) => string;
                 fill: string;
@@ -163,7 +162,7 @@ module powerbi.visuals {
     export class FunnelChart implements IVisual {
         public static DefaultBarOpacity = 1;
         public static DimmedBarOpacity = 0.4;
-        public static PercentBarToBarRatio = 2;
+        public static PercentBarToBarRatio = 0.75;
         public static TickPadding = 0;
         public static InnerTickSize = 0;
         public static MinimumInteractorSize = 15;
@@ -185,6 +184,7 @@ module powerbi.visuals {
         public static FunnelBarHighlightClass = [FunnelChart.Selectors.funnel.bars.class, FunnelChart.Selectors.funnel.highlights.class].join(' ');
 
         private static VisualClassName = 'funnelChart';
+        private static DefaultFontFamily = 'wf_standard-font';
         private static BarToSpaceRatio = 0.1;
         private static MaxBarWidth = 40;
         private static MinBarThickness = 12;
@@ -778,9 +778,8 @@ module powerbi.visuals {
             let data = this.data;
 
             if (data.percentBarLabelSettings.show) {
-                let percentBarTextProperties = FunnelChart.getTextProperties(data.percentBarLabelSettings.fontSize);
-                let percentBarTextHeight = TextMeasurementService.estimateSvgTextHeight(percentBarTextProperties) * 2;
-                let verticalSpace = this.getUsableVerticalSpace() - (2 * FunnelChart.MinBarThickness * FunnelChart.PercentBarToBarRatio) - percentBarTextHeight;
+                let percentBarTextHeight = this.getPercentBarTextHeight();
+                let verticalSpace = this.getUsableVerticalSpace() - (2 * FunnelChart.MinBarThickness * FunnelChart.PercentBarToBarRatio) - (2 * percentBarTextHeight);
                 return verticalSpace <= 0;
             }
             return true;
@@ -796,9 +795,10 @@ module powerbi.visuals {
             let categoryLabels = data.categoryLabels;
             let viewport = this.currentViewport;
             let margin = this.margin;
-            let horizontalRange = viewport.height - (margin.top + margin.bottom);
             let isSparklines = this.isSparklines();
             let isHidingPercentBars = this.isHidingPercentBars();
+            let percentBarTextHeight = isHidingPercentBars ? 0 : this.getPercentBarTextHeight();
+            let horizontalRange = viewport.height - (margin.top + margin.bottom) - (2 * percentBarTextHeight);
 
             if (categoryLabels.length > 0 && isSparklines) {
                 categoryLabels = [];
@@ -828,6 +828,12 @@ module powerbi.visuals {
                 rangeEnd = Math.ceil(horizontalRange - delta / 2);
             }
 
+            // Offset funnel axis start and end by percent bar text height
+            if (!isHidingPercentBars) {
+                rangeStart += percentBarTextHeight;
+                rangeEnd += percentBarTextHeight;
+            }
+
             let yScale = d3.scale.linear()
                 .domain([minScore, maxScore])
                 .range([verticalRange, 0]);
@@ -846,6 +852,11 @@ module powerbi.visuals {
                 barToSpaceRatio: barToSpaceRatio,
                 categoryLabels: categoryLabels,
             };
+        }
+
+        private getPercentBarTextHeight(): number {
+            let percentBarTextProperties = FunnelChart.getTextProperties(this.data.percentBarLabelSettings.fontSize);
+            return TextMeasurementService.estimateSvgTextHeight(percentBarTextProperties);
         }
 
         public onClearSelection(): void {
@@ -868,6 +879,9 @@ module powerbi.visuals {
             let emptyHorizontalSpace = (value: number): number => (horizontalDistance - Math.abs(yScale(value) - yScale(0))) / 2;
             let getMinimumShapeSize = (value: number): number => Math.max(FunnelChart.MinimumInteractorSize, Math.abs(yScale(value) - yScale(0)));
             let percentBarFontSize = PixelConverter.fromPoint(data.percentBarLabelSettings.fontSize);
+            let percentBarTextProperties = FunnelChart.getTextProperties(data.percentBarLabelSettings.fontSize);
+            let baselineDelta = TextMeasurementService.estimateSvgTextBaselineDelta(percentBarTextProperties);
+            let percentBarYOffset = TextMeasurementService.estimateSvgTextHeight(percentBarTextProperties) - baselineDelta;
 
             return {
                 percentBarLayout: {
@@ -907,11 +921,10 @@ module powerbi.visuals {
                         x: (d: FunnelPercent) => Math.ceil((Math.abs(yScale(maxScore) - yScale(0)) / 2)),
                         y: (d: FunnelPercent) => {
                             return d.isTop
-                                ? -percentBarTickHeight / 2
-                                : parseInt(percentBarFontSize, 10) + (percentBarTickHeight / 2);
+                                ? -percentBarTickHeight / 2 - baselineDelta
+                                : percentBarYOffset + (percentBarTickHeight / 2);
                         },
-                        dy: (d: FunnelPercent) => d.isTop ? '' : dataLabelUtils.DefaultDy,
-                        style: () => `font-size: ${percentBarFontSize}`,
+                        style: () => `font-size: ${percentBarFontSize};`,
                         transform: (d: FunnelPercent) => {
                             let yOffset = d.isTop
                                 ? xScale(0) - halfColumnWidth
@@ -1140,7 +1153,7 @@ module powerbi.visuals {
         private static getTextProperties(fontSize?: number): TextProperties {
             return {
                 fontSize: PixelConverter.fromPoint(fontSize || dataLabelUtils.DefaultFontSizeInPt),
-                fontFamily: dataLabelUtils.StandardFontFamily,
+                fontFamily: FunnelChart.DefaultFontFamily,
             };
         }
     }

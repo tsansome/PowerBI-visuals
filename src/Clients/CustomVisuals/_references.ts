@@ -24,7 +24,9 @@
  *  THE SOFTWARE.
  */
 
-/// <reference path="../Visuals/obj/visuals.d.ts" />
+/// <reference path="../Visuals/obj/Visuals.d.ts" />
+
+/// <reference path="capabilities/consoleWriter.capabilities.ts" />
 
 /// <reference path="visuals/consoleWriter/consoleWriter.ts"/>
 /// <reference path="visuals/helloIVisual/helloIVisual.ts"/>
@@ -44,5 +46,6 @@
 /// <reference path="visuals/gantt/gantt.ts" />
 /// <reference path="visuals/globeMap/globeMap.ts" />
 /// <reference path="visuals/bulletChart/bulletChart.ts" />
+/// <reference path="visuals/forceGraph/forceGraph.ts" />
 
 /// <reference path="plugins.ts" />

@@ -290,8 +290,7 @@ module powerbitests {
                 expect(interactivityService.legendHasSelection()).toBeFalsy();
             });
 
-            it('Datapoint selection syncs legend datapoints', () => {
-                
+            it('Datapoint selection syncs legend datapoints', () => {    
                 // Datapoints
                 let selectableDataPoints = [
                     { selected: false, identity: SelectionId.createWithIdAndMeasure(mocks.dataViewScopeIdentity("a"), "queryName") },
@@ -438,8 +437,7 @@ module powerbitests {
         });
     });
 
-    function getSelectedIds(interactivityService: powerbi.visuals.IInteractivityService): SelectionId[] {
-        
+    function getSelectedIds(interactivityService: powerbi.visuals.IInteractivityService): SelectionId[] {    
         // Accessing a private member.
         return interactivityService['selectedIds'];
     }

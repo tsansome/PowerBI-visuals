@@ -30,6 +30,8 @@ module powerbi {
     import DataViewObjectDescriptors = powerbi.data.DataViewObjectDescriptors;
     import DataViewObjectDescriptor = powerbi.data.DataViewObjectDescriptor;
     import Selector = powerbi.data.Selector;
+    import SemanticFilter = powerbi.data.SemanticFilter;
+    import SQExpr = powerbi.data.SQExpr;
     import IStringResourceProvider = jsCommon.IStringResourceProvider;
     import IRect = powerbi.visuals.IRect;
 
@@ -279,7 +281,7 @@ module powerbi {
         sortDirection?: SortDirection;
     }
 
-    export enum ViewMode {
+    export const enum ViewMode {
         View = 0,
         Edit = 1,
     }
@@ -365,7 +367,7 @@ module powerbi {
         promiseFactory(): IPromiseFactory;
 
         /** Gets filter analyzer */
-        filterAnalyzer?(filter: data.SemanticFilter, fieldSQExprs: data.SQExpr[]): IFilterAnalyzer;
+        analyzedFilter(options: FilterAnalyzerOptions): AnalyzedFilter;
     }
 
     /** Animation options for visuals. */
@@ -504,14 +506,33 @@ module powerbi {
         remove?: VisualObjectInstance[];
     }
 
-    export interface IFilterAnalyzer {
+    export interface FilterAnalyzerOptions {
+        dataView: DataView;
+
+        /** The DataViewObjectPropertyIdentifier for default value */
+        defaultValuePropertyId: DataViewObjectPropertyIdentifier;
+
+        /** The filter that will be analyzed */
+        filter: SemanticFilter;
+
+        /** The field SQExprs used in the filter */
+        fieldSQExprs: SQExpr[];
+    }
+
+    export interface AnalyzedFilter {
+        /** The default value of the slicer selected item and it can be undefined if there is no default value */
+        defaultValue?: DefaultValueDefinition;
+
         /** Indicates the filter has Not condition. */
-        isNotFilter(): boolean;
+        isNotFilter: boolean;
 
         /** The selected filter values. */
-        selectedIdentities(): DataViewScopeIdentity[];
+        selectedIdentities: DataViewScopeIdentity[];
+
+        /** The filter after analyzed. It will be the default filter if it has defaultValue and the pre-analyzed filter is undefined. */
+        filter: SemanticFilter;
 
         /** Indicates the filter is using a default filter value. */
-        hasDefaultFilterOverride(): IPromise<boolean>;
+        hasDefaultFilterOverride(): boolean;
     }
 }

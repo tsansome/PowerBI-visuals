@@ -69,11 +69,13 @@ module powerbi.data {
                 return;
 
             let variation = variationColumn.variations.withName(variationName);
-            let targetEntity = variation && variation.navigationProperty && variation.navigationProperty.targetEntity;
-            if (!targetEntity || _.isEmpty(targetEntity.hierarchies))
-                return;
+            if (variation) {
+                let targetEntity = variation.navigationProperty ? variation.navigationProperty.targetEntity : variationEntity;
+                if (!targetEntity || _.isEmpty(targetEntity.hierarchies))
+                    return;
 
-            return targetEntity.hierarchies.withName(hierarchyName);
+                return targetEntity.hierarchies.withName(hierarchyName);
+            }
         }
 
         /**

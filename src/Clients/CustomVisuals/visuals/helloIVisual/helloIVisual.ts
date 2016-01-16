@@ -114,7 +114,7 @@ module powerbi.visuals.samples {
         }
 
         public update(options: VisualUpdateOptions) {
-            if (!options.dataViews && !options.dataViews[0]) return;
+            if (!options.dataViews || !options.dataViews[0]) return;
             var dataView = this.dataView = options.dataViews[0];
             var viewport = options.viewport;
             var viewModel: HelloViewModel = HelloIVisual.converter(dataView);

@@ -69,7 +69,7 @@ module powerbi.visuals {
         */
         scriptVisualEnabled?: boolean;
 
-        isLabelInteractivityEnabled?: boolean;        
+        isLabelInteractivityEnabled?: boolean;
 
         referenceLinesEnabled?: boolean;
 
@@ -496,7 +496,7 @@ module powerbi.visuals {
                 isScrollable: true,
                 behavior: new TreemapWebBehavior(),
                 tooltipsEnabled: true,
-            }));            
+            }));
             // Waterfall Chart
             createPlugin(plugins, powerbi.visuals.plugins.waterfallChart, () => new CartesianChart({
                 chartType: CartesianChartType.Waterfall,
@@ -524,12 +524,14 @@ module powerbi.visuals {
             createPlugin(plugins, powerbi.visuals.plugins.slicer, () => new Slicer({
                 behavior: new SlicerWebBehavior(),
             }));           
-
             // Matrix
-            createPlugin(plugins, powerbi.visuals.plugins.matrix, () => new Matrix(formattingPropertiesEnabled));
-
+            createPlugin(plugins, powerbi.visuals.plugins.matrix, () => new Matrix({
+                isFormattingPropertiesEnabled: formattingPropertiesEnabled
+            }));
             // Table
-            createPlugin(plugins, powerbi.visuals.plugins.table, () => new Table(formattingPropertiesEnabled));
+            createPlugin(plugins, powerbi.visuals.plugins.table, () => new Table({
+                isFormattingPropertiesEnabled: formattingPropertiesEnabled
+            }));;
 
             if (scriptVisualEnabled) {
                 // R visual
@@ -544,7 +546,7 @@ module powerbi.visuals {
         function enablePivot(pluginOld: IVisualPlugin, categoricalPivotEnabled?: boolean): IVisualPlugin {
             if (!categoricalPivotEnabled)
                 return pluginOld;
-            
+
             let caps: VisualCapabilities = pluginOld.capabilities;
             if (!caps.dataViewMappings)
                 return pluginOld;
@@ -594,7 +596,7 @@ module powerbi.visuals {
                 this.visualPlugins = {};
 
                 this.addCustomVisualizations([]);
-                
+
                 createMinervaPlugins(this.visualPlugins, this.featureSwitches);
             }
 
@@ -625,17 +627,22 @@ module powerbi.visuals {
                     powerbi.visuals.plugins.funnel,
                     powerbi.visuals.plugins.gauge,
                     powerbi.visuals.plugins.multiRowCard,
-                    powerbi.visuals.plugins.card,
-                    powerbi.visuals.plugins.slicer,
-                    powerbi.visuals.plugins.donutChart,                    
+                    powerbi.visuals.plugins.card
                 ];
+
+                if (this.featureSwitches.kpiVisualEnabled) {
+                    convertibleVisualTypes.push(powerbi.visuals.plugins.kpi);
+                }
+
+                convertibleVisualTypes.push(powerbi.visuals.plugins.slicer);
+                convertibleVisualTypes.push(powerbi.visuals.plugins.donutChart);
 
                 if (this.featureSwitches.scriptVisualEnabled) {
                     convertibleVisualTypes.push(powerbi.visuals.plugins.scriptVisual);
                 }
 
-                    // Add any visuals compiled in the developer tools
-                    // Additionally add custom visuals.
+                // Add any visuals compiled in the developer tools
+                // Additionally add custom visuals.
                 for (let p in plugins) {
                     let plugin = plugins[p];
                     if (plugin.custom) {
@@ -649,15 +656,11 @@ module powerbi.visuals {
                     convertibleVisualTypes.push(powerbi.visuals.plugins.dataDotClusteredColumnComboChart);
                     convertibleVisualTypes.push(powerbi.visuals.plugins.dataDotStackedColumnComboChart);
                 }
-                           
+
                 // if (this.featureSwitches.sunburstVisualEnabled) {
                 //     convertibleVisualTypes.push(powerbi.visuals.plugins.sunburst);
                 // }
 
-                if (this.featureSwitches.kpiVisualEnabled) {
-                    convertibleVisualTypes.push(powerbi.visuals.plugins.kpi);
-                }
-                    
                 return convertibleVisualTypes;
             }
 
@@ -666,7 +669,7 @@ module powerbi.visuals {
                     convertibleVisualTypes.push(plugin);
                 }
             }
-            
+
             private addCustomVisualizations(convertibleVisualTypes: IVisualPlugin[]): void {
                 // Read new visual from localstorage
                 let customVisualizationList = localStorageService.getData('customVisualizations');
@@ -908,6 +911,8 @@ module powerbi.visuals {
                 // Disable tooltips for mobile
                 TooltipManager.ShowTooltips = false;
 
+                let mapThrottleInterval: number = this.getMapThrottleInterval();
+
                 this.visualPlugins = {};
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineChart, () => new CartesianChart({ chartType: CartesianChartType.Line, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineClusteredColumnComboChart, () => new CartesianChart({ chartType: CartesianChartType.LineClusteredColumnCombo, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties }));
@@ -917,6 +922,10 @@ module powerbi.visuals {
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.funnel, () => new FunnelChart({ animator: null, funnelSmallViewPortProperties: this.smallViewPortProperties.FunnelSmallViewPortProperties }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.donutChart, () => new DonutChart({ disableGeometricCulling: true }));
                 createPlugin(this.visualPlugins, powerbi.visuals.plugins.pieChart, () => new DonutChart({ sliceWidthRatio: 0, disableGeometricCulling: true }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.matrix, () => new Matrix({ isTouchEnabled: true }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.table, () => new Table({ isTouchEnabled: true }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.map, () => new Map({ viewChangeThrottleInterval: mapThrottleInterval }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.filledMap, () => new Map({ filledMap: true, viewChangeThrottleInterval: mapThrottleInterval }));
             }
 
             public getPlugin(type: string): IVisualPlugin {
@@ -924,6 +933,18 @@ module powerbi.visuals {
                     return this.visualPlugins[type];
 
                 return super.getPlugin(type);
+            }
+
+            // Windows phone webView chokes when zooming on heavy maps,
+            // this is a workaround to allow a relatively smooth pinch to zoom experience.
+            private getMapThrottleInterval(): number {
+                const windowsPhoneThrottleInterval = 100;
+                let userAgentLowerCase = navigator.userAgent.toLowerCase();
+                if (userAgentLowerCase.indexOf('windows phone') !== -1) {
+                    return windowsPhoneThrottleInterval;
+                }
+
+                return undefined;
             }
         }
 

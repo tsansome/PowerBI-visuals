@@ -28,7 +28,6 @@
 
 module powerbi.visuals.samples {
     import SelectionManager = utility.SelectionManager;
-
     export interface SunburstSlice {
         children?: SunburstSlice[];
         value?: any;
@@ -58,7 +57,7 @@ module powerbi.visuals.samples {
         private viewport: IViewport;
         private colors: IDataColorPalette;
         private selectionManager: SelectionManager;
-      
+
         private static roleNames = {
             nodes: 'Nodes',
             values: 'Values',
@@ -94,8 +93,8 @@ module powerbi.visuals.samples {
                     rows: {
                         for: { in: Sunburst.roleNames.nodes },
                     },
-                    values: {                      
-                        for: { in: Sunburst.roleNames.values } 
+                    values: {
+                        for: { in: Sunburst.roleNames.values }
                     },
                 }
             }],
@@ -103,15 +102,15 @@ module powerbi.visuals.samples {
 
         public init(options: VisualInitOptions): void {
             this.arc = d3.svg.arc()
-                .startAngle(function (d) { return d.x; })
-                .endAngle(function (d) { return d.x + d.dx; })
-                .innerRadius(function (d) { return Math.sqrt(d.y); })
-                .outerRadius(function (d) { return Math.sqrt(d.y + d.dy); });
+                .startAngle(function(d) { return d.x; })
+                .endAngle(function(d) { return d.x + d.dx; })
+                .innerRadius(function(d) { return Math.sqrt(d.y); })
+                .outerRadius(function(d) { return Math.sqrt(d.y + d.dy); });
 
             this.colors = options.style.colorPalette.dataColors;
             this.selectionManager = new SelectionManager({ hostServices: options.host });
             this.svg = d3.select(options.element.get(0)).append('svg');
-            this.svg.classed('mainDrawArea',true);
+            this.svg.classed('mainDrawArea', true);
             this.g = this.svg.append('g');
             this.g.classed("container", true);
             this.svg.append("text")
@@ -130,23 +129,23 @@ module powerbi.visuals.samples {
 
         public update(options: VisualUpdateOptions): void {
             if (options.dataViews.length > 0) {
-                let data = this.converter(options.dataViews[0], this.colors);
+                var data = this.converter(options.dataViews[0], this.colors);
                 this.viewport = options.viewport;
                 this.updateInternal(data);
             }
         }
-        
+
         private updateInternal(dataRootNode: SunburstSlice): void {
             this.svg.attr({
                 'height': this.viewport.height,
                 'width': this.viewport.width
             });
             this.g.attr('transform', SVGUtil.translate(this.viewport.width / 2, this.viewport.height / 2));
-            let radius = Math.min(this.viewport.width, this.viewport.height) / 2;
-            let partition = d3.layout.partition()
+            var radius = Math.min(this.viewport.width, this.viewport.height) / 2;
+            var partition = d3.layout.partition()
                 .size([2 * Math.PI, radius * radius])
                 .value((d) => { return d.value; });
-            let path = this.g.datum(dataRootNode).selectAll("path")
+            var path = this.g.datum(dataRootNode).selectAll("path")
                 .data(partition.nodes);
             path.enter().append("path");
             path.attr("display", (d) => { return d.depth ? null : "none"; })
@@ -160,7 +159,7 @@ module powerbi.visuals.samples {
                     }
                     d3.selectAll("path").call(Sunburst.setAllUnhide).attr('setUnHide', null);
                     this.highlightPath(d, this, true);
-                    let percentageFixedText = this.svg.select(".sunBurstPercentageFixed");
+                    var percentageFixedText = this.svg.select(".sunBurstPercentageFixed");
                     var percentage = this.total === 0 ? 0 : (100 * d.total / this.total).toPrecision(3);
                     percentageFixedText.text(d ? percentage + "%" : "");
                     percentageFixedText.style("fill", d.color);
@@ -169,14 +168,14 @@ module powerbi.visuals.samples {
                 });
             this.renderTooltip(path);
             path.exit().remove();
-            
+
             this.onResize();
         }
 
         // Get all parents of the node
         private static getTreePath(node) {
-            let path = [];
-            let current = node;
+            var path = [];
+            var current = node;
             while (current.parent) {
                 path.unshift(current);
                 current = current.parent;
@@ -185,27 +184,29 @@ module powerbi.visuals.samples {
         }
 
         private onResize(): void {
-            let width = this.viewport.width;
-            let height = this.viewport.height;
-            let percentageFixedText = this.svg.select(".sunBurstPercentageFixed");
+            var width = this.viewport.width;
+            var height = this.viewport.height;
+            var percentageFixedText = this.svg.select(".sunBurstPercentageFixed");
+            var textWidth = powerbi.TextMeasurementService.measureSvgTextElementWidth(percentageFixedText[0][0]);
+
             percentageFixedText.style("opacity", 1);
-            percentageFixedText.attr("y", (height / 2));
-            percentageFixedText.attr("x", ((width / 2) - (percentageFixedText.node().clientWidth / 2)));
+            percentageFixedText.attr("y", (height / 2 + 4));
+            percentageFixedText.attr("x", ((width / 2) - (textWidth / 2)));
         }
 
         private highlightPath(d, sunBurst, setUnhide): void {
-            let parentsArray = d ? Sunburst.getTreePath(d) : [];
+            var parentsArray = d ? Sunburst.getTreePath(d) : [];
             // Set opacity for all the segments.
-            sunBurst.svg.selectAll("path").each(function () {
+            sunBurst.svg.selectAll("path").each(function() {
                 if (d3.select(this).attr('setUnHide') !== 'true') {
                     d3.select(this).style("opacity", Sunburst.minOpacity);
                 }
             });
             // Highlight only ancestors of the current segment.
             sunBurst.svg.selectAll("path")
-                .filter(function (node) {
+                .filter(function(node) {
                     return (parentsArray.indexOf(node) >= 0);
-                }).each(function () {
+                }).each(function() {
                     d3.select(this).style("opacity", 1);
                     if (setUnhide === true) {
                         d3.select(this).attr('setUnHide', 'true');
@@ -234,10 +235,10 @@ module powerbi.visuals.samples {
                 selector = { data: pathIdentity, };
             }
 
-            let selectionId = pathIdentity.length === 0 ? null : new SelectionId(selector, false);
+            var selectionId = pathIdentity.length === 0 ? null : new SelectionId(selector, false);
             var valueToSet = originParentNode.values ? originParentNode.values[0].value : 0;
-            
-            let newSunNode: SunburstSlice = {
+
+            var newSunNode: SunburstSlice = {
                 name: originParentNode.name,
                 value: Math.max(valueToSet, 0),
                 selector: selectionId,
@@ -253,7 +254,7 @@ module powerbi.visuals.samples {
                 newSunNode.tooltipInfo = Sunburst.getTooltipData(originParentNode.value, -1);
 
                 newSunNode.children = [];
-                for (let i = 0; i < originParentNode.children.length; i++) {
+                for (var i = 0; i < originParentNode.children.length; i++) {
                     var newChild = this.covertTreeNodeToSunBurstNode(originParentNode.children[i], newSunNode, colors, pathIdentity, newSunNode.color);
                     newSunNode.children.push(newChild);
                     newSunNode.total += newChild.total;
@@ -268,10 +269,10 @@ module powerbi.visuals.samples {
             return newSunNode;
         }
 
-        public converter(dataView: DataView, colors: IDataColorPalette): SunburstSlice{
+        public converter(dataView: DataView, colors: IDataColorPalette): SunburstSlice {
             var colorScale = colors.getNewColorScale();
             this.total = 0;
-            let root: SunburstSlice = this.covertTreeNodeToSunBurstNode(dataView.matrix.rows.root, null, colorScale, [], undefined);
+            var root: SunburstSlice = this.covertTreeNodeToSunBurstNode(dataView.matrix.rows.root, null, colorScale, [], undefined);
 
             return root;
         }

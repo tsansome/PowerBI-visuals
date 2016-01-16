@@ -567,10 +567,10 @@ module powerbitests {
                     value: "Group 1",
                     values: { 0: { value: 100 } }
                 }, {
-                    level: 0,
-                    value: "Group 2",
-                    values: { 0: { value: 200 } }
-                }]
+                        level: 0,
+                        value: "Group 2",
+                        values: { 0: { value: 200 } }
+                    }]
             },
             levels: [{ sources: [rowGroupSource1] }]
         },
@@ -2217,6 +2217,71 @@ module powerbitests {
         valueSources: [measureSource1]
     };
 
+    let matrixWithBigValues: DataViewMatrix = {
+        rows: {
+            root: {
+                children: [
+                    {
+                        level: 0,
+                        value: 'First header value to test in matrix, First header value to test in matrix',
+                        values: {
+                            0: { value: 5334543535 },
+                            1: { value: 8634246535 },
+                            2: { value: 6554438435 }
+                        }
+                    },
+                    {
+                        level: 0,
+                        value: 'Second header value to test in matrix, Second header value to test in matrix',
+                        values: {
+                            0: { value: 8563425435 },
+                            1: { value: 3455438435 },
+                            2: { value: 7613454435 }
+                        }
+                    },
+                    {
+                        level: 0,
+                        values: {
+                            0: { value: 7654554435 },
+                            1: { value: 1963425435 },
+                            2: { value: 75414535435 }
+                        }
+                    },
+                    {
+                        level: 0,
+                        isSubtotal: true,
+                        values: {
+                            0: { value: 6434246535 },
+                            1: { value: 4422465435 },
+                            2: { value: 4245543745 }
+                        }
+                    }
+                ]
+            },
+            levels: [{ sources: [rowGroupSource4] }]
+        },
+        columns: {
+            root: {
+                children: [
+                    {
+                        level: 0,
+                        value: true
+                    },
+                    {
+                        level: 0,
+                        value: false
+                    },
+                    {
+                        level: 0,
+                        isSubtotal: true
+                    }
+                ]
+            },
+            levels: [{ sources: [columnGroupSource4] }]
+        },
+        valueSources: [measureSource1]
+    };
+
     function getMatrixColumnWidthDataView(matrix, objects): any {
         return {
             metadata: {
@@ -2888,7 +2953,7 @@ module powerbitests {
             });
         });
 
-        describe("isRowHierarchyLeaf", () => {
+        describe("isRowHierarchyLeaf", () => {    
             // TODO
         });
 
@@ -3167,8 +3232,7 @@ module powerbitests {
             });
         });
 
-        it("loadMoreData calls control refresh", () => {
-            
+        it("loadMoreData calls control refresh", () => {    
             //Passing a Dataview with Create Operation to ensure previousDataView is not null when performing Append Operation
             v.onDataChanged({
                 dataViews: [matrixOneMeasureDataView],
@@ -3319,6 +3383,7 @@ module powerbitests {
                 extension: {
                     contentHost: { textContent: null },
                     setContainerStyle: () => { },
+                    clearTextAndTooltip: () => { },
                     clearContainerStyle: () => { },
                     unregisterClickHandler: () => { unregisterCalled = true; }
                 }
@@ -3718,6 +3783,14 @@ module powerbitests {
 
         function validateClassNames(expectedValues: string[][]): void {
             tablixHelper.validateClassNames(expectedValues, ".bi-tablix tr", NoMarginClass);
+        }
+
+        function validateMatrixTooltip(selector: string, values: powerbi.DataViewTreeNodeValue, index: number): void {
+            let matrixItems = $("tr").eq(index + 1).find(`.${selector} div div`);
+            for (let i = 0; i < Object.keys(values).length; i++) {
+                expect(matrixItems[i].textContent).toBe(formatter(values[i].value, measureSource3));
+                expect(matrixItems[i].title).toBe(formatter(values[i].value, measureSource3));
+            }
         }
 
         describe('text size', () => {
@@ -4845,6 +4918,39 @@ module powerbitests {
                 ];
 
                 validateClassNames(expectedClassNames);
+
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it("ensure matrix items tooltip", (done) => {
+            let matrix = matrixWithBigValues;
+            v.onDataChanged({
+                dataViews: [{
+                    metadata: {
+                        columns:
+                        [
+                            rowGroupSource4,
+                            columnGroupSource4,
+                            measureSource1
+                        ],
+                        objects: {
+                            general: {
+                                rowSubtotals: true,
+                                columnSubtotals: true
+                            }
+                        }
+                    },
+                    matrix: matrix
+                }]
+            });
+
+            setTimeout(() => {
+                
+                //test matrix items
+                for (let i = 0; i < matrixWithBigValues.rows.root.children.length; i++) {
+                    validateMatrixTooltip(BodyCellClass, matrixWithBigValues.rows.root.children[i].values,i);
+                }
 
                 done();
             }, DefaultWaitForRender);

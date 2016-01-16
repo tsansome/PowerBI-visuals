@@ -1518,25 +1518,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 .secondaryFont {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .secondaryBoldFont {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .lightFont {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .semilightFont {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .regularFont {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .semiboldFont {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .boldFontFamily {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .smallFontSize {
   font-size: 12px;
@@ -1824,42 +1824,53 @@ body {
   border-bottom: 2px solid #FFF;
   transform: rotate(45deg);
 }
+.horizontalSlicerContainer.canScrollRight .navigationArrow.right {
+  visibility: visible;
+}
+.horizontalSlicerContainer.canScrollLeft .navigationArrow.left {
+  visibility: visible;
+}
 .horizontalSlicerContainer .navigationArrow {
   visibility: hidden;
   background-color: white;
-}
-.horizontalSlicerContainer .navigationArrow.show {
-  visibility: visible;
 }
 .horizontalSlicerContainer .navigationArrow.right {
   background-image: url(../images/visuals.sprites.png);
   background-position: -62px -72px;
   width: 14px;
   height: 24px;
+  margin-left: 5px;
 }
 .horizontalSlicerContainer .navigationArrow.left {
   background-image: url(../images/visuals.sprites.png);
   background-position: -48px -72px;
   width: 14px;
   height: 24px;
+  margin-right: 5px;
 }
 .horizontalSlicerContainer .flexDisplay {
   display: -ms-flexbox;
+  display: -webkit-flex;
   display: flex;
-  -ms-flex-direction: row;
-  flex-direction: row;
 }
 .horizontalSlicerContainer .slicerBody {
   align-items: center;
   -ms-flex-align: center;
+  justify-content: space-between;
+  -ms-flex-direction: row;
+  flex-direction: row;
 }
 .horizontalSlicerContainer .slicerItemsContainer {
   vertical-align: top;
+  width: 100%;
+  height: 100%;
+  -webkit-flex: 1;
+  /* Chrome */
+  -ms-flex: 1;
+  /* IE 10 */
+  flex: 1;
 }
 .horizontalSlicerContainer .slicerText {
-  display: -ms-flexbox;
-  display: -webkit-flex;
-  display: flex;
   -webkit-flex-direction: column;
   -ms-flex-direction: column;
   flex-direction: column;
@@ -1869,6 +1880,11 @@ body {
   -webkit-align-items: center;
   -ms-flex-align: center;
   align-items: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 .horizontalSlicerContainer .slicerText.selected,
 .horizontalSlicerContainer .slicerText.partiallySelected {
@@ -1927,7 +1943,7 @@ body {
 .animatedNumber .mainText,
 .card .mainText {
   fill: #333333;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 /* Column chart styles */
 .columnChart .column {
@@ -1937,7 +1953,7 @@ body {
   fill: #239fd1;
 }
 .columnChart .axisGraphicsContext {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
 }
 .columnChart .axisGraphicsContext text {
@@ -1959,7 +1975,7 @@ body {
   opacity: 1;
 }
 .dataDotChart .dataDotChartMainGraphicsContext {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
 }
 .dataDotChart .dataDotChartMainGraphicsContext .dot {
@@ -1982,7 +1998,7 @@ body {
   display: none;
 }
 .dataDotChart .axisGraphicsContext {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
 }
 .dataDotChart .axisGraphicsContext text {
@@ -2001,7 +2017,7 @@ body {
   fill: #239fd1;
 }
 .waterfallChart .axisGraphicsContext {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
 }
 .waterfallChart .axisGraphicsContext text {
@@ -2052,7 +2068,7 @@ body {
   opacity: 1;
 }
 .lineChart .axisGraphicsContext {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
 }
 .lineChart .axisGraphicsContext text {
@@ -2079,10 +2095,10 @@ body {
 }
 .funnelChart .percentBars text {
   text-anchor: middle;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .funnelChart .axis {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
 }
 .funnelChart .axis path {
@@ -2103,7 +2119,7 @@ body {
   stroke: white;
 }
 .donutChart .labels text {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
   fill: #777777;
 }
@@ -2116,15 +2132,15 @@ body {
   fill: #666666;
 }
 .donutLegend .legend-item .category {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #666666;
 }
 .donutLegend .legend-item .percentage {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   /* No need for color, as it would be overriden afterwards */
 }
 .donutLegend .legend-item .value {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #666666;
 }
 .scatterChart .mainGraphicsContext path {
@@ -2148,7 +2164,7 @@ body {
   opacity: 0.6;
 }
 .scatterChart .axisGraphicsContext {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
 }
 .scatterChart .axisGraphicsContext text {
@@ -2172,7 +2188,7 @@ body {
   opacity: 1;
 }
 .playChart .axisGraphicsContext {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 11px;
 }
 .playChart .axisGraphicsContext text {
@@ -2311,7 +2327,7 @@ body {
   padding: 0px;
   border: 0px;
   margin: 0px;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #666666;
   font-weight: normal;
 }
@@ -2358,12 +2374,12 @@ body {
   border-bottom-width: 1pt;
   border-bottom-style: solid;
   border-bottom-color: #E8E8E8;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #333333;
   padding: 0px 0px 0px 10px;
 }
 .tablixContainer .bi-tablix .bi-table-last-row {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #333333;
   padding: 0px 0px 0px 10px;
 }
@@ -2371,7 +2387,7 @@ body {
   border-top-width: 1pt;
   border-top-style: solid;
   border-top-color: #CCCCCC;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #333333;
   padding: 0px 5px 0px 10px;
 }
@@ -2408,12 +2424,12 @@ body {
 }
 .tablixContainer .bi-tablix .bi-matrix-body-cell {
   text-align: right;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #333333;
   padding: 0px 5px 0px 10px;
 }
 .tablixContainer .bi-tablix .total {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .tablixContainer .bi-tablix .scroll-bar-div {
   background: #F1F1F1;
@@ -2455,7 +2471,7 @@ body {
   padding: 0px;
   border: 0px;
   margin: 0px;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #666666;
   font-weight: normal;
 }
@@ -2492,12 +2508,12 @@ body {
   border-bottom-width: 1pt;
   border-bottom-style: solid;
   border-bottom-color: #E8E8E8;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #333333;
   padding: 0px 0px 0px 10px;
 }
 .tablixContainer .bi-dashboard-tablix .bi-table-last-row {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #333333;
   padding: 0px 0px 0px 10px;
 }
@@ -2505,7 +2521,7 @@ body {
   border-top-width: 1pt;
   border-top-style: solid;
   border-top-color: #CCCCCC;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-weight: bold;
   color: #333333;
   padding: 0px 5px 0px 10px;
@@ -2540,13 +2556,13 @@ body {
 }
 .tablixContainer .bi-dashboard-tablix .bi-matrix-body-cell {
   text-align: right;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   color: #333333;
   padding: 0px 5px 0px 10px;
 }
 .tablixContainer .bi-dashboard-tablix .total {
   font-weight: bold;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .callout {
   /*temp styles, waiting on behaviour spec*/
@@ -2632,7 +2648,7 @@ body {
   fill: none;
 }
 .visual .treemap .labels {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   fill: #FFF;
   pointer-events: none;
 }
@@ -2677,18 +2693,23 @@ body {
 .visual .scroll-wrapper .scroll-element.scroll-draggable .scroll-bar {
   opacity: 1;
 }
+.visual.disable-events {
+  pointer-events: none;
+}
 .interactive-legend {
   white-space: nowrap;
   text-align: left;
   overflow: hidden;
+  touch-action: none;
+  cursor: pointer;
 }
 .interactive-legend .title {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 16px;
   color: #666666;
 }
 .interactive-legend .item {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   font-size: 12px;
   color: #666666;
   padding-right: 22px;
@@ -2733,7 +2754,7 @@ body {
 .tooltip-container div.tooltip-title-cell {
   display: table-cell;
   word-wrap: break-word;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   text-transform: uppercase;
   max-width: 130px;
   padding-right: 12px;
@@ -2742,7 +2763,7 @@ body {
 .tooltip-container div.tooltip-value-cell {
   display: table-cell;
   word-wrap: break-word;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   max-width: 260px;
   font-weight: bold;
   color: #FFF;
@@ -2774,12 +2795,12 @@ body {
 .labelGraphicsContext .label {
   font-size: 12px;
   text-anchor: middle;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .labelGraphicsContext .catagorylabel {
   font-size: 12px;
   text-anchor: middle;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
 }
 .leader-lines .line-label {
   opacity: 0.5;
@@ -2788,7 +2809,7 @@ body {
 .data-labels {
   font-size: 12px;
   text-anchor: middle;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   /* Enables tooltip when hovering on data label inside visual */
   pointer-events: none;
 }
@@ -2990,7 +3011,7 @@ div.ql-toolbar.darkToolbar select.ql-picker {
 }
 .multiRowCard .card .title {
   font-size: 18px;
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
   line-height: 24px;
   margin-bottom: 5px;
   overflow: hidden;
@@ -3090,19 +3111,6 @@ div.ql-toolbar.darkToolbar select.ql-picker {
     transform: rotate(2deg);
   }
 }
-.streamGraph {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
-  font-size: 11px;
-}
-.streamGraph .axis path,
-.streamGraph .axis line {
-  fill: none;
-  stroke: #666;
-  shape-rendering: crispEdges;
-}
-.streamGraph .axis text {
-  font-size: 11px;
-}
 .visual-sandbox {
   border: none;
   overflow: hidden;
@@ -3118,95 +3126,9 @@ div.ql-toolbar.darkToolbar select.ql-picker {
   stroke-width: 3px;
   stroke-opacity: 0.5;
 }
-.radarChart .axis path,
-.radarChart .axis line {
-  fill: none;
-  stroke: grey;
-  stroke-width: 1px;
-}
-.radarChart .axis text {
-  font-family: sans-serif;
-  font-size: 11px;
-}
-.radarChart .segments path,
-.radarChart .segments line {
-  fill: none;
-  stroke: grey;
-  stroke-opacity: 0.75;
-  stroke-width: 0.3px;
-}
-.dotPlot .axis path,
-.dotPlot .axis line {
-  fill: none;
-  stroke: black;
-  shape-rendering: crispEdges;
-}
-.dotPlot .axis text {
-  font-family: sans-serif;
-  font-size: 11px;
-}
-.timeline .axis path,
-.timeline .axis line {
-  fill: none;
-  stroke: black;
-  shape-rendering: crispEdges;
-}
-.timeline .axis text {
-  font-family: sans-serif;
-  font-size: 11px;
-}
-.sunBurstPercentage {
-  font-weight: bold;
-  opacity: 0;
-}
-.sunBurstPercentageFixed {
-  font-weight: bold;
-  opacity: 0;
-}
-.histogram {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
-}
-.histogram .axis path,
-.histogram .legends path,
-.histogram .axis line,
-.histogram .legends line {
-  fill: none;
-  stroke: #777777;
-  shape-rendering: crispEdges;
-}
-.histogram .axis text,
-.histogram .legends text {
-  fill: #777777;
-  font-size: 11px;
-}
-.histogram .legends text {
-  font-size: 12px;
-  fill: #000;
+.kpiVisual .goalText {
+  fill: #333333;
+  font-family: Segoe UI,Tahoma,Verdana,Geneva,sans-serif;
+  font-size: 15px;
   text-anchor: middle;
-}
-.areaRangeChart {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
-}
-.areaRangeChart .axis path,
-.areaRangeChart .axis line {
-  fill: none;
-  stroke: #777777;
-  shape-rendering: crispEdges;
-}
-.areaRangeChart .axis text {
-  fill: #777777;
-  font-size: 11px;
-}
-.areaRangeChart .chart path,
-.areaRangeChart .chart line {
-  stroke-width: 1;
-}
-.tornado-chart {
-  font-family: Tahoma,Verdana,Geneva,sans-serif;
-  font-size: 11px;
-}
-.tornado-chart .axes .axis {
-  fill: none;
-  stroke: #777777;
-  stroke-width: 1px;
 }

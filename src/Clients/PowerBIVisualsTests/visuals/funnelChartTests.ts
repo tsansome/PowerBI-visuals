@@ -1350,8 +1350,7 @@ module powerbitests {
             let dataView: DataView = dataViewBuilder.build();
             
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -1809,6 +1808,59 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
+        xit("Ensure percent bars font size position with many categories", (done) => {
+            let fontSize = 35;
+            let categoryValues: any[] = [
+                "United States",
+                "United Kingdom",
+                "Russia",
+                "Turkey",
+                "Romania",
+                "Latvia",
+                "Laos",
+                "Jamaica",
+                "Canada",
+                "India",
+            ];
+
+            let percentBarOnMetadata: DataViewMetadata = powerbi.Prototype.inherit(dataViewMetadata);
+            percentBarOnMetadata.objects = { percentBarLabel: { show: true, fontSize: fontSize } };
+
+            dataViewBuilder.setMetadata(percentBarOnMetadata);
+
+            dataViewBuilder.categoryBuilder()
+                .setSource(percentBarOnMetadata.columns[0])
+                .setValues(categoryValues)
+                .setIdentity(categoryValues.map((value: any) => {
+                    return mocks.dataViewScopeIdentity(value);
+                }))
+                .setIdentityFields([categoryColumnRef])
+                .buildCategory();
+
+            dataViewBuilder.valueColumnsBuilder()
+                .newValueBuilder()
+                .setSource(percentBarOnMetadata.columns[1])
+                .setValues([50, 200, 300, 400, 500, 600, 450, 900, 100, 255])
+                .setSubtotal(2000)
+                .buildNewValue()
+                .buildValueColumns();
+
+            let dataView: DataView = dataViewBuilder.build();
+
+            visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
+            setTimeout(() => {
+                let funnelBox = $('svg.funnelChart').get(0).getBoundingClientRect();
+                let percentBars = $('.percentBars text');
+                let topTextBox = percentBars.get(0).getBoundingClientRect();
+                let bottomTextBox = percentBars.get(1).getBoundingClientRect();
+
+                expect(topTextBox.top).toBeGreaterThan(funnelBox.top);
+                expect(bottomTextBox.bottom).toBeLessThan(funnelBox.bottom);
+
+                done();
+            }, DefaultWaitForRender);
+        });
+
         it("Default labels validation", (done) => {
             let metadataWithDisplayUnits: DataViewMetadata = $.extend(true, {}, dataViewMetadata);
             metadataWithDisplayUnits.objects = { labels: { labelDisplayUnits: 1000 } };
@@ -1843,8 +1895,7 @@ module powerbitests {
             let dataView: DataView = dataViewBuilder.build();
             
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -1946,8 +1997,7 @@ module powerbitests {
             let dataView: DataView = dataViewBuilder.build();
             
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -1997,8 +2047,7 @@ module powerbitests {
             let dataView: DataView = dataViewBuilder.build();
             
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".
@@ -2411,7 +2460,7 @@ module powerbitests {
             dataViewBuilder.valueColumnsBuilder()
                 .newValueBuilder()
                     .setSource(dataViewMetadataWithLabelsObject.columns[1])
-                    .setValues([1555, 2000, 20])
+                    .setValues([1556, 2000, 20])
                     .setSubtotal(3575)
                     .buildNewValue()
                 .buildValueColumns();
@@ -2461,8 +2510,7 @@ module powerbitests {
                 
             dataView.categorical.values[0].source["objects"]["general"]["formatString"] = "$0.00";
             visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // The funnel bars are rotated 90 degrees, so for the bars, "y" and "height" correspond
                 // to what we would think of as the position and size along the x-axis.
                 // The funnel data labels are not rotated, so for the labels we need to use "x" and "width".

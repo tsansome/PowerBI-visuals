@@ -37,7 +37,6 @@ module powerbitests.tableDataViewHelper {
 
     /** Create a table which contains @columnCount number of columns */
     export function getDataWithColumns(columnCount: number, numRows: number = 1, objects?: powerbi.DataViewObjects): powerbi.DataView {
-        
         // Generate alternating column types
         var columnTypes: ColumnType[] = [];
         for (var i = 0; i < columnCount; ++i) {

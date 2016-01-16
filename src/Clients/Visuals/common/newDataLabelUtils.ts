@@ -51,6 +51,7 @@ module powerbi.visuals {
         export let defaultInsideLabelColor = "#ffffff"; //white
         export const horizontalLabelBackgroundMargin = 4;
         export const verticalLabelBackgroundMargin = 2;
+        
         let labelBackgroundRounding = 4;
         let defaultLabelPrecision: number = undefined;
         let defaultCountLabelPrecision: number = 0;
@@ -58,14 +59,15 @@ module powerbi.visuals {
         export let labelGraphicsContextClass: ClassAndSelector = createClassAndSelector('labelGraphicsContext');
         export let labelBackgroundGraphicsContextClass: ClassAndSelector = createClassAndSelector('labelBackgroundGraphicsContext');
         let labelsClass: ClassAndSelector = createClassAndSelector('label');
-        let catagorylabelsClass: ClassAndSelector = createClassAndSelector('catagorylabel');
+        let categorylabelsClass: ClassAndSelector = createClassAndSelector('catagorylabel');
 
         const linesGraphicsContextClass: ClassAndSelector = createClassAndSelector('leader-lines');
         const lineClass: ClassAndSelector = createClassAndSelector('line-label');
 
         export function drawDefaultLabels(context: D3.Selection, dataLabels: Label[], numeric: boolean = false, twoRows: boolean = false): D3.UpdateSelection {
+            let filteredDataLabels = _.filter(dataLabels, (d: Label) => d.isVisible);
             let labels = context.selectAll(labelsClass.selector)
-                .data(_.filter(dataLabels, (d: Label) => d.isVisible), (d: Label, index: number) => { return d.identity ? d.identity.getKeyWithoutHighlight() : index; });
+                .data(filteredDataLabels, labelKeyFunction);
             labels.enter()
                 .append("text")
                 .classed(labelsClass.class, true);
@@ -93,11 +95,12 @@ module powerbi.visuals {
             labels.exit()
                 .remove();
 
-           let catagoryLabels = context.selectAll(catagorylabelsClass.selector)
-                .data(_.filter(twoRows ? dataLabels : [], (d: Label) => d.isVisible), (d: Label, index: number) => { return d.identity ? d.identity.getKeyWithoutHighlight() : index; });
-            catagoryLabels.enter()
+            let filteredCategoryLabels = _.filter(twoRows ? dataLabels : [], (d: Label) => d.isVisible && !_.isEmpty(d.secondRowText));
+            let categoryLabels = context.selectAll(categorylabelsClass.selector)
+                .data(filteredCategoryLabels, (d: Label, index: number) => { return d.identity ? d.identity.getKeyWithoutHighlight() : index; });
+            categoryLabels.enter()
                 .append("text")
-                .classed(catagorylabelsClass.class, true);
+                .classed(categorylabelsClass.class, true);
 
             labelAttr = {
                 x: (d: Label) => {
@@ -110,18 +113,19 @@ module powerbi.visuals {
                 },
                 dy: "-0.15em",
             };
-            if (numeric) { // For numeric catagoryLables, we use a tighter bounding box, so remove the dy because it doesn't need to be centered
+            if (numeric) { // For numeric categoryLables, we use a tighter bounding box, so remove the dy because it doesn't need to be centered
                 labelAttr.dy = undefined;
             }
-            catagoryLabels
+            categoryLabels
                 .text((d: Label) => d.secondRowText)
                 .attr(labelAttr)
                 .style({
                     'fill': (d: Label) => d.fill,
-                    'font-size': (d: Label) => PixelConverter.fromPoint(d.fontSize || DefaultLabelFontSizeInPt)
+                    'font-size': (d: Label) => PixelConverter.fromPoint(d.fontSize || DefaultLabelFontSizeInPt),
+                    'text-anchor': (d: Label) => d.textAnchor,
                 });
 
-            catagoryLabels.exit()
+            categoryLabels.exit()
                 .remove();
 
             return labels;
@@ -129,7 +133,7 @@ module powerbi.visuals {
 
         export function animateDefaultLabels(context: D3.Selection, dataLabels: Label[], duration: number, numeric: boolean = false, easeType: string = 'cubic-in-out'): D3.UpdateSelection {
             let labels = context.selectAll(labelsClass.selector)
-                .data(_.filter(dataLabels, (d: Label) => d.isVisible), (d: Label, index: number) => { return d.identity ? d.identity.getKeyWithoutHighlight() : index; });
+                .data(_.filter(dataLabels, (d: Label) => d.isVisible), labelKeyFunction);
 
             labels.enter()
                 .append("text")
@@ -167,7 +171,7 @@ module powerbi.visuals {
         /** Draws black rectangles based on the bounding bx of labels, to be used in debugging */
         export function drawLabelBackground(context: D3.Selection, dataLabels: Label[], fill?: string, fillOpacity?: number): D3.UpdateSelection {
             let labelRects = context.selectAll("rect")
-                .data(_.filter(dataLabels, (d: Label) => d.isVisible));
+                .data(_.filter(dataLabels, (d: Label) => d.isVisible), labelKeyFunction);
 
             labelRects.enter()
                 .append("rect");
@@ -201,40 +205,6 @@ module powerbi.visuals {
             return labelRects;
         }
 
-        export function setLabelTextDonutChart(d: DonutArcDescriptor, labelX: number, viewport: IViewport, dataLabelsSettings: VisualDataLabelsSettings, alternativeScale: number): string {
-            let spaceAvailableForLabels = viewport.width / 2 - Math.abs(labelX) - NewDataLabelUtils.maxLabelOffset;
-            let measureFormattersCache = dataLabelUtils.createColumnFormatterCacheManager();
-            let resultLabelText: string = '';
-            if (!dataLabelsSettings.show)
-                return resultLabelText;
-
-            let maxDataLabelWidth = dataLabelsSettings.labelStyle === labelStyle.both ? spaceAvailableForLabels / 2 : spaceAvailableForLabels;
-            let measureFormatter = measureFormattersCache.getOrCreate(d.data.labelFormatString, dataLabelsSettings, alternativeScale);
-
-            if (dataLabelsSettings.labelStyle === labelStyle.both || dataLabelsSettings.labelStyle === labelStyle.category)
-                resultLabelText = dataLabelUtils.getLabelFormattedText({
-                    label: d.data.label,
-                    maxWidth: maxDataLabelWidth,
-                    fontSize: dataLabelsSettings.fontSize
-                });
-
-            if (dataLabelsSettings.labelStyle === labelStyle.both || dataLabelsSettings.labelStyle === labelStyle.data) {
-                let fullMeasureText = dataLabelsSettings.labelStyle === labelStyle.both ? " (" + measureFormatter.format(d.data.measure) + ")" : d.data.measure;
-                resultLabelText += dataLabelUtils.getLabelFormattedText({
-                    label: fullMeasureText,
-                    maxWidth: maxDataLabelWidth,
-                    formatter: dataLabelsSettings.labelStyle === labelStyle.data ? measureFormatter : null,
-                    fontSize: dataLabelsSettings.fontSize,
-                });
-            }
-            return resultLabelText;
-        }
-
-        export function getXPositionForDonutLabel(textPointX: number): number {
-            let margin = textPointX < 0 ? -maxLabelOffset : maxLabelOffset;
-            return textPointX += margin;
-        }
-
         export function drawLabelLeaderLines(context: D3.Selection, filteredDataLabels: Label[], key?: (data: any, index?: number) => any, leaderLineColor?: string) {
             if (context.select(linesGraphicsContextClass.selector).empty())
                 context.append('g').classed(linesGraphicsContextClass.class, true);
@@ -252,6 +222,7 @@ module powerbi.visuals {
                 }).
                 style({
                     'stroke': (d: Label) => leaderLineColor ? leaderLineColor : d.fill,
+                'stroke-width': DonutLabelUtils.LineStrokeWidth,
                 });
 
             lines
@@ -368,6 +339,20 @@ module powerbi.visuals {
                         startingOffset: NewDataLabelUtils.startingLabelOffset
                     };
             }
+        }
+
+        /**
+         * Obtains the key from the label.  Index is required to use as a backup in cases
+         * where labels have no key or identity.
+         */
+        function labelKeyFunction(label: Label, index: number): any {
+            if (label.key) {
+                return label.key;
+            }
+            if (label.identity) {
+                return label.identity.getKeyWithoutHighlight();
+            }
+            return index;
         }
     }
 }

@@ -744,5 +744,6 @@
 
     module Events {
         function addHandler(target: any, eventName: string, handler: any);
+        function addThrottledHandler(target: any, eventName: string, handler: any, throttleInterval: any);
     }
 }

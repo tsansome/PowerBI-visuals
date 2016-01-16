@@ -37,6 +37,7 @@ module powerbitests {
     import ILegend = powerbi.visuals.ILegend;
     import dataLabelUtils = powerbi.visuals.dataLabelUtils;
     import PixelConverter = jsCommon.PixelConverter;
+    import MapShapeDataPointRenderer = powerbi.visuals.MapShapeDataPointRenderer;
 
     powerbitests.mocks.setLocale();
 
@@ -73,7 +74,6 @@ module powerbitests {
         });
 
             it('Capabilities DataRole preferredTypes', () => {
-            
                 //Map's Category, X and Y fieldWells have preferences for geographic locations, longitude and latitude respectively
             expect(powerbi.visuals.mapCapabilities.dataRoles.map(r => !!r.preferredTypes)).toEqual([
                 true,
@@ -982,6 +982,40 @@ module powerbitests {
                 
                 done();
             }, powerbitests.DefaultWaitForRender);
+        });
+
+        it("Selecting the main shape of a location", function () {
+            let smallShape: powerbi.IGeocodeBoundaryPolygon = {
+                nativeBing: '', //contents aren't used.
+                absoluteString: '',
+                absolute: new Float64Array(100), 
+                geographic: new Float64Array(3),
+                absoluteBounds: {
+                    left: 10,
+                    top: 10,
+                    width: 34.2,
+                    height: 49,
+                }
+            };
+
+            let bigShape: powerbi.IGeocodeBoundaryPolygon = {
+                nativeBing: '', //contents aren't used.
+                absoluteString: '',
+                absolute: new Float64Array(100), 
+                geographic: new Float64Array(3), 
+                absoluteBounds: {
+                    left: 10,
+                    top: 10,
+                    width: 100,
+                    height: 100,
+                }
+            };
+
+            let indexOfLargestShape: number = MapShapeDataPointRenderer.getIndexOfLargestShape([smallShape, bigShape]);
+            expect(indexOfLargestShape).toBe(1);
+            bigShape.absoluteBounds.width = bigShape.absoluteBounds.height = 1;
+            indexOfLargestShape = MapShapeDataPointRenderer.getIndexOfLargestShape([smallShape, bigShape]);
+            expect(indexOfLargestShape).toBe(0);
         });
 
         it("should have path for each category", (done) => {

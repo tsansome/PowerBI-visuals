@@ -32,8 +32,6 @@ module powerbitests {
     let valueFormatter = powerbi.visuals.valueFormatter;
 
     describe("ValueFormatter", () => {
-        let columnIntObjFormat: powerbi.DataViewMetadataColumn = { displayName: "col", objects: { fmtObj: { fmtProp: "R" } } };
-        let columnIntObjFormatIdentitifer: powerbi.DataViewObjectPropertyIdentifier = { objectName: "fmtObj", propertyName: "fmtProp" };
 
         describe("format", () => {
             it("format null", () => {
@@ -62,7 +60,6 @@ module powerbitests {
             });
 
             it("format 52 pct - 4 decimals beautified", () => {
-                
                 // we only beautify the default format strings for percent
                 expect(valueFormatter.format(0.52, "0.0000 %;-0.0000 %;0.0000 %", true)).toBe("52.0000 %");
             });
@@ -84,33 +81,130 @@ module powerbitests {
             });
         });
 
-        describe("formatValueColumn", () => {
-            let formatter = (value: any) => valueFormatter.formatValueColumn(value, columnIntObjFormat, columnIntObjFormatIdentitifer);
+        describe('format strings', () => {
 
-            it("format null", () => {
-                expect(formatter(null)).toBe("");
+            describe("getFormatString", () => {
+                const DefaultDateFormat = 'd';
+                const DefaultIntegerFormat = 'g';
+                const DefaultNumericFormat = '#,0.00';
+
+                let property: powerbi.DataViewObjectPropertyIdentifier = { objectName: "fmtObj", propertyName: "fmtProp" };
+                let getFormatString = (customFormat: string, columnType: ValueType): string => {
+                    let column: powerbi.DataViewMetadataColumn = {
+                        displayName: "col",
+                    };
+
+                    if (customFormat)
+                        column.objects = {
+                            fmtObj: { fmtProp: customFormat }
+                        };
+
+                    if (columnType)
+                        column.type = columnType;
+
+                    return valueFormatter.getFormatString(column, property);
+                };
+
+                it("column unspecfied format", () => {
+                    let format = getFormatString(null, null);
+
+                    expect(format).toBeUndefined();
+                });
+
+                it("column (null)", () => {
+                    let format = getFormatString(null, ValueType.fromPrimitiveTypeAndCategory(powerbi.PrimitiveType.Null));
+
+                    expect(format).toBeUndefined();
+                });
+
+                it("column (boolean)", () => {
+                    let format = getFormatString(null, ValueType.fromPrimitiveTypeAndCategory(powerbi.PrimitiveType.Boolean));
+
+                    expect(format).toBeUndefined();
+                });
+
+                it("column (date)", () => {
+                    let format = getFormatString(null, ValueType.fromPrimitiveTypeAndCategory(powerbi.PrimitiveType.Date));
+
+                    expect(format).toBe(DefaultDateFormat);
+                });
+
+                it("column (datetime)", () => {
+                    let format = getFormatString(null, ValueType.fromPrimitiveTypeAndCategory(powerbi.PrimitiveType.DateTime));
+
+                    expect(format).toBe(DefaultDateFormat);
+                });
+
+                it("column (time)", () => {
+                    let format = getFormatString(null, ValueType.fromPrimitiveTypeAndCategory(powerbi.PrimitiveType.Time));
+
+                    expect(format).toBe(DefaultDateFormat);
+                });
+
+                it("column (integer)", () => {
+                    let format = getFormatString(null, ValueType.fromPrimitiveTypeAndCategory(powerbi.PrimitiveType.Integer));
+
+                    expect(format).toBe(DefaultIntegerFormat);
+                });
+
+                it("column (double)", () => {
+                    let format = getFormatString(null, ValueType.fromPrimitiveTypeAndCategory(powerbi.PrimitiveType.Double));
+
+                    expect(format).toBe(DefaultNumericFormat);
+                });
+
+                it("column (decimal)", () => {
+                    let format = getFormatString(null, ValueType.fromPrimitiveTypeAndCategory(powerbi.PrimitiveType.Decimal));
+
+                    expect(format).toBe(DefaultNumericFormat);
+                });
+
+                it("column (month)", () => {
+                    let format = getFormatString(null, ValueType.fromDescriptor({ temporal: { month: true } }));
+
+                    expect(format).toBe(DefaultIntegerFormat);
+                });
+
+                it("column (year)", () => {
+                    let format = getFormatString(null, ValueType.fromDescriptor({ temporal: { year: true } }));
+
+                    expect(format).toBe(DefaultIntegerFormat);
+                });
+
+                it("column (text)", () => {
+                    let format = getFormatString(null, ValueType.fromDescriptor({ text: true }));
+
+                    expect(format).toBeUndefined();
+                });
+
+                it("column with custom format", () => {
+                    let customFormat = '*PBI*';
+                    let format = getFormatString(customFormat, null);
+
+                    expect(format).toBe(customFormat);
+                });
             });
 
-            it("format empty", () => {
-                expect(formatter("")).toBe("");
-            });
+            describe("formatValueColumn", () => {
+                let columnIntObjFormat: powerbi.DataViewMetadataColumn = { displayName: "col", objects: { fmtObj: { fmtProp: "R" } } };
+                let columnIntObjFormatIdentitifer: powerbi.DataViewObjectPropertyIdentifier = { objectName: "fmtObj", propertyName: "fmtProp" };
+                let formatter = (value: any) => valueFormatter.formatValueColumn(value, columnIntObjFormat, columnIntObjFormatIdentitifer);
 
-            it("format non-null value", () => {
-                expect(formatter(2010)).not.toBeNull();
-            });
+                it("format null", () => {
+                    expect(formatter(null)).toBe("");
+                });
 
-            it("format datetime value", () => {
-                expect(formatter(new Date(599914800000))).toBe('1/4/1989');
-            });
-        });
+                it("format empty", () => {
+                    expect(formatter("")).toBe("");
+                });
 
-        describe("getFormatString", () => {
-            it("getFormatString: column with custom object", () => {
-                expect(valueFormatter.getFormatString(columnIntObjFormat, columnIntObjFormatIdentitifer)).toBe("R");
-            });
+                it("format non-null value", () => {
+                    expect(formatter(2010)).not.toBeNull();
+                });
 
-            it("getFormatString: column with custom object (unspecified)", () => {
-                expect(valueFormatter.getFormatString({ displayName: "col" }, columnIntObjFormatIdentitifer)).toBeUndefined();
+                it("format datetime value", () => {
+                    expect(formatter(new Date(599914800000))).toBe('1/4/1989');
+                });
             });
         });
 
@@ -199,15 +293,15 @@ module powerbitests {
             it("create Trillion ($)", () => {
                 let scale = valueFormatter.create({ value: 1e12, format: '$#,0.00' });
 
-                expect(scale.format(4.56e13)).toBe("$45.6T");
+                expect(scale.format(4.56e13)).toBe("$45.60T");
                 expect(scale.format(4.56789123e13)).toBe("$45.68T");
                 expect(scale.format(-3130000000000.567)).toBe("-$3.13T");
-                expect(scale.format(100000000000)).toBe("$0.1T");
-                expect(scale.format(1000000000000)).toBe("$1T");
-                expect(scale.format(100000000000000)).toBe("$100T");
-                expect(scale.format(1000000000000000)).toBe("$1000T");
-                expect(scale.format(1000000000000001)).toBe("$1000T");
-                expect(scale.format(1000000000000000000)).toBe("$1000000T");
+                expect(scale.format(100000000000)).toBe("$0.10T");
+                expect(scale.format(1000000000000)).toBe("$1.00T");
+                expect(scale.format(100000000000000)).toBe("$100.00T");
+                expect(scale.format(1000000000000000)).toBe("$1,000.00T");
+                expect(scale.format(1000000000000001)).toBe("$1,000.00T");
+                expect(scale.format(1000000000000000000)).toBe("$1,000,000.00T");
                 expect(scale.format(null)).toBe("(Blank)");
             });
 
@@ -234,19 +328,19 @@ module powerbitests {
             it("create Exponent format", () => {
                 let scale = valueFormatter.create({ value: 1e15 });
 
-                expect(scale.format(719200000000001920000000000)).toBe("7.192E+26");
+                expect(scale.format(719200000000001920000000000)).toBe("7.19E+26");
             });
 
             it("create Exponent format with precision(1)", () => {
                 let scale = valueFormatter.create({ value: 1e15, precision: 1 });
 
-                // #6400065: 7.1E+26 returned because fuseNumberWithCustomFormatRight did not consider rounding
-                expect(scale.format(719200000000001920000000000)).toBe("7.1E+26");
+                expect(scale.format(719200000000001920000000000)).toBe("7.2E+26");
             });
 
             it("create Percentage", () => {
                 let scale = valueFormatter.create({ format: "0.00 %;-0.00 %;0.00 %", value: 1, allowFormatBeautification: true });
 
+                // beautified -> #,0.##%
                 expect(scale.format(0)).toBe("0%");
                 expect(scale.format(1)).toBe("100%");
                 expect(scale.format(-1)).toBe("-100%");
@@ -412,15 +506,14 @@ module powerbitests {
                 expect(scale.format(input)).toBe("9999");
             });
 
-            it("Verify single value integer formatting for numeric values less than 10K should show display units", () => {
-                
+            it("Verify single value integer formatting for numeric values less than 10K should show display units", () => {    
                 // NOTE: In this case the column type is Integer, but the value is actually numeric.
                 let format: string = "g";
                 let input: number = 9999.12345;
                 let columnType = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Integer);
                 let scale = valueFormatter.create({ format: format, value: input, formatSingleValues: true, columnType: columnType });
 
-                expect(scale.format(input)).toBe("10K");
+                expect(scale.format(input)).toBe("9.99912345K");
             });
 
             it("Verify single value number formatting with display units for values greater than 10K should show display units",() => {
@@ -429,7 +522,7 @@ module powerbitests {
                 let columnType = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double);
                 let scale = valueFormatter.create({ format: format, value: input, formatSingleValues: true, columnType: columnType });
 
-                expect(scale.format(input)).toBe("10K");
+                expect(scale.format(input)).toBe("10.001K");
             });
 
             it("Verify single value custom formatting with single decimal value should not show display units", () => {
@@ -447,7 +540,7 @@ module powerbitests {
                 let columnType = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double);
                 let scale = valueFormatter.create({ format: format, value: input, formatSingleValues: true, columnType: columnType });
 
-                expect(scale.format(input)).toBe("2K");
+                expect(scale.format(input)).toBe("2.00K");
             });
 
             it("Verify single value number formatting for values less than 10K should show display units", () => {
@@ -456,7 +549,7 @@ module powerbitests {
                 let columnType = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double);
                 let scale = valueFormatter.create({ format: format, value: input, formatSingleValues: true, columnType: columnType });
 
-                expect(scale.format(input)).toBe("2K");
+                expect(scale.format(input)).toBe("1.9999K");
             });
 
             it("create Boolean", () => {

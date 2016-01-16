@@ -31,13 +31,33 @@ module powerbi.visuals.samples {
     import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
     import createClassAndSelector = jsCommon.CssConstants.createClassAndSelector;
 
-    export interface AsterDatapoint {
+    export interface AsterDataPoint {
         color: string;
         sliceHeight: number;
         sliceWidth: number;
         label: string;
         selector: SelectionId;
         tooltipInfo: TooltipDataItem[];
+    }
+
+    //more than one implementation of interface which contains "IVisual" in its name currently is not supported in devtools
+    export class AsterPlotWarning/* implements IVisualWarning*/ {
+        private message: string;
+        constructor(message: string) {
+            this.message = message;
+        }
+
+        public get code(): string {
+            return "AsterPlotWarning";
+        }
+
+        public getMessages(resourceProvider: jsCommon.IStringResourceProvider): IVisualErrorMessage {
+            return {
+                message: this.message,
+                title: resourceProvider.get(""),
+                detail: resourceProvider.get("")
+            };
+        }
     }
 
     export class AsterPlot implements IVisual {
@@ -117,6 +137,7 @@ module powerbi.visuals.samples {
         private colors: IDataColorPalette;
         private selectionManager: SelectionManager;
         private dataView: DataView;
+        private hostService: IVisualHostServices;
 
         private static CenterTextFontHeightCoefficient = 0.4;
         private static CenterTextFontWidthCoefficient = 1.9;
@@ -129,7 +150,7 @@ module powerbi.visuals.samples {
             };
         }
 
-        public static converter(dataView: DataView, colors: IDataColorPalette): AsterDatapoint[] {
+        public static converter(dataView: DataView, colors: IDataColorPalette): AsterDataPoint[] {
             if (!dataView.categorical
                 || !dataView.categorical.categories
                 || dataView.categorical.categories.length !== 1)
@@ -138,7 +159,7 @@ module powerbi.visuals.samples {
             var cat = catDv.categories[0];
             var catValues = cat.values;
             var values = catDv.values;
-            var dataPoints: AsterDatapoint[] = [];
+            var dataPoints: AsterDataPoint[] = [];
 
             if (!catValues || catValues.length < 1 || !values || values.length < 1)
                 return dataPoints;
@@ -193,6 +214,7 @@ module powerbi.visuals.samples {
                 .append('svg')
                 .classed(AsterPlot.VisualClassName, true);
 
+            this.hostService = options.host;
             this.colors = options.style.colorPalette.dataColors;
             this.mainGroupElement = svg.append('g');
             this.centerText = this.mainGroupElement.append('text');
@@ -221,7 +243,7 @@ module powerbi.visuals.samples {
             mainGroup.attr('transform', SVGUtil.translate((width + 10) / 2, (height + 10) / 2));
 
             var dataView = this.dataView = options.dataViews[0];
-            var dataPoints = AsterPlot.converter(dataView, this.colors);
+            var dataPoints = this.validateData(dataView, AsterPlot.converter(dataView, this.colors));
             if (!dataPoints)
                 return;
 
@@ -276,6 +298,19 @@ module powerbi.visuals.samples {
             this.drawCenterText(innerRadius);
             this.drawOuterLine(innerRadius, radius, pie(dataPoints));
             TooltipManager.addTooltip(selection, (tooltipEvent: TooltipEvent) => tooltipEvent.data.data.tooltipInfo);
+        }
+
+        public validateData(dataView: DataView, dataPoints: AsterDataPoint[]): AsterDataPoint[] {
+            var maxCategories = this.colors.getAllColors().length;
+
+            if (dataPoints && dataView.categorical.categories[0].values.length > maxCategories) {
+                this.hostService.setWarnings(
+                    [new AsterPlotWarning((<any>powerbi).localization.defaultLocalizedStrings.DsrLimitWarning_TooMuchDataMessage)]);
+                var minSliceWidth: number = dataPoints.sort((a, b) => b.sliceWidth - a.sliceWidth)[maxCategories - 1].sliceWidth;
+                return dataPoints.filter(x => x.sliceWidth >= minSliceWidth).slice(0, maxCategories);
+            }
+
+            return dataPoints;
         }
 
         private drawOuterLine(innerRadius: number, radius: number, data) {

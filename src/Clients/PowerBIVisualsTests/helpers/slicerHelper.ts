@@ -33,7 +33,13 @@ module powerbitests.slicerHelper {
 
     export const SelectAllTextKey = 'Select All';
     export const SlicerVisual = 'slicer';
+    export const slicerTextClassSelector = ".slicerText";
+    export const slicerHeaderClassSelector = ".slicerHeader";
     const SelectedClass = 'selected';
+
+    export const longSlicerItems = ["First Slicer Long Name for testing",
+        "Second Slicer Long Name for testing",
+        "Third Slicer Long Name for testing"];
 
     export interface RenderSlicerOptions {
         visualType: string;
@@ -65,8 +71,8 @@ module powerbitests.slicerHelper {
     export function createHostServices(): powerbi.IVisualHostServices {
         let hostServices = new powerbi.visuals.DefaultVisualHostServices();
         hostServices.canSelect = () => true;
-        hostServices.filterAnalyzer = (filter: powerbi.data.SemanticFilter, fieldSQExprs: SQExpr[]) => {
-            return new mocks.FilterAnalyzerMock(filter, fieldSQExprs);
+        hostServices.analyzedFilter = (options: powerbi.FilterAnalyzerOptions) => {
+            return new mocks.FilterAnalyzerMock(options.filter, options.fieldSQExprs);
         };
         return hostServices;
     }
@@ -138,6 +144,13 @@ module powerbitests.slicerHelper {
         return {
             columns: [
                 { displayName: "Fruit", roles: { "Values": true }, type: ValueType.fromDescriptor({ text: true }) }]
+        };
+    }
+
+    export function buildDataViewMetadataWithLongName(): powerbi.DataViewMetadata {
+        return {
+            columns: [
+                { displayName: "This is a long slicer header for testing", roles: { "Values": true }, type: ValueType.fromDescriptor({ text: true }) }]
         };
     }
 

@@ -184,7 +184,6 @@ module powerbitests {
             });
 
             it("Single-select mode", () => {
-                
                 // Switch to single-select
                 let dataView = builder.dataView;
                 (<any>dataView.metadata.objects).selection.singleSelect = true;
@@ -245,6 +244,7 @@ module powerbitests {
                 expect(getSelectAllItem().length).toBe(0);
             });
         }
+
         describe("VerticalSlicer selection validation", () => validateSelection(SlicerOrientation.Vertical));
         describe("HorizontalSlicer selection validation", () => validateSelection(SlicerOrientation.Horizontal));
 
@@ -360,6 +360,7 @@ module powerbitests {
                 expect(parseAndRoundFontSize($(".slicerHeader .headerText"))).toBe(19);
             });
         }
+
         describe("VerticalSlicer formatting pane properties validation", () => validateFormattingPaneProperties(SlicerOrientation.Vertical));
         describe("HorizontalSlicer formatting pane properties validation", () => validateFormattingPaneProperties(SlicerOrientation.Horizontal));
 
@@ -414,6 +415,7 @@ module powerbitests {
                 expect(loadMoreSpy.calls.all().length).toBe(1);
             });
         }
+
         describe("VerticalSlicer LoadMoreData validation", () => validateLoadMoreData(SlicerOrientation.Vertical));
         describe("HorizontalSlicer LoadMoreData validation", () => validateLoadMoreData(SlicerOrientation.Horizontal));
 
@@ -430,18 +432,18 @@ module powerbitests {
                 expect($(".slicerText").length).toBe(6);
             });
             
-            // TODO: Recent changes to the converter logic makes this test fail. Qian will be enabling this test as part of her changes to revert the logic back to be synchronous
-            //it("Empty dataView test", () => {
-            //    expect($(".slicerText").length).toBe(6);
+            it("Empty dataView test", () => {
+                expect($(".slicerText").length).toBe(6);
 
-            //    let dataView: powerbi.DataView = slicerHelper.buildEmptyDataView();
-            //    let interactiveDataViewOptions: powerbi.VisualDataChangedOptions = {
-            //        dataViews: [dataView]
-            //    };
-            //    helpers.fireOnDataChanged(builder.visual, interactiveDataViewOptions);
-            //    expect($(".slicerText").length).toBe(0);
-            //});
+                let dataView: powerbi.DataView = slicerHelper.buildEmptyDataView();
+                let interactiveDataViewOptions: powerbi.VisualDataChangedOptions = {
+                    dataViews: [dataView]
+                };
+                helpers.fireOnDataChanged(builder.visual, interactiveDataViewOptions);
+                expect($(".slicerText").length).toBe(0);
+            });
         }
+
         describe("VerticalSlicer Null and Empty data validation", () => validateNullEmptyData(SlicerOrientation.Vertical));
         describe("HorizontalSlicer Null and Empty data validation", () => validateNullEmptyData(SlicerOrientation.Horizontal));
     });

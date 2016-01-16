@@ -240,29 +240,31 @@ module powerbi.visuals {
             let isScalar = axisOptions.isScalar;
             let xScale = axisOptions.xScale;
             let yScale = axisOptions.yScale;
-            let scaledY0 = yScale(0);
             let xScaleOffset = 0;
-
             if (isScalar)
                 xScaleOffset = columnWidth / 2;
+
+            // d.position is the top left corner (for drawing) - set in columnChart.converter
+            // for positive values, this is the previous stack position + the new value,
+            // for negative values it is just the previous stack position
 
             return {
                 shapeLayout: {
                     width: (d: ColumnChartDataPoint) => columnWidth,
                     x: (d: ColumnChartDataPoint) => xScale(isScalar ? d.categoryValue : d.categoryIndex) - xScaleOffset,
-                    y: (d: ColumnChartDataPoint) => scaledY0 + AxisHelper.diffScaled(yScale, d.position, 0),
-                    height: (d: ColumnChartDataPoint) => StackedUtil.getSize(yScale, d.valueAbsolute)
+                    y: (d: ColumnChartDataPoint) => yScale(d.position),
+                    height: (d: ColumnChartDataPoint) => yScale(d.position - d.valueAbsolute) - yScale(d.position),
                 },
                 shapeLayoutWithoutHighlights: {
                     width: (d: ColumnChartDataPoint) => columnWidth,
                     x: (d: ColumnChartDataPoint) => xScale(isScalar ? d.categoryValue : d.categoryIndex) - xScaleOffset,
-                    y: (d: ColumnChartDataPoint) => scaledY0 + AxisHelper.diffScaled(yScale, d.originalPosition, 0),
-                    height: (d: ColumnChartDataPoint) => StackedUtil.getSize(yScale, d.originalValueAbsolute)
+                    y: (d: ColumnChartDataPoint) => yScale(d.originalPosition),
+                    height: (d: ColumnChartDataPoint) => yScale(d.originalPosition - d.originalValueAbsolute) - yScale(d.originalPosition),
                 },
                 zeroShapeLayout: {
                     width: (d: ColumnChartDataPoint) => columnWidth,
                     x: (d: ColumnChartDataPoint) => xScale(isScalar ? d.categoryValue : d.categoryIndex) - xScaleOffset,
-                    y: (d: ColumnChartDataPoint) => scaledY0 + AxisHelper.diffScaled(yScale, d.position, 0) + StackedUtil.getSize(yScale, d.valueAbsolute),
+                    y: (d: ColumnChartDataPoint) => d.value >= 0 ? yScale(d.position - d.valueAbsolute) : yScale(d.position),
                     height: (d: ColumnChartDataPoint) => 0
                 },
             };
@@ -554,28 +556,30 @@ module powerbi.visuals {
             let isScalar = axisOptions.isScalar;
             let xScale = axisOptions.xScale;
             let yScale = axisOptions.yScale;
-            let scaledX0 = xScale(0);
             let yScaleOffset = 0;
-            
             if (isScalar)
                 yScaleOffset = columnWidth / 2;
 
+            // d.position is the top right corner for bars - set in columnChart.converter
+            // for positive values, this is the previous stack position + the new value,
+            // for negative values it is just the previous stack position
+
             return {
                 shapeLayout: {
-                    width: (d: ColumnChartDataPoint) => -StackedUtil.getSize(xScale, d.valueAbsolute),
-                    x: (d: ColumnChartDataPoint) => scaledX0 + AxisHelper.diffScaled(xScale, d.position - d.valueAbsolute, 0),
+                    width: (d: ColumnChartDataPoint) => xScale(d.position) - xScale(d.position - d.valueAbsolute),
+                    x: (d: ColumnChartDataPoint) => xScale(d.position - d.valueAbsolute),
                     y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - yScaleOffset,
                     height: (d: ColumnChartDataPoint) => columnWidth,
                 },
                 shapeLayoutWithoutHighlights: {
-                    width: (d: ColumnChartDataPoint) => -StackedUtil.getSize(xScale, d.originalValueAbsolute),
-                    x: (d: ColumnChartDataPoint) => scaledX0 + AxisHelper.diffScaled(xScale, d.originalPosition - d.originalValueAbsolute, 0),
+                    width: (d: ColumnChartDataPoint) => xScale(d.originalPosition) - xScale(d.originalPosition - d.originalValueAbsolute),
+                    x: (d: ColumnChartDataPoint) => xScale(d.originalPosition - d.originalValueAbsolute),
                     y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - yScaleOffset,
                     height: (d: ColumnChartDataPoint) => columnWidth,
                 },
                 zeroShapeLayout: {
                     width: (d: ColumnChartDataPoint) => 0,
-                    x: (d: ColumnChartDataPoint) => scaledX0 + AxisHelper.diffScaled(xScale, d.position - d.valueAbsolute, 0),
+                    x: (d: ColumnChartDataPoint) => d.value >= 0 ? xScale(d.position - d.valueAbsolute) : xScale(d.position),
                     y: (d: ColumnChartDataPoint) => yScale(isScalar ? d.categoryValue : d.categoryIndex) - yScaleOffset,
                     height: (d: ColumnChartDataPoint) => columnWidth,
                 },

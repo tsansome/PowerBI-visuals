@@ -77,7 +77,6 @@ module powerbitests {
                     type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
                 },
                 {
-                    
                     // for secondary grouping (legend/series)
                     displayName: 'col5',
                     queryName: 'col5',
@@ -306,7 +305,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 0 }),
+                            key: JSON.stringify({ series: key, category: 0 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -319,7 +318,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "200" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 1 }),
+                            key: JSON.stringify({ series: key, category: 1 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -332,7 +331,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col2", value: "700" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 2 }),
+                            key: JSON.stringify({ series: key, category: 2 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -445,7 +444,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }],
                                 identity: seriesId1,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey1, catIdx: 0 }),
+                                key: JSON.stringify({ series: seriesKey1, category: 0 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -458,7 +457,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "200" }],
                                 identity: seriesId1,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey1, catIdx: 1 }),
+                                key: JSON.stringify({ series: seriesKey1, category: 1 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -471,7 +470,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col2", value: "700" }],
                                 identity: seriesId1,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey1, catIdx: 2 }),
+                                key: JSON.stringify({ series: seriesKey1, category: 2 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -497,7 +496,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col3", value: "700" }],
                                 identity: seriesId2,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey2, catIdx: 0 }),
+                                key: JSON.stringify({ series: seriesKey2, category: 0 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -510,7 +509,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col3", value: "100" }],
                                 identity: seriesId2,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey2, catIdx: 1 }),
+                                key: JSON.stringify({ series: seriesKey2, category: 1 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -523,7 +522,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col3", value: "200" }],
                                 identity: seriesId2,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey2, catIdx: 2 }),
+                                key: JSON.stringify({ series: seriesKey2, category: 2 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -549,7 +548,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col4", value: "200" }],
                                 identity: seriesId3,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey3, catIdx: 0 }),
+                                key: JSON.stringify({ series: seriesKey3, category: 0 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -562,7 +561,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col4", value: "700" }],
                                 identity: seriesId3,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey3, catIdx: 1 }),
+                                key: JSON.stringify({ series: seriesKey3, category: 1 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -575,7 +574,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col4", value: "100" }],
                                 identity: seriesId3,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey3, catIdx: 2 }),
+                                key: JSON.stringify({ series: seriesKey3, category: 2 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -644,7 +643,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }],
                                 identity: seriesId1,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey1, catIdx: 0 }),
+                                key: JSON.stringify({ series: seriesKey1, category: 0 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -657,7 +656,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "200" }],
                                 identity: seriesId1,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey1, catIdx: 1 }),
+                                key: JSON.stringify({ series: seriesKey1, category: 1 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -670,7 +669,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col2", value: "700" }],
                                 identity: seriesId1,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey1, catIdx: 2 }),
+                                key: JSON.stringify({ series: seriesKey1, category: 2 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -696,7 +695,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col3", value: "700" }],
                                 identity: seriesId2,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey2, catIdx: 0 }),
+                                key: JSON.stringify({ series: seriesKey2, category: 0 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -709,7 +708,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col3", value: "100" }],
                                 identity: seriesId2,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey2, catIdx: 1 }),
+                                key: JSON.stringify({ series: seriesKey2, category: 1 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -722,7 +721,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col3", value: "200" }],
                                 identity: seriesId2,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey2, catIdx: 2 }),
+                                key: JSON.stringify({ series: seriesKey2, category: 2 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -748,7 +747,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col4", value: "200" }],
                                 identity: seriesId3,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey3, catIdx: 0 }),
+                                key: JSON.stringify({ series: seriesKey3, category: 0 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -761,7 +760,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col4", value: "700" }],
                                 identity: seriesId3,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey3, catIdx: 1 }),
+                                key: JSON.stringify({ series: seriesKey3, category: 1 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -774,7 +773,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col4", value: "100" }],
                                 identity: seriesId3,
                                 selected: false,
-                                key: JSON.stringify({ ser: seriesKey3, catIdx: 2 }),
+                                key: JSON.stringify({ series: seriesKey3, category: 2 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -869,7 +868,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col1", value: "100" }],
                                 identity: ids[0],
                                 selected: false,
-                                key: JSON.stringify({ ser: keys[0], catIdx: 0 }),
+                                key: JSON.stringify({ series: keys[0], category: 0 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -895,7 +894,7 @@ module powerbitests {
                                 tooltipInfo: [{ displayName: "col2", value: "200" }],
                                 identity: ids[1],
                                 selected: false,
-                                key: JSON.stringify({ ser: keys[1], catIdx: 0 }),
+                                key: JSON.stringify({ series: keys[1], category: 0 }),
                                 labelFill: labelColor,
                                 labelFormatString: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -953,7 +952,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "Date", value: "9/25/2014 12:00:00 AM" }, { displayName: "PowerBI Customers", value: "8000" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 0 }),
+                            key: JSON.stringify({ series: key, category: 0 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -966,7 +965,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "Date", value: "12/12/2014 12:00:00 AM" }, { displayName: "PowerBI Customers", value: "20000" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 1 }),
+                            key: JSON.stringify({ series: key, category: 1 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -979,7 +978,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "Date", value: "9/25/2015 12:00:00 AM" }, { displayName: "PowerBI Customers", value: "1000000" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 2 }),
+                            key: JSON.stringify({ series: key, category: 2 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1036,7 +1035,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "Date", value: "9/25/2014 12:00:00 AM" }, { displayName: "PowerBI Customers", value: "8000" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 1 }),
+                            key: JSON.stringify({ series: key, category: 1 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1049,7 +1048,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "Date", value: "12/12/2014 12:00:00 AM" }, { displayName: "PowerBI Customers", value: "20000" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 2 }),
+                            key: JSON.stringify({ series: key, category: 2 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1062,7 +1061,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "Date", value: "9/25/2015 12:00:00 AM" }, { displayName: "PowerBI Customers", value: "1000000" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 3 }),
+                            key: JSON.stringify({ series: key, category: 3 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1114,7 +1113,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 0 }),
+                            key: JSON.stringify({ series: key, category: 0 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1127,7 +1126,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "(Blank)" }, { displayName: "col2", value: "300" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 1 }),
+                            key: JSON.stringify({ series: key, category: 1 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1140,7 +1139,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "200" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 2 }),
+                            key: JSON.stringify({ series: key, category: 2 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1153,7 +1152,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col2", value: "700" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 3 }),
+                            key: JSON.stringify({ series: key, category: 3 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1205,7 +1204,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 0 }),
+                            key: JSON.stringify({ series: key, category: 0 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1218,7 +1217,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "1.7976931348623157E+308" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 1 }),
+                            key: JSON.stringify({ series: key, category: 1 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1231,7 +1230,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col2", value: "700" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 2 }),
+                            key: JSON.stringify({ series: key, category: 2 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1283,7 +1282,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 0 }),
+                            key: JSON.stringify({ series: key, category: 0 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1296,7 +1295,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "-1.7976931348623157E+308" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 1 }),
+                            key: JSON.stringify({ series: key, category: 1 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1309,7 +1308,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col2", value: "700" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 2 }),
+                            key: JSON.stringify({ series: key, category: 2 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1361,7 +1360,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 0 }),
+                            key: JSON.stringify({ series: key, category: 0 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1374,7 +1373,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Delta Force" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 1 }),
+                            key: JSON.stringify({ series: key, category: 1 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1387,7 +1386,7 @@ module powerbitests {
                             tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col2", value: "700" }],
                             identity: selectionId,
                             selected: false,
-                            key: JSON.stringify({ ser: key, catIdx: 2 }),
+                            key: JSON.stringify({ series: key, category: 2 }),
                             labelFill: labelColor,
                             labelFormatString: undefined,
                             labelSettings: defaultLabelSettings,
@@ -1547,7 +1546,7 @@ module powerbitests {
                         queryName: 'col2',
                         isMeasure: true,
                         type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double),
-                        objects: { general: { formatString: '0.000' } },
+                        objects: { general: { formatString: '0.###' } },
                     },
                     {
                         displayName: 'col3',
@@ -1728,7 +1727,6 @@ module powerbitests {
             });
 
             it('verify viewport when filtering data', (done) => {
-                
                 // Clone in order to keep the original as it is
                 let dataViewMeta = _.clone(dataViewMetadata);
                 dataViewMeta.objects = {
@@ -1762,7 +1760,7 @@ module powerbitests {
                 let graphicsBox = $('.mainGraphicsContext')[0].getBoundingClientRect();
                 if (interactiveChart) {
                     setTimeout(() => {
-                        expect(graphicsBox.height).toBeCloseTo(405, 0);
+                        expect(graphicsBox.height).toBeCloseTo(400, 0);
                         expect(Helpers.isInRange(graphicsBox.width, 384, 391)).toBe(true);
                         done();
                     }, DefaultWaitForRender);
@@ -2343,7 +2341,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col2", value: "100" }],
                                     identity: seriesId1,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey1, catIdx: 0 }),
+                                    key: JSON.stringify({ series: seriesKey1, category: 0 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2356,7 +2354,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col2", value: "200" }],
                                     identity: seriesId1,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey1, catIdx: 1 }),
+                                    key: JSON.stringify({ series: seriesKey1, category: 1 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2369,7 +2367,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col2", value: "700" }],
                                     identity: seriesId1,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey1, catIdx: 2 }),
+                                    key: JSON.stringify({ series: seriesKey1, category: 2 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2395,7 +2393,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col3", value: "700" }],
                                     identity: seriesId2,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey2, catIdx: 0 }),
+                                    key: JSON.stringify({ series: seriesKey2, category: 0 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2408,7 +2406,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col3", value: "100" }],
                                     identity: seriesId2,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey2, catIdx: 1 }),
+                                    key: JSON.stringify({ series: seriesKey2, category: 1 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2421,7 +2419,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col3", value: "200" }],
                                     identity: seriesId2,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey2, catIdx: 2 }),
+                                    key: JSON.stringify({ series: seriesKey2, category: 2 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2447,7 +2445,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "John Domo" }, { displayName: "col4", value: "200" }],
                                     identity: seriesId3,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey3, catIdx: 0 }),
+                                    key: JSON.stringify({ series: seriesKey3, category: 0 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2460,7 +2458,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "Delta Force" }, { displayName: "col4", value: "700" }],
                                     identity: seriesId3,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey3, catIdx: 1 }),
+                                    key: JSON.stringify({ series: seriesKey3, category: 1 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2473,7 +2471,7 @@ module powerbitests {
                                     tooltipInfo: [{ displayName: "col1", value: "Jean Tablau" }, { displayName: "col4", value: "100" }],
                                     identity: seriesId3,
                                     selected: false,
-                                    key: JSON.stringify({ ser: seriesKey3, catIdx: 2 }),
+                                    key: JSON.stringify({ series: seriesKey3, category: 2 }),
                                     labelFill: labelColor,
                                     labelFormatString: undefined,
                                     labelSettings: defaultLabelSettings,
@@ -2716,8 +2714,8 @@ module powerbitests {
                 });
                 setTimeout(() => {
                     expect($('.lineChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(1);
-                    expect($('.lineChart .axisGraphicsContext .y.axis .tick').find('text').first().text()).toBe('0.150');
-                    expect($('.lineChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('0.160');
+                    expect($('.lineChart .axisGraphicsContext .y.axis .tick').find('text').first().text()).toBe('0.15');
+                    expect($('.lineChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('0.16');
                     done();
                 }, DefaultWaitForRender);
             });
@@ -2774,7 +2772,6 @@ module powerbitests {
             });
 
             it('line chart validate word breaking axis labels', (done) => {
-                
                 // Word break will only tend to trigger when graphs are wider than they are high
                 v.update({
                     viewport: { height: 320, width: 640 },
@@ -3464,13 +3461,12 @@ module powerbitests {
         });
 
         it('verify legend formatted as date', () => {
-            
             // verify legend was changed to correct values
             let legend = $('.interactive-legend');
             let title = legend.find('.title');
 
             expect(legend.length).toBe(1);
-            expect(title.text().trim()).toBe('12/18/2014');
+            expect(title.text().trim()).toBe('12/20/2014');
         });
     });
 
@@ -3754,7 +3750,7 @@ module powerbitests {
 
             let hoverLine = $('.hover-line');
 
-            expect(lineChart.selectColumn).toHaveBeenCalledWith(0, true);
+            expect(lineChart.selectColumn).toHaveBeenCalledWith(4, true);
             expect(hoverLine.length).toBe(1);
         });
     });
@@ -5109,6 +5105,66 @@ module powerbitests {
             expect(labelDataPoints[2].fontSize).toEqual(fontSize);
             expect(labelDataPoints[3].fontSize).toEqual(fontSize);
             expect(labelDataPoints[4].fontSize).toEqual(fontSize);
+        });
+
+        it("Label data points have correct text", () => {
+            let dataViewMetadata: powerbi.DataViewMetadata = {
+                columns: [
+                    {
+                        displayName: 'col1',
+                        queryName: 'col1',
+                        type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Text)
+                    }, {
+                        displayName: 'col2',
+                        queryName: 'col2',
+                        isMeasure: true,
+                        type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double),
+                        format: '0.##;-0.##;0',
+                    }],
+                objects: {
+                    labels: {
+                        show: true,
+                        color: undefined,
+                        labelDisplayUnits: undefined,
+                        labelPosition: undefined,
+                        labelPrecision: undefined,
+                        labelDensity: labelDensityMax,
+                    }
+                }
+            };
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity('a'),
+                mocks.dataViewScopeIdentity('b'),
+                mocks.dataViewScopeIdentity('c'),
+                mocks.dataViewScopeIdentity('d'),
+                mocks.dataViewScopeIdentity('e'),
+            ];
+            v.onDataChanged({
+                dataViews: [{
+                    metadata: dataViewMetadata,
+                    categorical: {
+                        categories: [{
+                            source: dataViewMetadata.columns[0],
+                            values: ['a', 'b', 'c', 'd', 'e'],
+                            identity: categoryIdentities,
+                        }],
+                        values: DataViewTransform.createValueColumns([{
+                            source: dataViewMetadata.columns[1],
+                            values: [500, 300, 700, 400, 100],
+                            subtotal: 2000
+                        }])
+                    }
+                }]
+            });
+
+            let labelDataPoints = callCreateLabelDataPoints(v);
+            
+            // Important labels (first, last, highest, lowest) should be first
+            expect(labelDataPoints[0].key).toEqual(JSON.stringify({ series: JSON.stringify({ selector: '{"metadata":"col2"}', highlight: false }), category: categoryIdentities[0].key }));
+            expect(labelDataPoints[1].key).toEqual(JSON.stringify({ series: JSON.stringify({ selector: '{"metadata":"col2"}', highlight: false }), category: categoryIdentities[2].key }));
+            expect(labelDataPoints[2].key).toEqual(JSON.stringify({ series: JSON.stringify({ selector: '{"metadata":"col2"}', highlight: false }), category: categoryIdentities[4].key }));
+            expect(labelDataPoints[3].key).toEqual(JSON.stringify({ series: JSON.stringify({ selector: '{"metadata":"col2"}', highlight: false }), category: categoryIdentities[1].key }));
+            expect(labelDataPoints[4].key).toEqual(JSON.stringify({ series: JSON.stringify({ selector: '{"metadata":"col2"}', highlight: false }), category: categoryIdentities[3].key }));
         });
     });
 

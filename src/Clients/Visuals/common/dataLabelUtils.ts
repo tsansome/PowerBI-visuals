@@ -881,22 +881,16 @@ module powerbi.visuals {
                 instance.properties['labelStyle'] = options.dataLabelsSettings.labelStyle;
             if (options.fontSize)
                 instance.properties['fontSize'] = options.dataLabelsSettings.fontSize;
+            if (options.labelDensity) {
+                var lineChartSettings = <LineChartDataLabelsSettings> options.dataLabelsSettings;
+                if (lineChartSettings)
+                    instance.properties['labelDensity'] = lineChartSettings.labelDensity;
+            }
+            //Keep show all as the last property of the instance.
             if (options.showAll)
                 instance.properties['showAll'] = options.dataLabelsSettings.showLabelPerSeries;
 
             return options.enumeration.pushInstance(instance);
-        }
-
-        export function enumerateLineChartDataLabels(
-            options: VisualDataLabelsSettingsOptions, labelDensity: number): ObjectEnumerationBuilder {
-
-            enumerateDataLabels(options);
-
-            return options.enumeration.pushInstance({
-                objectName: 'labels',
-                selector: options.selector,
-                properties: { labelDensity: labelDensity },
-            });
         }
 
         export function enumerateCategoryLabels(enumeration: ObjectEnumerationBuilder, dataLabelsSettings: VisualDataLabelsSettings, withFill: boolean, isShowCategory: boolean = false, fontSize?: number): void {

@@ -27,92 +27,509 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
+    export interface PlayInitOptions extends CartesianVisualInitOptions {
+    }
+    
+    export interface PlayChartDataPoint {
+        frameIndex?: number;
+    };
 
-    export interface PlayableVisual {
-        renderAtFrameIndex(frameIndex: number): void;
+    export interface PlayChartData<T extends PlayableChartData> {
+        frameKeys: string[];
+        allViewModels: T[];
+        currentViewModel: T;
+        currentFrameIndex: number;
+        labelData: PlayAxisTickLabelData;
     }
 
-    // TODO: use templating for the base visual datapoint class (allViewModels: T[][])
-    //      export interface PlayChartData<T> {
-    // TODO: consider organizing better with logical grouping, like playData.state = {isPlaying,currentFrameIndex,etc}, and .elements = {playContainer,playButton,slider,callout,etc}
-    export interface PlayChartData {
-        host?: IVisualHostServices;
-        frameKeys: any[];
-        allViewModels?: PlayableChartData[];
-        currentViewModel?: PlayableChartData;
-        currentFrameIndex?: number;
-        lastRenderedTraceFrameIndex?: number;
-        currentViewport?: IViewport;
-        lastRenderedViewport?: IViewport;
-        frameCount?: number;
-        isPlaying?: boolean;
-
-        element?: JQuery;
-        svg?: JQuery;
-
-        playAxisContainer?: JQuery; //contains the playButton and slider
-        playButton?: JQuery;
-        playButtonCircle?: JQuery;
-        slider?: JQuery;
-        callout?: JQuery;
-        
-        // do not call converter() when we call persistProperties and a new update() happens
-        // NOTE: calling persistProperties will still cause a render() call to come from cartesianChart
-        // TODO: make persist properties only optionally trigger a new onDataChagned, as most charts don't want this (only slicer needs it)
-        ridiculousFlagForPersistProperties?: boolean;
-
-        renderAtFrameIndexFn?(frameIndex: number): void;
+    export interface PlayChartViewModel<TData extends PlayableChartData, TViewModel> {
+        data: PlayChartData<TData>;
+        viewModel: TViewModel;
+        viewport: IViewport;
     }
 
     // TODO: consider a template for the datapoint type <T> instead of any[]
+    // I tried this an it is quite hard to express correctly with TypeScript.
     export interface PlayableChartData {
         dataPoints: any[];
     }
 
-    export interface PlayableConverterOptions {
-        viewport: IViewport;
-    }
-
-    //interface PlayDataState {
-    //}
-
-    //interface PlayDataElements {
-    //}
-    
     interface PlayObjectProperties {
         currentFrameIndex?: number;
     }
 
-    interface PlayLabelInfo {
+    export interface PlayAxisTickLabelInfo {
         label: string;
         labelWidth: number;
     }
 
-    interface PlayLabelData {
-        labelInfo: PlayLabelInfo[];
+    export interface PlayAxisTickLabelData {
+        labelInfo: PlayAxisTickLabelInfo[];
         anyWordBreaks: boolean;
+    }
+
+    export interface PlayChartRenderResult<TData extends PlayableChartData, TViewModel> {
+        allDataPoints: SelectableDataPoint[];
+        viewModel: PlayChartViewModel<TData, TViewModel>;
+    }
+
+    export interface PlayChartRenderFrameDelegate<T> {
+        (data: T): void;
+    }
+
+    export interface VisualDataConverterDelegate<T> {
+        (dataView: DataView): T;
+    }
+
+    export interface ITraceLineRenderer {
+        render(selectedPoints: SelectableDataPoint[], shouldAnimate: boolean): void;
+        remove(): void;
+    }
+
+    export class PlayAxis<T extends PlayableChartData> {
+        private element: JQuery;
+        private svg: JQuery;
+
+        private playData: PlayChartData<T>;
+        private renderDelegate: PlayChartRenderFrameDelegate<T>;
+        private isPlaying: boolean;
+        private lastViewport: IViewport;
+
+        // do not call converter() when we call persistProperties and a new update() happens
+        // NOTE: calling persistProperties will still cause a render() call to come from cartesianChart
+        // TODO: make persist properties only optionally trigger a new onDataChagned, as most charts don't want this (only slicer needs it)
+        private ridiculousFlagForPersistProperties: boolean;
+
+        private playControl: PlayControl;
+        private callout: JQuery;
+
+        private host: IVisualHostServices;
+        private interactivityService: IInteractivityService;
+        private isMobileChart: boolean;
+
+        constructor(options: CartesianVisualConstructorOptions) {
+            if (options) {
+                this.interactivityService = options.interactivityService;
+            }
+        }
+
+        public init(options: PlayInitOptions) {
+            debug.assertValue(options, 'options');
+
+            this.element = options.element;
+            this.svg = options.svg ? $(options.svg.node()) : null;
+            this.host = options.host;
+
+            this.isMobileChart = options.interactivity && options.interactivity.isInteractiveLegend;
+
+            if (this.interactivityService && !this.isMobileChart) {
+                this.playControl = new PlayControl(this.element, (frameIndex: number) => this.moveToFrameAndRender(frameIndex));
+                this.playControl.onPlay(() => this.play());
+            }
+        }
+
+        public setData(dataView: DataView, visualConverter: VisualDataConverterDelegate<T>, onlyResized: boolean): PlayChartData<T> {
+            if (dataView) {
+                if (this.ridiculousFlagForPersistProperties && dataView.metadata) {
+                    // BUG FIX: customer feedback has been strong that we should always default to show the last frame.
+                    // This is essential for dashboard tiles to refresh properly.
+
+                    //  Only copy frameIndex since it is the only property using persistProperties
+                    //let objectProps = getObjectProperties(dataView.metadata);
+                    //playData.currentFrameIndex = objectProps.currentFrameIndex;
+                    
+                    //  Turn off the flag that was set by our persistProperties call
+                    this.ridiculousFlagForPersistProperties = false;
+                    return this.playData;
+                }
+                else if (dataView.matrix || dataView.categorical) {
+                    if (onlyResized)
+                        return this.playData;
+
+                    this.playData = PlayChart.converter<T>(dataView, visualConverter);
+                }
+                else {
+                    this.playData = PlayChart.getDefaultPlayData<T>();
+                }
+            }
+            else {
+                this.playData = PlayChart.getDefaultPlayData<T>();
+            }
+
+            // Next render should be a full one.
+            this.lastViewport = undefined;
+
+            return this.playData;
+        }
+
+        public render<TViewModel>(suppressAnimations: boolean, viewModel: TViewModel, viewport: IViewport): PlayChartRenderResult<T, TViewModel> {
+            let playData = this.playData;
+
+            let resized = !this.lastViewport || (this.lastViewport.height !== viewport.height || this.lastViewport.width !== viewport.width);
+            this.lastViewport = viewport;
+
+            if (resized)
+                this.stop();
+
+            if (!playData)
+                return;
+
+            let playViewModel: PlayChartViewModel<T, TViewModel> = {
+                data: this.playData,
+                viewModel: viewModel,
+                viewport: viewport,
+            };
+
+            let hasSelection = false;
+            if (this.interactivityService) {
+                let data = <PlayableChartData>playData.currentViewModel;
+                this.interactivityService.applySelectionStateToData(data.dataPoints);
+                hasSelection = this.interactivityService.hasSelection();
+            }
+
+            let frameKeys = playData.frameKeys;
+            let currentFrameIndex = playData.currentFrameIndex;
+            let height = viewport.height;
+            let width = viewport.width;
+
+            // callout / currentFrameIndex label - keep separate from other Play DOM creation as we need this even without interactivity.
+            if (!this.callout) {
+                this.callout = $('<span class="callout"></span>').appendTo(this.element);
+            }
+
+            // update callout position due to legend
+            // TODO: Shouldn't all of this placement be done from the viewport?
+            this.adjustForLegend();
+
+            if (this.playControl && resized) {
+                this.playControl.rebuild(playData, viewport);
+            }
+
+            // update callout to current frame index
+            let calloutDimension = Math.min(height, width * 1.3); //1.3 to compensate for tall, narrow-width viewport
+            let fontSize = Math.max(12, Math.round(calloutDimension / 7));
+            fontSize = Math.min(fontSize, 70);
+            if (currentFrameIndex < frameKeys.length && currentFrameIndex >= 0) {
+                // clear these for auto-measurement
+                this.callout.width('auto');
+                this.callout.height('auto');
+
+                this.callout
+                    .text(frameKeys[currentFrameIndex])
+                    .css('font-size', fontSize + 'px');
+
+                let compStyle = getComputedStyle(this.callout[0]);
+                let actualWidth = Math.ceil(parseFloat(compStyle.width));
+                let actualHeight = Math.ceil(parseFloat(compStyle.height));
+                this.callout.width(Math.min(actualWidth, viewport.width));
+                this.callout.height(actualHeight);
+            }
+            else {
+                this.callout.text('');
+            }
+
+            let allDataPoints = playData.allViewModels.map((vm) => vm.dataPoints);
+            let flatAllDataPoints = _.flatten<SelectableDataPoint>(allDataPoints);
+            
+            // NOTE: Return data points to keep track of current selected bubble even if it drops out for a few frames
+            return {
+                allDataPoints: flatAllDataPoints,
+                viewModel: playViewModel,
+            };
+        }
+
+        public play(): void {
+            let playData = this.playData;
+
+            if (this.isPlaying) {
+                this.stop();
+            }
+            else if (this.playControl) {
+                this.isPlaying = true;
+                this.playControl.play();
+
+                let indexToShow = Math.round(this.playControl.getCurrentIndex());
+                if (indexToShow >= playData.allViewModels.length - 1) {
+                    playData.currentFrameIndex = -1;
+                } else {
+                    playData.currentFrameIndex = indexToShow - 1;
+                }
+
+                this.playNextFrame(playData);
+            }
+        }
+
+        private playNextFrame(playData: PlayChartData<T>, startFrame?: number, endFrame?: number): void {
+            if (!this.isPlaying) {
+                this.stop();
+                return;
+            }
+
+            let nextFrame = playData.currentFrameIndex + 1;
+            if (startFrame != null && endFrame != null) {
+                nextFrame = Math.abs(endFrame - startFrame + 1);
+                startFrame = nextFrame;
+            }
+
+            if (nextFrame < playData.allViewModels.length && nextFrame > -1) {
+                playData.currentFrameIndex = nextFrame;
+                playData.currentViewModel = playData.allViewModels[nextFrame];
+
+                this.renderDelegate(playData.currentViewModel);
+                this.playControl.setFrame(nextFrame);
+
+                if (nextFrame < playData.allViewModels.length) {
+                    window.setTimeout(() => {
+                        this.playNextFrame(playData, startFrame, endFrame);
+                    }, PlayChart.FrameStepDuration);
+                }
+            } else {
+                this.stop();
+            }
+        }
+
+        public stop(): void {
+            if (this.playControl)
+                this.playControl.pause();
+            this.isPlaying = false;
+        }
+
+        public remove(): void {
+            if (this.playControl)
+                this.playControl.remove();
+            if (this.callout)
+                this.callout.remove();
+
+            // TODO: remove any tracelines
+        }
+
+        public setRenderFunction(fn: PlayChartRenderFrameDelegate<T>): void {
+            this.renderDelegate = fn;
+        }
+
+        private moveToFrameAndRender(frameIndex: number): void {
+            let playData = this.playData;
+
+            this.isPlaying = false;
+
+            if (frameIndex < 0 || frameIndex === playData.currentFrameIndex || frameIndex >= playData.allViewModels.length)
+                return;
+
+            playData.currentFrameIndex = frameIndex;
+            let data = playData.allViewModels[frameIndex];
+            playData.currentViewModel = data;
+            this.renderDelegate(data);
+        }
+
+        private adjustForLegend(): void {
+            let legend = $(".legend", this.element);
+            let sliderLeftOffset = 0, sliderBottomOffset = 0;
+
+            if (this.playControl) {
+                // Reset
+                let container = this.playControl.getContainer();
+                container.css("left", "");
+                container.css("bottom", "");
+            }
+
+            if (legend.length > 0) {
+                // TODO: we should NOT be interrogating legend CSS properties for this, move the Callout to be SVGText and position inside the svg container
+                const padding = 16; //callout padding
+                
+                // Reset to inherit css class top/right
+                this.callout.css("right", "");
+                this.callout.css("top", "");
+
+                let floatVal = legend.css("float");
+                let bottomVal = legend.css("bottom");
+
+                if (floatVal === "right")
+                    this.callout.css("right", legend.width() + padding);
+                else if (floatVal === "left")
+                    sliderLeftOffset = legend.width();
+                else if (floatVal === "none" || floatVal === "") {
+                    if (bottomVal === "" || bottomVal === "inherit" || bottomVal === "auto") {
+                        this.callout.css("top", legend.height() + padding);
+                    }
+                    else {
+                        sliderBottomOffset = legend.height() + 35;
+                    }
+                }
+
+                if (this.playControl) {
+                    let container = this.playControl.getContainer();
+                    if (sliderLeftOffset)
+                        container.css("left", sliderLeftOffset);
+                    if (sliderBottomOffset)
+                        container.css("bottom", sliderBottomOffset);
+                }
+            }
+        }
+
+        public getCartesianExtents(existingExtents: CartesianExtents, getExtents: (T) => CartesianExtents): CartesianExtents {
+            if (this.playData && this.playData.allViewModels && this.playData.allViewModels.length > 0) {
+                return PlayChart.getMinMaxForAllFrames(this.playData, getExtents);
+            }
+
+            return existingExtents;
+        }
+    }
+
+    class PlayControl {
+        private playAxisContainer: JQuery;
+        private playButton: JQuery;
+        private playButtonCircle: JQuery;
+        private slider: JQuery;
+        private noUiSlider: noUiSlider.noUiSlider;
+        private renderDelegate: (index: number) => void;
+
+        private static SliderMarginLeft = 15 + 24 + 10 * 2; // left margin + playButton width + playButton margin
+        private static SliderMarginRight = 20;
+        private static SliderMaxMargin = 100;
+
+        constructor(element: JQuery, renderDelegate: (index: number) => void) {
+            this.createSliderDOM(element);
+            this.renderDelegate = renderDelegate;
+        }
+
+        public getContainer(): JQuery {
+            return this.playAxisContainer;
+        }
+
+        public remove(): void {
+            if (this.playAxisContainer)
+                this.playAxisContainer.remove();
+        }
+
+        public pause(): void {
+            this.playButton.removeClass('pause').addClass('play');
+        }
+
+        public play(): void {
+            this.playButton.removeClass('play').addClass('pause');
+        }
+
+        public getCurrentIndex(): number {
+            // TODO: round() necessary?
+            return Math.round(<number>this.noUiSlider.get());
+        }
+
+        public onPlay(handler: (eventObject: JQueryEventObject) => void): void {
+            this.playButtonCircle.off('click');
+            this.playButtonCircle.on('click', handler);
+        }
+
+        private static calculateSliderWidth(labelData: PlayAxisTickLabelData, width: number): number {
+            let leftMargin = 0, rightMargin = 0;
+            if (!_.isEmpty(labelData.labelInfo)) {
+                leftMargin = _.first(labelData.labelInfo).labelWidth / 2;
+                rightMargin = _.last(labelData.labelInfo).labelWidth / 2;
+            }
+
+            let sliderLeftMargin = Math.max(leftMargin, PlayControl.SliderMarginLeft);
+            let sliderRightMargin = Math.max(rightMargin, PlayControl.SliderMarginRight);
+            
+            sliderLeftMargin = Math.min(PlayControl.SliderMaxMargin, sliderLeftMargin);
+            sliderRightMargin = Math.min(PlayControl.SliderMaxMargin, sliderRightMargin);
+            
+            let sliderWidth = Math.max((width - sliderLeftMargin - sliderRightMargin), 1);
+            return sliderWidth;
+        }
+
+        private createSliderDOM(element: JQuery): void {
+            this.playAxisContainer = $('<div class="play-axis-container"></div>')
+                .appendTo(element);
+
+            this.playButtonCircle = $('<div class="button-container"></div>')
+                .appendTo(this.playAxisContainer);
+
+            this.playButton = $('<div class="play"></div>')
+                .appendTo(this.playButtonCircle);
+
+            this.slider = $('<div class="sliders"></div>')
+                .appendTo(this.playAxisContainer);
+        }
+
+        public rebuild<T extends PlayableChartData>(playData: PlayChartData<T>, viewport: IViewport): void {
+            let slider = this.slider;
+
+            // re-create the slider
+            if (this.noUiSlider)
+                this.noUiSlider.destroy();
+
+            let sliderElement = <noUiSlider.Instance>this.slider.get(0);
+
+            let labelData = playData.labelData;
+            let sliderWidth = PlayControl.calculateSliderWidth(labelData, viewport.width);
+            this.slider.css('width', sliderWidth + 'px');
+
+            let numFrames = playData.frameKeys.length;
+            if (numFrames > 0) {
+                let filterPipLabels = PlayChart.createPipsFilterFn(playData, sliderWidth, labelData);
+                let lastIndex = numFrames - 1;
+                noUiSlider.create(
+                    sliderElement,
+                    {
+                        step: 1,
+                        start: [playData.currentFrameIndex],
+                        range: {
+                            min: [0],
+                            max: [lastIndex],
+                        },
+                        pips: {
+                            mode: 'steps',
+                            density: Math.round(100 / numFrames), //only draw ticks where we have labels
+                            format: {
+                                to: (index) => playData.frameKeys[index],
+                                from: (value) => playData.frameKeys.indexOf(value),
+                            },
+                            filter: filterPipLabels,
+                        },
+                    }
+                );
+            }
+            else {
+                noUiSlider.create(
+                    sliderElement,
+                    {
+                        step: 1,
+                        start: [0],
+                        range: {
+                            min: [0],
+                            max: [0],
+                        },
+                    });
+            }
+
+            this.noUiSlider = sliderElement.noUiSlider;
+
+            this.noUiSlider.on('slide', () => {
+                let indexToShow = this.getCurrentIndex();
+                this.renderDelegate(indexToShow);
+            });
+
+            // update the width and margin-left to center up each label
+            $('.noUi-value', slider).each((idx, elem) => {
+                // TODO: better way to get the label info for an element?
+                let actualWidth = labelData.labelInfo.filter(l => l.label === $(elem).text())[0].labelWidth;
+                $(elem).width(actualWidth);
+                $(elem).css('margin-left', -actualWidth / 2 + 'px');
+            });
+        }
+
+        public setFrame(frameIndex: number): void {
+            this.noUiSlider.set([frameIndex]);
+        };
     }
 
     export module PlayChart {
         // TODO: add speed control to property pane
         // NOTE: current noUiSlider speed is a CSS property of the class .noUi-state-tap, and also is hard-coded in noUiSlider.js. We'll need to add a new create param for transition time.
         // 800ms matches Silverlight frame speed
-        const FrameStepDuration = 800;
+        export const FrameStepDuration = 800;
         export const FrameAnimationDuration = 750; //leave 50ms for the traceline animation - to avoid being cancelled. TODO: add a proper wait impl.
-        const SliderMarginLeft = 15 + 24 + 10*2; //left margin + playButton width + playButton margin
-        const SliderMarginRight = 20;
-        const SliderMaxMargin = 100;
-        export const ClassName = 'playChart';
 
-        export function init(options: CartesianVisualInitOptions, playData: PlayChartData) {
-            playData.element = options.element;
-            playData.svg = options.svg ? $(options.svg.node()) : null;
-            playData.currentViewport = {
-                height: options.viewport.height,
-                width: options.viewport.width
-            };
-            playData.host = options.host;
-        }
+        export const ClassName = 'playChart';
 
         export function convertMatrixToCategorical(matrix: DataViewMatrix, frame: number): DataViewCategorical {
 
@@ -264,266 +681,134 @@ module powerbi.visuals {
 
             if (dataViewMetadata && dataViewMetadata.objects) {
                 let objects = dataViewMetadata.objects;
+                // TODO: remove?
                 objectProperties.currentFrameIndex = DataViewObjects.getValue(objects, scatterChartProps.currentFrameIndex.index, null);
             }
             return objectProperties;
         }
 
-        export function converter(
-            dataView: DataView,
-            visualConverter: (dataView: DataView, options: any) => any,
-            visualConverterOptions: any): PlayChartData {
+        function buildDataViewForFrame(metadata: DataViewMetadata, categorical: DataViewCategorical): DataView {
+            return {
+                metadata: metadata,
+                categorical: categorical,
+            };
+        }
 
+        export function converter<T extends PlayableChartData>(dataView: DataView, visualConverter: VisualDataConverterDelegate<T>): PlayChartData<T> {
             let dataViewMetadata: DataViewMetadata = dataView.metadata;
-
             let dataLabelsSettings = dataLabelUtils.getDefaultPointLabelSettings();
             let objectProperties = getObjectProperties(dataViewMetadata, dataLabelsSettings);
 
-            let allViewModels = [];
-            let frameKeys = [];
-            let currentViewModel = undefined;
+            let allViewModels: T[] = [];
+            let frameKeys: string[] = [];
+            let convertedData: T = undefined;
             let matrixRows = dataView.matrix.rows;
             let rowChildrenLength = matrixRows.root.children ? matrixRows.root.children.length : 0;
             if (dataView.matrix && rowChildrenLength > 0) {
                 let keySourceColumn = matrixRows.levels[0].sources[0];
+
+                // TODO: this should probably defer to the visual which knows how to format the categories.
                 let keyFormatter = valueFormatter.create({
                     format: valueFormatter.getFormatString(keySourceColumn, scatterChartProps.general.formatString),
                     value: matrixRows.root.children[0],
                     value2: matrixRows.root.children[rowChildrenLength - 1],
                 });
+
                 for (let i = 0, len = rowChildrenLength; i < len; i++) {
                     let key = matrixRows.root.children[i];
                     frameKeys.push(keyFormatter.format(key.value));
-                    let dataViewCategorical = PlayChart.convertMatrixToCategorical(dataView.matrix, i);
 
-                    // call child converter
-                    currentViewModel = visualConverter({ metadata: dataView.metadata, categorical: dataViewCategorical }, visualConverterOptions);
-                    allViewModels.push(currentViewModel);
+                    let dataViewCategorical = convertMatrixToCategorical(dataView.matrix, i);
+                    convertedData = visualConverter(buildDataViewForFrame(dataView.metadata, dataViewCategorical));
+                    allViewModels.push(convertedData);
                 }
             }
             else {
-                // call child converter
-                let dataViewCategorical = PlayChart.convertMatrixToCategorical(dataView.matrix, 0);
-                currentViewModel = visualConverter({ metadata: dataView.metadata, categorical: dataViewCategorical }, visualConverterOptions);
-                allViewModels.push(currentViewModel);
+                let dataViewCategorical = convertMatrixToCategorical(dataView.matrix, 0);
+                convertedData = visualConverter(buildDataViewForFrame(dataView.metadata, dataViewCategorical));
+                allViewModels.push(convertedData);
             }
-
-            // use the saved frame index, or default to the last frame
-            // FEATURE CHANGE: always default to go to the last frame.
-            //if (objectProperties.currentFrameIndex == null) {
-                objectProperties.currentFrameIndex = frameKeys.length - 1; //default
-                // currentViewModel is already set to the last frame
-            //}
-            //else if (objectProperties.currentFrameIndex < frameKeys.length) {
-                //currentViewModel = allViewModels[objectProperties.currentFrameIndex];
-            //}
+            
+            // NOTE: currentViewModel is already set to the last frame
+            objectProperties.currentFrameIndex = frameKeys.length - 1;
 
             return {
-                isPlaying: false,
                 allViewModels: allViewModels,
-                currentViewModel: currentViewModel,
+                currentViewModel: convertedData,
                 frameKeys: frameKeys,
                 currentFrameIndex: objectProperties.currentFrameIndex,
-                lastRenderedViewport: { width: 0, height: 0 }
+                labelData: getLabelData(frameKeys),
             };
         }
 
-        export function getDefaultPlayData(): PlayChartData {
-            let defaultData: PlayChartData = {
+        export function getDefaultPlayData<T extends PlayableChartData>(): PlayChartData<T> {
+            let defaultData: PlayChartData<T> = {
                 frameKeys: [],
+                allViewModels: [],
+                currentFrameIndex: 0,
+                currentViewModel: undefined,
+                labelData: {
+                    anyWordBreaks: false,
+                    labelInfo: [],
+                },
             };
             return defaultData;
         }
 
-        export function setData(playData: PlayChartData,
-            dataView: DataView,
-            visualConverter: (dataView: DataView, options: any) => any,
-            visualConverterOptions: PlayableConverterOptions,
-            resized?: boolean): PlayChartData {
-
-            if (playData && visualConverterOptions.viewport) {
-                playData.currentViewport = {
-                    height: visualConverterOptions.viewport.height,
-                    width: visualConverterOptions.viewport.width
-                };
-            }
-
-            if (dataView) {
-                if (playData && playData.ridiculousFlagForPersistProperties && dataView.metadata) {
-                    // BUG FIX: customer feedback has been strong that we should always default to show the last frame.
-                    // This is essential for dashboard tiles to refresh properly.
-
-                    //  Only copy frameIndex since it is the only property using persistProperties
-                    //let objectProps = getObjectProperties(dataView.metadata);
-                    //playData.currentFrameIndex = objectProps.currentFrameIndex;
-                    
-                    //  Turn off the flag that was set by our persistProperties call
-                    playData.ridiculousFlagForPersistProperties = false;
-                    return playData;
-                }
-                else if (dataView.matrix || dataView.categorical) {
-                    if (resized)
-                        return playData;
-
-                    let data = PlayChart.converter(dataView, visualConverter, visualConverterOptions);
-
-                    if (data && playData) {
-                        // TODO: we shouldn't have to do this, fix
-                        // copy state properties over
-                        data.element = playData.element;
-                        data.svg = playData.svg;
-                        data.host = playData.host;
-                        data.callout = playData.callout;
-                        data.playAxisContainer = playData.playAxisContainer;
-                        data.playButton = playData.playButton;
-                        data.slider = playData.slider;
-                        data.playButtonCircle = playData.playButtonCircle;
-                        data.ridiculousFlagForPersistProperties = playData.ridiculousFlagForPersistProperties;
-                        data.renderAtFrameIndexFn = playData.renderAtFrameIndexFn;
-
-                        return data;
-                    }
-                }
-            }
-
-            return getDefaultPlayData();
-        }
-
-        // TODO: specific to ScatterChartDataPoint right now (.x and .y), update to handle .value and .categoryValue also (CartesianDataPoint)
-        export function getMinMaxForAllFrames(playData: PlayChartData): { xRange: NumberRange, yRange: NumberRange } {
-            let minY = 0,
-                maxY = 10,
-                minX = 0,
-                maxX = 10;
+        export function getMinMaxForAllFrames<T extends PlayableChartData>(playData: PlayChartData<T>, getExtents: (T) => CartesianExtents): CartesianExtents {
+            let extents: CartesianExtents = {
+                minY: 0,
+                maxY: 10,
+                minX: 0,
+                maxX: 10,
+            };
 
             if (playData.allViewModels && playData.allViewModels.length > 0) {
-                minY = minX = Number.MAX_VALUE;
-                maxY = maxX = Number.MIN_VALUE;
+                extents.minY = extents.minX = Number.MAX_VALUE;
+                extents.maxY = extents.maxX = Number.MIN_VALUE;
                 for (let i = 0, len = playData.allViewModels.length; i < len; i++) {
-                    let dps = playData.allViewModels[i].dataPoints;
-                    minY = Math.min(d3.min<ScatterChartDataPoint, number>(dps, d => d.y), minY);
-                    maxY = Math.max(d3.max<ScatterChartDataPoint, number>(dps, d => d.y), maxY);
-                    minX = Math.min(d3.min<ScatterChartDataPoint, number>(dps, d => d.x), minX);
-                    maxX = Math.max(d3.max<ScatterChartDataPoint, number>(dps, d => d.x), maxX);
+                    let data = playData.allViewModels[i];
+                    let e = getExtents(data);
+
+                    // NOTE: D3.min/max handle undefined and NaN nicely, as opposed to Math.min/max
+                    extents = {
+                        minY: d3.min([e.minY, extents.minY]),
+                        maxY: d3.max([e.maxY, extents.maxY]),
+                        minX: d3.min([e.minX, extents.minX]),
+                        maxX: d3.max([e.maxX, extents.maxX]),
+                    };
                 }
             }
 
-            return {
-                xRange: { min: minX, max: maxX },
-                yRange: { min: minY, max: maxY }
-            };
+            return extents;
         }
 
-        export function clearPlayDOM(playData: PlayChartData): void {
-            if (!playData)
-                return;
-            if (playData.playAxisContainer)
-                playData.playAxisContainer.remove();
-            if (playData.callout)
-                playData.callout.remove();
-        }
-
-        function createSliderDOM(playData: PlayChartData, behaviorOptions: PlayBehaviorOptions, interactivityService: IInteractivityService): void {
-            // a container to position the button and the slider together
-            playData.playAxisContainer = $('<div class="play-axis-container"></div>')
-                .appendTo(playData.element);
-
-            playData.playButtonCircle = $('<div class="button-container"></div>')
-                .appendTo(playData.playAxisContainer);
-            playData.playButton = $('<div class="play"></div>')
-                .appendTo(playData.playButtonCircle);
-
-            // the noUiSlider
-            playData.slider = $('<div class="sliders"></div>')
-                .appendTo(playData.playAxisContainer);
-        }
-
-        function createSliderControl(playData: PlayChartData, slider: JQuery, sliderWidth: number, labelData: PlayLabelData): void {
-            // re-create the slider
-            if ((<any>slider[0]).noUiSlider)
-                (<any>slider[0]).noUiSlider.destroy();
-
-            let numFrames = playData.frameKeys.length;
-            if (numFrames > 0) {
-                let filterPipLabels = createPipsFilterFn(playData, sliderWidth, labelData);
-                let lastIndex = numFrames - 1;
-                noUiSlider.create(
-                    slider[0],
-                    {
-                        step: 1,
-                        start: [playData.currentFrameIndex],
-                        range: {
-                            min: [0],
-                            max: [lastIndex],
-                        },
-                        pips: {
-                            mode: 'steps',
-                            density: Math.round(100 / numFrames), //only draw ticks where we have labels
-                            format: {
-                                to: (index) => playData.frameKeys[index],
-                                from: (value) => playData.frameKeys.indexOf(value),
-                            },
-                            filter: filterPipLabels,
-                        },
-                    });
-
-                (<any>slider[0]).noUiSlider.on('slide', () => {
-                    playData.isPlaying = false; //stop the play sequence
-                    let indexToShow = Math.round((<any>slider[0]).noUiSlider.get());
-                    if (indexToShow >= 0 && indexToShow !== playData.currentFrameIndex && indexToShow < playData.allViewModels.length) {
-                        playData.currentFrameIndex = indexToShow;
-                        let data = playData.allViewModels[indexToShow];
-                        playData.currentViewModel = data;
-                        //persistFrameIndex(playData, indexToShow); //this will cause a render call
-                        playData.renderAtFrameIndexFn(indexToShow);
-                    }
-                });
-            }
-            else {
-                noUiSlider.create(
-                    slider[0],
-                    {
-                        step: 1,
-                        start: [0],
-                        range: {
-                            min: [0],
-                            max: [0],
-                        },
-                    });
-            }
-
-            // update the width and margin-left to center up each label
-            $('.noUi-value', slider).each((idx, elem) => {
-                let actualWidth = labelData.labelInfo.filter(l => l.label === $(elem).text())[0].labelWidth;
-                $(elem).width(actualWidth);
-                $(elem).css('margin-left', -actualWidth / 2 + 'px');
-            });
-        }
-
-        function getLabelData(playData: PlayChartData): PlayLabelData {
+        export function getLabelData(keys: string[]): PlayAxisTickLabelData {
             let textProperties: TextProperties = {
                 fontFamily: 'wf_segoe-ui_normal',
                 fontSize: jsCommon.PixelConverter.toString(14),
             };
-            let labelInfo: PlayLabelInfo[] = [];
+
+            let labelInfo: PlayAxisTickLabelInfo[] = [];
             let anyWordBreaks = false;
-            for (let key of playData.frameKeys) {
-                let labelWidth = jsCommon.WordBreaker.getMaxWordWidth(key + "", TextMeasurementService.measureSvgTextWidth, textProperties);
-                anyWordBreaks = anyWordBreaks || jsCommon.WordBreaker.hasBreakers(key) || (<string>key).indexOf('-') > -1;
+            for (let key of keys) {
+                let labelWidth = jsCommon.WordBreaker.getMaxWordWidth(key, TextMeasurementService.measureSvgTextWidth, textProperties);
+                anyWordBreaks = anyWordBreaks || jsCommon.WordBreaker.hasBreakers(key) || (key).indexOf('-') > -1;  // TODO: Why isn't this last part included in hasBreakers()?
                 labelInfo.push({ label: key, labelWidth });
             }
+
             return {
                 labelInfo: labelInfo,
                 anyWordBreaks: anyWordBreaks,
             };
         }
 
-        function createPipsFilterFn(playData: PlayChartData, sliderWidth: number, labelData: PlayLabelData): (index: any, type: any) => number {
-            let maxLabelWidth = _.max<PlayLabelInfo>(labelData.labelInfo,'labelWidth').labelWidth;
+        export function createPipsFilterFn<T extends PlayableChartData>(playData: PlayChartData<T>, sliderWidth: number, labelData: PlayAxisTickLabelData): (index: any, type: any) => number {
+            let maxLabelWidth = _.max(_.map(labelData.labelInfo, (l) => l.labelWidth));
 
             let pipSize = 1; //0=hide, 1=large, 2=small
             let skipMod = 1;
-            let maxAllowedLabelWidth = playData.frameCount > 1 ? sliderWidth / (playData.frameCount - 1) : sliderWidth;
+            let maxAllowedLabelWidth = playData.frameKeys.length > 1 ? sliderWidth / (playData.frameKeys.length - 1) : sliderWidth;
             let widthRatio = maxLabelWidth / maxAllowedLabelWidth;
 
             if (widthRatio > 1.25) {
@@ -546,407 +831,24 @@ module powerbi.visuals {
             return filterPipLabels;
         }
 
-        function adjustForLegend(playData: PlayChartData): void {
-            let legend = $(".legend", playData.element);
-            let sliderLeftOffset = 0, sliderBottomOffset = 0;
+        export function isDataViewPlayable(dataView: DataView, playRole: string = 'Play'): boolean {
+            debug.assertValue(dataView, 'dataView');
 
-            if (playData.playAxisContainer) {
-                // Reset
-                playData.playAxisContainer.css("left", "");
-                playData.playAxisContainer.css("bottom", "");
-            }
+            let categoryRoleIsPlay = dataView.categorical
+                && dataView.categorical.categories
+                && dataView.categorical.categories[0]
+                && dataView.categorical.categories[0].source
+                && dataView.categorical.categories[0].source.roles
+                && dataView.categorical.categories[0].source.roles[playRole];
 
-            if (legend.length > 0) {
-                // TODO: we should NOT be interrogating legend CSS properties for this, move the Callout to be SVGText and position inside the svg container
-                const padding = 16; //callout padding
-                
-                // Reset to inherit css class top/right
-                playData.callout.css("right", "");
-                playData.callout.css("top", "");
-
-                let floatVal = legend.css("float");
-                let bottomVal = legend.css("bottom");
-
-                if (floatVal === "right")
-                    playData.callout.css("right", legend.width() + padding);
-                else if (floatVal === "left")
-                    sliderLeftOffset = legend.width();
-                else if (floatVal === "none" || floatVal === "") {
-                    if (bottomVal === "" || bottomVal === "inherit" || bottomVal === "auto") {
-                        playData.callout.css("top", legend.height() + padding);
-                    }
-                    else {
-                        sliderBottomOffset = legend.height() + 35;
-                    }
-                }
-
-                if (playData.playAxisContainer) {
-                    if (sliderLeftOffset)
-                        playData.playAxisContainer.css("left", sliderLeftOffset);
-                    if (sliderBottomOffset)
-                        playData.playAxisContainer.css("bottom", sliderBottomOffset);
-                }
-            }
+            return (dataView.matrix && (!dataView.categorical || categoryRoleIsPlay));
         }
 
-        export function render(playData: PlayChartData, behaviorOptions: PlayBehaviorOptions, interactivityOptions: InteractivityOptions, interactivityService: IInteractivityService, suppressAnimations: boolean): CartesianVisualRenderResult {
-            if (!playData) {
-                return { dataPoints: [], behaviorOptions: null, labelDataPoints: null, labelsAreNumeric: false };
-            }
-
-            let hasSelection = false;
-            if (interactivityService) {
-                interactivityService.applySelectionStateToData(playData.currentViewModel.dataPoints);
-                hasSelection = interactivityService.hasSelection();
-            }
-
-            let frameKeys = playData.frameKeys;
-            let currentFrameIndex = playData.currentFrameIndex;
-            let height = playData.currentViewport.height;
-            let width = playData.currentViewport.width;
-
-            if (!playData.playAxisContainer && interactivityService && !interactivityOptions.isInteractiveLegend) {
-                createSliderDOM(playData, behaviorOptions, interactivityService);
-            }
-            if (playData.playAxisContainer) {
-                // always update the event handler with the latest state (capture the three params)
-                playData.playButtonCircle.off('click');
-                playData.playButtonCircle.on('click', () => {
-                    PlayChart.play(playData, behaviorOptions, interactivityService);
-                });
-            }
-
-            // callout / currentFrameIndex label - keep separate from other Play DOM creation as we need this even without interactivity.
-            if (!playData.callout) {
-                playData.callout = $('<span class="callout"></span>').appendTo(playData.element);
-            }
-
-            // update callout position due to legend
-            adjustForLegend(playData);
-
-            // dynamic left/right margin for the slider bar
-            let labelData = getLabelData(playData);
-            let labelWidthLen = labelData.labelInfo.length;
-            let sliderLeftMargin = SliderMarginLeft, sliderRightMargin = SliderMarginRight;
-            if (labelWidthLen > 0) {
-                sliderLeftMargin = Math.max(labelData.labelInfo[0].labelWidth / 2, sliderLeftMargin);
-                sliderRightMargin = Math.max(labelData.labelInfo[labelWidthLen - 1].labelWidth / 2, sliderRightMargin);
-                // stop the margins at some reasonable point
-                sliderLeftMargin = Math.min(SliderMaxMargin, sliderLeftMargin);
-                sliderRightMargin = Math.min(SliderMaxMargin, sliderRightMargin);
-            }
-
-            let slider = playData.slider;
-            let sliderWidth = (width - sliderLeftMargin - sliderRightMargin);
-            if (sliderWidth < 1) sliderWidth = 1;
-            if (slider)
-                slider.css('width', sliderWidth + 'px');
-
-            // TODO: make this smarter
-            let resized = playData.currentViewport.width !== playData.lastRenderedViewport.width
-                || playData.currentViewport.height !== playData.lastRenderedViewport.height;
-            let changed = !playData.playAxisContainer
-                || frameKeys.length !== playData.frameCount
-                || resized;
-
-            // default to last frame if frameKeys have changed and it's not the first time we are rendering
-            if (playData.frameCount && (frameKeys.length !== playData.frameCount || currentFrameIndex >= frameKeys.length))
-                currentFrameIndex = frameKeys.length - 1;
-
-            if (changed && slider) {
-                playData.frameCount = frameKeys.length;
-                createSliderControl(playData, slider, sliderWidth, labelData);
-            }
-
-            // update callout to current frame index
-            let calloutDimension = Math.min(height, width * 1.3); //1.3 to compensate for tall, narrow-width viewport
-            let fontSize = Math.max(12, Math.round(calloutDimension / 7));
-            fontSize = Math.min(fontSize, 70);
-            if (currentFrameIndex < frameKeys.length && currentFrameIndex >= 0) {
-                // clear these for auto-measurement
-                playData.callout.width('auto');
-                playData.callout.height('auto');
-
-                playData.callout
-                    .text(frameKeys[currentFrameIndex])
-                    .css('font-size', fontSize + 'px');
-
-                let compStyle = getComputedStyle(playData.callout[0]);
-                let actualWidth = Math.ceil(parseFloat(compStyle.width));
-                let actualHeight = Math.ceil(parseFloat(compStyle.height));
-                playData.callout.width(Math.min(actualWidth, sliderWidth));
-                playData.callout.height(actualHeight);
-            }
-            else {
-                playData.callout.text('');
-            }
-                
-            if (slider) {
-                // ensure slider position
-                (<any>slider[0]).noUiSlider.set([currentFrameIndex]);
-            }
-
-            playData.lastRenderedViewport = {
-                height: playData.currentViewport.height,
-                width: playData.currentViewport.width
-            };
-
-            let allDataPoints = playData.allViewModels.map((vm) => vm.dataPoints);
-            let flatAllDataPoints = _.flatten<SelectableDataPoint>(allDataPoints);
-            if (interactivityService) {
-                if (hasSelection && behaviorOptions) {
-                    let uniqueDataPoints = _.uniq(flatAllDataPoints, (d: SelectableDataPoint) => d.identity.getKey());
-                    behaviorOptions.renderTraceLine(behaviorOptions, _.filter(uniqueDataPoints, 'selected'), !suppressAnimations);
-                }
-            }
-            
-            // pass all data points to keep track of current selected bubble even if it drops out for a few frames
-            return { dataPoints: flatAllDataPoints, behaviorOptions: behaviorOptions, labelDataPoints: null, labelsAreNumeric: false };
-        }
-
-        // Scatter specific traceline
-        export function renderScatterTraceLine(options: PlayBehaviorOptions, selectedPoints: SelectableDataPoint[], shouldAnimate: boolean): void {
-            let seriesPoints: ScatterChartDataPoint[][] = [];
-
-            if (selectedPoints && selectedPoints.length > 0) {
-                let currentFrameIndex = options.data.currentFrameIndex;
-                let lastRenderedTraceFrameIndex = options.data.lastRenderedTraceFrameIndex;
-
-                // filter to the selected identity, only up to and including the current frame. Add frames during play.
-                let hasBubbleAtCurrentFrame = [];
-                for (var selectedIndex = 0, selectedLen = selectedPoints.length; selectedIndex < selectedLen; selectedIndex++) {
-                    seriesPoints[selectedIndex] = [];
-                    hasBubbleAtCurrentFrame[selectedIndex] = false;
-                    for (let frameIndex = 0, frameLen = options.data.allViewModels.length; frameIndex < frameLen && frameIndex <= currentFrameIndex; frameIndex++) {
-                        let values = options.data.allViewModels[frameIndex].dataPoints.filter((value, index) => {
-                            return value.identity.getKey() === selectedPoints[selectedIndex].identity.getKey();
-                        });
-                        if (values && values.length > 0) {
-                            let value = values[0];
-                            value['frameIndex'] = frameIndex;
-                            seriesPoints[selectedIndex].push(value);
-                            if (frameIndex === currentFrameIndex)
-                                hasBubbleAtCurrentFrame[selectedIndex] = true;
-                        }
-                    }
-                }
-                if (seriesPoints.length > 0) {
-                    let xScale = options.xScale;
-                    let yScale = options.yScale;
-
-                    let line = d3.svg.line()
-                        .x((d: ScatterChartDataPoint) => {
-                            return xScale(d.x);
-                        })
-                        .y((d: ScatterChartDataPoint) => {
-                            return yScale(d.y);
-                        })
-                        .defined((d: ScatterChartDataPoint) => {
-                            return d.x !== null && d.y !== null;
-                        });
-
-                    // Render Lines
-                    let traceLines = options.svg.selectAll('.traceLine').data(selectedPoints, (sp: ScatterChartDataPoint) => sp.identity.getKey());
-                    traceLines.enter()
-                        .append('path')
-                        .classed('traceLine', true);
-                    // prepare array of new/previous lengths
-                    // NOTE: can't use lambda because we need the "this" context to be the DOM Element associated with the .each()
-                    let previousLengths = [], newLengths = [];
-                    traceLines.each(function (d, i) {
-                        let existingPath = (<SVGPathElement>this);
-                        let previousLength = existingPath.hasAttribute('d') ? existingPath.getTotalLength() : 0;
-                        previousLengths.push(previousLength);
-                        // create offline SVG for new path measurement
-                        let tempSvgPath = $('<svg><path></path></svg>');
-                        let tempPath = $('path', tempSvgPath);
-                        tempPath.attr('d', line(seriesPoints[i]));
-                        let newLength = seriesPoints[i].length > 0 ? (<SVGPathElement>tempPath.get()[0]).getTotalLength() : 0;
-                        newLengths.push(newLength);
-                    });
-                    // animate using stroke-dash* trick
-                    if (lastRenderedTraceFrameIndex == null || currentFrameIndex >= lastRenderedTraceFrameIndex) {
-                        // growing line
-                        traceLines
-                            .style('stroke', (d: ScatterChartDataPoint) => ScatterChart.getStrokeFill(d, true))
-                            .attr({
-                                'd': (d, i: number) => {
-                                    return line(seriesPoints[i]);
-                                },
-                                'stroke-dasharray': (d, i) => newLengths[i] + " " + newLengths[i],
-                                'stroke-dashoffset': (d, i) => newLengths[i] - previousLengths[i],
-                            });
-                        if (shouldAnimate) {
-                            traceLines
-                                .transition()
-                                .ease('linear')
-                                .duration(FrameAnimationDuration)
-                                .attr('stroke-dashoffset', 0);
-                        }
-                        else {
-                            traceLines.attr('stroke-dashoffset', 0);
-                        }
-                    }
-                    else {
-                        // shrinking line
-                        if (shouldAnimate) {
-                            traceLines
-                                .transition()
-                                .ease('linear')
-                                .duration(FrameAnimationDuration)
-                                .attr('stroke-dashoffset', (d, i) => previousLengths[i] - newLengths[i])
-                                .transition()
-                                .ease('linear')
-                                .duration(1) // animate the shrink first, then update with new line properties
-                                .delay(FrameAnimationDuration)
-                                .style('stroke', (d: ScatterChartDataPoint) => ScatterChart.getStrokeFill(d, true))
-                                .attr({
-                                    'd': (d, i) => {
-                                        return line(seriesPoints[i]);
-                                    },
-                                    'stroke-dasharray': (d, i) => newLengths[i] + " " + newLengths[i],
-                                    'stroke-dashoffset': 0,
-                                });
-                        }
-                        else {
-                            traceLines
-                                .style('stroke', (d: ScatterChartDataPoint) => ScatterChart.getStrokeFill(d, true))
-                                .attr({
-                                    'd': (d, i) => {
-                                        return line(seriesPoints[i]);
-                                    },
-                                    'stroke-dasharray': (d, i) => newLengths[i] + " " + newLengths[i],
-                                    'stroke-dashoffset': 0,
-                                });
-                        }
-                    }
-                    traceLines.exit()
-                        .remove();
-
-                    // Render circles
-                    // slice to length-1 because we draw lines to the current bubble but we don't need to draw the current frame's bubble
-                    let circlePoints: ScatterChartDataPoint[] = [];
-                    for (let selectedIndex = 0; selectedIndex < seriesPoints.length; selectedIndex++) {
-                        let points = seriesPoints[selectedIndex];
-                        let newPoints = hasBubbleAtCurrentFrame[selectedIndex] ? points.slice(0, points.length - 1) : points;
-                        circlePoints = circlePoints.concat(newPoints);
-                    }
-                    let circles = options.svg.selectAll('.traceBubble').data(circlePoints, (d: ScatterChartDataPoint) => d.identity.getKey() + d.x + d.y + d.size);
-                    circles.enter()
-                        .append('circle')
-                        .style('opacity', 0) //fade new bubbles into visibility
-                        .classed('traceBubble', true);
-                    circles
-                        .attr('cx', (d: ScatterChartDataPoint) => xScale(d.x))
-                        .attr('cy', (d: ScatterChartDataPoint) => yScale(d.y))
-                        .attr('r', (d: ScatterChartDataPoint) => ScatterChart.getBubbleRadius(d.radius, (<ScatterChartData>options.data.currentViewModel).sizeRange, options.data.currentViewport))
-                        .style({
-                            'stroke-opacity': (d: ScatterChartDataPoint) => ScatterChart.getBubbleOpacity(d, true),
-                            'stroke-width': '1px',
-                            'stroke': (d: ScatterChartDataPoint) => ScatterChart.getStrokeFill(d, options.colorBorder),
-                            'fill': (d: ScatterChartDataPoint) => d.fill,
-                            // vary the opacity along the traceline from 0.20 to 0.80, with 0.85 left for the circle already drawn by scatterChart
-                            'fill-opacity': (d: ScatterChartDataPoint) => d.size != null ? 0.20 + (d['frameIndex'] / currentFrameIndex) * 0.60 : 0,
-                        })
-                        .transition()
-                        .ease('linear')
-                        .duration(FrameAnimationDuration)
-                        .style('opacity',1);
-                    circles.exit()
-                        .transition()
-                        .ease('linear')
-                        .duration(FrameAnimationDuration)
-                        .style('opacity', 0) //fade exiting bubbles out
-                        .remove();
-
-                    TooltipManager.addTooltip(circles, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
-
-                    // sort the z-order, smallest size on top
-                    circles.sort((d1: ScatterChartDataPoint, d2: ScatterChartDataPoint) => { return d2.size - d1.size; });
-
-                    options.data.lastRenderedTraceFrameIndex = options.data.currentFrameIndex;
-                }
-                else {
-                    options.svg.selectAll('.traceLine').remove();
-                    options.svg.selectAll('.traceBubble').remove();
-                    options.data.lastRenderedTraceFrameIndex = null;
-                }
-            }
-            else {
-                options.svg.selectAll('.traceLine').remove();
-                options.svg.selectAll('.traceBubble').remove();
-                options.data.lastRenderedTraceFrameIndex = null;
-            }
-        }
-
-        export function play(playData: PlayChartData, behaviorOptions: PlayBehaviorOptions, interactivityService: IInteractivityService): void {
-            if (playData.isPlaying) {
-                // Toggle the flag and allow the animation logic to kill it
-                playData.isPlaying = false;
-            }
-            else if ((<any>playData.slider[0]).noUiSlider != null) {
-                playData.isPlaying = true;
-                playData.playButton.removeClass('play').addClass('pause');
-
-                let indexToShow = Math.round((<any>playData.slider[0]).noUiSlider.get());
-                if (indexToShow >= playData.allViewModels.length - 1) {
-                    playData.currentFrameIndex = -1;
-                } else {
-                    playData.currentFrameIndex = indexToShow - 1;
-                }
-
-                playNextFrame(playData, behaviorOptions, interactivityService);
-            }
-        }
-
-        /*function persistFrameIndex(playData: PlayChartData, frameIndex: number): void {
-            playData.ridiculousFlagForPersistProperties = true;
-
-            playData.host.persistProperties([{
-                selector: null,
-                properties: {
-                    index: frameIndex
-                },
-                objectName: 'currentFrameIndex'
-            }]);
-        }*/
-
-        function playNextFrame(playData: PlayChartData, behaviorOptions: PlayBehaviorOptions, interactivityService: IInteractivityService, startFrame?: number, endFrame?: number): void {
-            if (!playData.isPlaying) {
-                playComplete(playData, behaviorOptions, interactivityService);
-                return;
-            }
-
-            let nextFrame = playData.currentFrameIndex + 1;
-            if (startFrame != null && endFrame != null) {
-                nextFrame = Math.abs(endFrame - startFrame + 1);
-                startFrame = nextFrame;
-            }
-
-            if (nextFrame < playData.allViewModels.length && nextFrame > -1) {
-                playData.currentFrameIndex = nextFrame;
-                playData.currentViewModel = playData.allViewModels[nextFrame];
-                //persistFrameIndex(playData, nextFrame); //this will cause a render call
-                playData.renderAtFrameIndexFn(nextFrame);
-                (<any>playData.slider[0]).noUiSlider.set([nextFrame]);
-
-                if (nextFrame < playData.allViewModels.length) {
-                    let timePerFrame = FrameStepDuration;
-                    window.setTimeout(() => {
-                        // Update the rangeSlider to show the correct offset
-                        (<any>playData.slider[0]).noUiSlider.set([nextFrame]);
-                        // Play next frame
-                        playNextFrame(playData, behaviorOptions, interactivityService, startFrame, endFrame);
-                    }, timePerFrame);
-                }
-            } else {
-                playComplete(playData, behaviorOptions, interactivityService);
-            }
-        }
-
-        function playComplete(playData: PlayChartData, behaviorOptions: PlayBehaviorOptions, interactivityService: IInteractivityService): void {
-            playData.playButton.removeClass('pause').addClass('play');
-            playData.isPlaying = false;
+        /** Render trace-lines for selected data points. */
+        export function renderTraceLines(allDataPoints: SelectableDataPoint[], traceLineRenderer: ITraceLineRenderer, shouldAnimate: boolean): void {
+            let selectedDataPoints = _.filter(allDataPoints, (d: SelectableDataPoint) => d.selected);
+            selectedDataPoints = _.uniq(selectedDataPoints, (d: SelectableDataPoint) => d.identity.getKey());
+            traceLineRenderer.render(selectedDataPoints, shouldAnimate);
         }
     }
 }

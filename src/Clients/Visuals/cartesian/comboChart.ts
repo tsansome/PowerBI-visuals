@@ -42,5 +42,16 @@ module powerbi.visuals {
      */
     export module ComboChart {
         export const capabilities = comboChartCapabilities;
+
+        export function customizeQuery(options: CustomizeQueryOptions): void {
+            // If there is a dynamic series but no values on the column data view mapping, remove the dynamic series
+            let columnMapping = !_.isEmpty(options.dataViewMappings) && options.dataViewMappings[0];
+            if (columnMapping) {
+                let columnValuesMapping: data.CompiledDataViewGroupedRoleMapping = columnMapping.categorical && <data.CompiledDataViewGroupedRoleMapping>columnMapping.categorical.values;
+                let seriesSelect = columnValuesMapping.group && !_.isEmpty(columnValuesMapping.group.select) && <data.CompiledDataViewRoleForMapping>columnValuesMapping.group.select[0];
+                if (_.isEmpty(seriesSelect.for.in.items))
+                    columnValuesMapping.group.by.items = undefined;
+            }
+        }
     }
 }

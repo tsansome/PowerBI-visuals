@@ -27,7 +27,6 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
-    import ArrayExtensions = jsCommon.ArrayExtensions;
     import Color = jsCommon.Color;
     import PixelConverter = jsCommon.PixelConverter;
     import Polygon = shapes.Polygon;
@@ -42,6 +41,7 @@ module powerbi.visuals {
         disableZooming?: boolean;
         disablePanning?: boolean;
         isLegendScrollable?: boolean;
+        viewChangeThrottleInterval?: number; // Minimum interval between viewChange events (in milliseconds)
     }
 
     export interface IMapControlFactory {
@@ -730,6 +730,10 @@ module powerbi.visuals {
                     let identity = SelectionId.createWithSelectorForColumnAndMeasure(dataMap, null);
                     let idKey = identity.getKey();
                     let formattersCache = NewDataLabelUtils.createColumnFormatterCacheManager();
+
+                    //Determine Largest Shape
+                    let mainShapeIndex = MapShapeDataPointRenderer.getIndexOfLargestShape(paths);
+
                     for (let pathIndex = 0, pathCount = paths.length; pathIndex < pathCount; pathIndex++) {
                         let path = paths[pathIndex];
                         let labelFormatString = (dataView && dataView.categorical && !_.isEmpty(dataView.categorical.values)) ? valueFormatter.getFormatString(dataView.categorical.values[0].source, filledMapProps.general.formatString) : undefined;
@@ -746,7 +750,7 @@ module powerbi.visuals {
                             identity: identity,
                             selected: false,
                             key: JSON.stringify({ id: idKey, pIdx: pathIndex }),
-                            displayLabel: pathIndex === 0,
+                            displayLabel: pathIndex === mainShapeIndex,
                             labeltext: value,
                             catagoryLabeltext: (catagoryValue != null) ? NewDataLabelUtils.getLabelFormattedText(formatter.format(catagoryValue)) : undefined,
                             labelFormatString: labelFormatString,
@@ -838,6 +842,25 @@ module powerbi.visuals {
             return 12;
         }
 
+        public static getIndexOfLargestShape(paths: IGeocodeBoundaryPolygon[]): number {
+            let largestShapeIndex = 0;
+            let largestShapeArea = 0;
+
+            for (let pathIndex = 0, pathCount = paths.length; pathIndex < pathCount; pathIndex++) {
+                let path = paths[pathIndex];
+                        
+                // Using the area of the bounding box (and taking the largest)
+                let currentShapeArea = path.absoluteBounds.width * path.absoluteBounds.height; 
+                        
+                if (currentShapeArea > largestShapeArea) {
+                    largestShapeIndex = pathIndex;
+                    largestShapeArea = currentShapeArea;
+                }
+            }
+
+            return largestShapeIndex;
+        }
+
         private clearMaxShapeDimension(): void {
             this.maxShapeDimension = 0;
         }
@@ -865,16 +888,16 @@ module powerbi.visuals {
 
                     if (this.dataLabelsSettings.show && !this.dataLabelsSettings.showCategory) {
                         text = dataShape.catagoryLabeltext;
-                        if (text === undefined|| text === null)
+                        if (text === undefined)
                             continue;
                     } else if (this.dataLabelsSettings.showCategory && !this.dataLabelsSettings.show) {
                         text = dataShape.labeltext;
-                        if (text === undefined || text === null)
+                        if (text === undefined)
                             continue;
                     } else if (this.dataLabelsSettings.showCategory && this.dataLabelsSettings.show) {
                         text = dataShape.catagoryLabeltext;
                         secondRowText = dataShape.labeltext;
-                        if ((text === undefined || text === null) && (secondRowText === undefined || secondRowText === null))
+                        if (text === undefined && secondRowText === undefined)
                             continue;
                         hasSecondRow = true;
                     }
@@ -983,6 +1006,7 @@ module powerbi.visuals {
         private disablePanning: boolean;
         private locale: string;
         private isLegendScrollable: boolean;
+        private viewChangeThrottleInterval: number;
 
         constructor(options: MapConstructionOptions) {
             if (options.filledMap) {
@@ -1000,6 +1024,7 @@ module powerbi.visuals {
             this.disableZooming = options.disableZooming;
             this.disablePanning = options.disablePanning;
             this.isLegendScrollable = !!options.behavior;
+            this.viewChangeThrottleInterval = options.viewChangeThrottleInterval;
         }
 
         public init(options: VisualInitOptions) {
@@ -1450,7 +1475,7 @@ module powerbi.visuals {
 
         /** Note: public for UnitTest */
         public static hasSizeField(values: DataViewValueColumns, defaultIndexIfNoRole?: number): boolean {
-            if (ArrayExtensions.isUndefinedOrEmpty(values))
+            if (_.isEmpty(values))
                 return false;
 
             for (let i = 0, ilen = values.length; i < ilen; i++) {
@@ -1793,7 +1818,14 @@ module powerbi.visuals {
             };
             let divQuery = InJs.DomFactory.div().addClass(Map.MapContainer.cssClass).appendTo(container);
             this.mapControl = this.mapControlFactory.createMapControl(divQuery[0], mapOptions);
-            Microsoft.Maps.Events.addHandler(this.mapControl, "viewchange", () => { this.onViewChanged(); });
+
+            if (this.viewChangeThrottleInterval !== undefined) {
+                Microsoft.Maps.Events.addThrottledHandler(this.mapControl, "viewchange", () => { this.onViewChanged(); },
+                    this.viewChangeThrottleInterval);
+            } else {
+                Microsoft.Maps.Events.addHandler(this.mapControl, "viewchange", () => { this.onViewChanged(); });
+            }
+
             this.dataPointRenderer.init(this.mapControl, divQuery, !!this.behavior);
 
             if (!this.pendingGeocodingRender) {

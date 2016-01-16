@@ -298,7 +298,7 @@ module powerbi.visuals {
                         suppressFormatPainterCopy: true,
                     },
                     showAll: {
-                        displayName: data.createDisplayNameGetter('Visual_ShowAll'),
+                        displayName: data.createDisplayNameGetter('Visual_LabelSeriesShowAll'),
                         type: { bool: true }
                     },
                     fontSize: {

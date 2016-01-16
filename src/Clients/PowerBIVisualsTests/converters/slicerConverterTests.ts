@@ -38,7 +38,7 @@ module powerbitests {
             column: "PropertyName"
         });
 
-        it("retained values doesn't exist in dataView", (done) => {
+        it("retained values doesn't exist in dataView", () => {
             let hostServices = slicerHelper.createHostServices();
             let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
             let semanticFilter: data.SemanticFilter = data.SemanticFilter.fromSQExpr(
@@ -46,28 +46,20 @@ module powerbitests {
                     SQExprBuilder.compare(data.QueryComparisonKind.Equal, field, SQExprBuilder.text('retainedValue1')),
                     SQExprBuilder.compare(data.QueryComparisonKind.Equal, field, SQExprBuilder.text('retainedValue2'))));
             let dataView = applyDataTransform(slicerHelper.buildDefaultDataView(field), semanticFilter);
-            let resultVerified = false;
-            powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices).then(
-                slicerData => {
-                    expect(slicerData.slicerDataPoints.length).toBe(7);
-                    expect(slicerData.slicerDataPoints[0].tooltip).toBe('Apple');
-                    expect(slicerData.slicerDataPoints[1].tooltip).toBe('Orange');
-                    expect(slicerData.slicerDataPoints[2].tooltip).toBe('Kiwi');
-                    expect(slicerData.slicerDataPoints[3].tooltip).toBe('Grapes');
-                    expect(slicerData.slicerDataPoints[4].tooltip).toBe('Banana');
-                    expect(slicerData.slicerDataPoints[5].tooltip).toBe('retainedValue1');
-                    expect(slicerData.slicerDataPoints[6].tooltip).toBe('retainedValue2');
-                    expect(slicerData.slicerDataPoints[5].selected).toBe(true);
-                    expect(slicerData.slicerDataPoints[6].selected).toBe(true);
-                    resultVerified = true;
-                });
-            setTimeout(() => {
-                expect(resultVerified).toBe(true);
-                done();
-            });
+            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
+            expect(slicerData.slicerDataPoints.length).toBe(7);
+            expect(slicerData.slicerDataPoints[0].tooltip).toBe('Apple');
+            expect(slicerData.slicerDataPoints[1].tooltip).toBe('Orange');
+            expect(slicerData.slicerDataPoints[2].tooltip).toBe('Kiwi');
+            expect(slicerData.slicerDataPoints[3].tooltip).toBe('Grapes');
+            expect(slicerData.slicerDataPoints[4].tooltip).toBe('Banana');
+            expect(slicerData.slicerDataPoints[5].tooltip).toBe('retainedValue1');
+            expect(slicerData.slicerDataPoints[6].tooltip).toBe('retainedValue2');
+            expect(slicerData.slicerDataPoints[5].selected).toBe(true);
+            expect(slicerData.slicerDataPoints[6].selected).toBe(true);
         });
 
-        it("one retained value exists in dataView, the other does not", (done) => {
+        it("one retained value exists in dataView, the other does not", () => {
             let hostServices = slicerHelper.createHostServices();;
             let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
             let semanticFilter: data.SemanticFilter = data.SemanticFilter.fromSQExpr(
@@ -75,27 +67,19 @@ module powerbitests {
                     SQExprBuilder.compare(data.QueryComparisonKind.Equal, field, SQExprBuilder.text('Grapes')),
                     SQExprBuilder.compare(data.QueryComparisonKind.Equal, field, SQExprBuilder.text('retainedValue'))));
             let dataView = applyDataTransform(slicerHelper.buildDefaultDataView(field), semanticFilter);
-            let resultVerified = false;
-            powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices).then(
-                slicerData => {
-                    expect(slicerData.slicerDataPoints.length).toBe(6);
-                    expect(slicerData.slicerDataPoints[0].tooltip).toBe('Apple');
-                    expect(slicerData.slicerDataPoints[1].tooltip).toBe('Orange');
-                    expect(slicerData.slicerDataPoints[2].tooltip).toBe('Kiwi');
-                    expect(slicerData.slicerDataPoints[3].tooltip).toBe('Grapes');
-                    expect(slicerData.slicerDataPoints[4].tooltip).toBe('Banana');
-                    expect(slicerData.slicerDataPoints[5].tooltip).toBe('retainedValue');
-                    expect(slicerData.slicerDataPoints[5].selected).toBe(true);
-                    expect(slicerData.slicerDataPoints[3].selected).toBe(true);
-                    resultVerified = true;
-                });
-            setTimeout(() => {
-                expect(resultVerified).toBe(true);
-                done();
-            }, DefaultWaitForRender);
+            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
+            expect(slicerData.slicerDataPoints.length).toBe(6);
+            expect(slicerData.slicerDataPoints[0].tooltip).toBe('Apple');
+            expect(slicerData.slicerDataPoints[1].tooltip).toBe('Orange');
+            expect(slicerData.slicerDataPoints[2].tooltip).toBe('Kiwi');
+            expect(slicerData.slicerDataPoints[3].tooltip).toBe('Grapes');
+            expect(slicerData.slicerDataPoints[4].tooltip).toBe('Banana');
+            expect(slicerData.slicerDataPoints[5].tooltip).toBe('retainedValue');
+            expect(slicerData.slicerDataPoints[5].selected).toBe(true);
+            expect(slicerData.slicerDataPoints[3].selected).toBe(true);
         });
 
-        it("is not in filter", (done) => {
+        it("is not in filter", () => {
             let hostServices = slicerHelper.createHostServices();
             let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
             let semanticFilter: data.SemanticFilter = data.SemanticFilter.fromSQExpr(
@@ -107,27 +91,18 @@ module powerbitests {
                             [SQExprBuilder.text('Banana')],
                         ])));
             let dataView = applyDataTransform(slicerHelper.buildDefaultDataView(field), semanticFilter);
-            let resultVerified = false;
-            powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices).then(
-                slicerData => {
-                    expect(slicerData.slicerDataPoints.length).toBe(5);
-                    expect(slicerData.slicerDataPoints[0].tooltip).toBe('Apple');
-                    expect(slicerData.slicerDataPoints[1].tooltip).toBe('Orange');
-                    expect(slicerData.slicerDataPoints[2].tooltip).toBe('Kiwi');
-                    expect(slicerData.slicerDataPoints[3].tooltip).toBe('Grapes');
-                    expect(slicerData.slicerDataPoints[4].tooltip).toBe('Banana');
-                    expect(slicerData.slicerDataPoints[0].selected).toBe(true);
-                    expect(slicerData.slicerDataPoints[4].selected).toBe(true);
-                    resultVerified = true;
-                });
-
-            setTimeout(() => {
-                expect(resultVerified).toBe(true);
-                done();
-            }, DefaultWaitForRender);
+            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
+            expect(slicerData.slicerDataPoints.length).toBe(5);
+            expect(slicerData.slicerDataPoints[0].tooltip).toBe('Apple');
+            expect(slicerData.slicerDataPoints[1].tooltip).toBe('Orange');
+            expect(slicerData.slicerDataPoints[2].tooltip).toBe('Kiwi');
+            expect(slicerData.slicerDataPoints[3].tooltip).toBe('Grapes');
+            expect(slicerData.slicerDataPoints[4].tooltip).toBe('Banana');
+            expect(slicerData.slicerDataPoints[0].selected).toBe(true);
+            expect(slicerData.slicerDataPoints[4].selected).toBe(true);
         });
 
-        it("when all are selected in filter", (done) => {
+        it("when all are selected in filter", () => {
             let hostServices = slicerHelper.createHostServices();
             let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
             let semanticFilter: data.SemanticFilter = data.SemanticFilter.fromSQExpr(
@@ -142,34 +117,24 @@ module powerbitests {
                     ]));
             let dataView = applyDataTransform(slicerHelper.buildDefaultDataView(field), semanticFilter);
             dataView[0].metadata.objects["selection"] = { selectAllCheckboxEnabled: true, singleSelect: false };
-            let resultVerified = false;
-            powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices).then(
-                slicerData => {
-                    expect(slicerData.slicerDataPoints.length).toBe(6);
-                    expect(slicerData.slicerDataPoints[0].tooltip).toBe('Select All');
-                    expect(slicerData.slicerDataPoints[1].tooltip).toBe('Apple');
-                    expect(slicerData.slicerDataPoints[2].tooltip).toBe('Orange');
-                    expect(slicerData.slicerDataPoints[3].tooltip).toBe('Kiwi');
-                    expect(slicerData.slicerDataPoints[4].tooltip).toBe('Grapes');
-                    expect(slicerData.slicerDataPoints[5].tooltip).toBe('Banana');
-                    expect(slicerData.slicerDataPoints[0].isSelectAllDataPoint).toBe(true);
-                    expect(slicerData.slicerDataPoints[0].selected).toBe(true);
-                    expect(slicerData.slicerDataPoints[1].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[2].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[3].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[4].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[5].selected).toBe(false);
-                    
-                    resultVerified = true;
-                });
-
-            setTimeout(() => {
-                expect(resultVerified).toBe(true);
-                done();
-            }, DefaultWaitForRender);
+            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
+            expect(slicerData.slicerDataPoints.length).toBe(6);
+            expect(slicerData.slicerDataPoints[0].tooltip).toBe('Select All');
+            expect(slicerData.slicerDataPoints[1].tooltip).toBe('Apple');
+            expect(slicerData.slicerDataPoints[2].tooltip).toBe('Orange');
+            expect(slicerData.slicerDataPoints[3].tooltip).toBe('Kiwi');
+            expect(slicerData.slicerDataPoints[4].tooltip).toBe('Grapes');
+            expect(slicerData.slicerDataPoints[5].tooltip).toBe('Banana');
+            expect(slicerData.slicerDataPoints[0].isSelectAllDataPoint).toBe(true);
+            expect(slicerData.slicerDataPoints[0].selected).toBe(true);
+            expect(slicerData.slicerDataPoints[1].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[2].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[3].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[4].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[5].selected).toBe(false);
         });
 
-        it("when all are selected in Not filter", (done) => {
+        it("when all are selected in Not filter", () => {
             let hostServices = slicerHelper.createHostServices();
             let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
             let semanticFilter: data.SemanticFilter = data.SemanticFilter.fromSQExpr(
@@ -185,31 +150,21 @@ module powerbitests {
                     ])));
             let dataView = applyDataTransform(slicerHelper.buildDefaultDataView(field), semanticFilter);
             dataView[0].metadata.objects["selection"] = { selectAllCheckboxEnabled: true, singleSelect: false };
-            let resultVerified = false;
-            powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices).then(
-                slicerData => {
-                    expect(slicerData.slicerDataPoints.length).toBe(6);
-                    expect(slicerData.slicerDataPoints[0].tooltip).toBe('Select All');
-                    expect(slicerData.slicerDataPoints[1].tooltip).toBe('Apple');
-                    expect(slicerData.slicerDataPoints[2].tooltip).toBe('Orange');
-                    expect(slicerData.slicerDataPoints[3].tooltip).toBe('Kiwi');
-                    expect(slicerData.slicerDataPoints[4].tooltip).toBe('Grapes');
-                    expect(slicerData.slicerDataPoints[5].tooltip).toBe('Banana');
-                    expect(slicerData.slicerDataPoints[0].isSelectAllDataPoint).toBe(true);
-                    expect(slicerData.slicerDataPoints[0].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[1].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[2].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[3].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[4].selected).toBe(false);
-                    expect(slicerData.slicerDataPoints[5].selected).toBe(false);
-                    
-                    resultVerified = true;
-                });
-
-            setTimeout(() => {
-                expect(resultVerified).toBe(true);
-                done();
-            }, DefaultWaitForRender);
+            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
+            expect(slicerData.slicerDataPoints.length).toBe(6);
+            expect(slicerData.slicerDataPoints[0].tooltip).toBe('Select All');
+            expect(slicerData.slicerDataPoints[1].tooltip).toBe('Apple');
+            expect(slicerData.slicerDataPoints[2].tooltip).toBe('Orange');
+            expect(slicerData.slicerDataPoints[3].tooltip).toBe('Kiwi');
+            expect(slicerData.slicerDataPoints[4].tooltip).toBe('Grapes');
+            expect(slicerData.slicerDataPoints[5].tooltip).toBe('Banana');
+            expect(slicerData.slicerDataPoints[0].isSelectAllDataPoint).toBe(true);
+            expect(slicerData.slicerDataPoints[0].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[1].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[2].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[3].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[4].selected).toBe(false);
+            expect(slicerData.slicerDataPoints[5].selected).toBe(false);
         });
 
         function applyDataTransform(dataView: powerbi.DataView, semanticFilter: data.SemanticFilter): powerbi.DataView[] {

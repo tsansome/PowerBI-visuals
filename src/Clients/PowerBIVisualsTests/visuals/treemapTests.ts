@@ -2814,8 +2814,7 @@ module powerbitests {
 
                 v.onResizing({ width: 300, height: 300 });
 
-                setTimeout(() => {
-                    
+                setTimeout(() => {    
                     // Select a major label
                     expect(rootShape[0].style.fillOpacity).toBe(defaultOpacity);
                     expect(shapes[0].style.fillOpacity).toBe(defaultOpacity);

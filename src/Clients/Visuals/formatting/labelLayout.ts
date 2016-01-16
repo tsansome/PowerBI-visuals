@@ -38,7 +38,7 @@ module powerbi {
     /**
      * Defines possible data label positions relative to rectangles
      */
-    export enum RectLabelPosition {
+    export const enum RectLabelPosition {
 
         /** Position is not defined. */
         None = 0,
@@ -76,7 +76,7 @@ module powerbi {
     /**
      * Defines possible data label positions relative to points or circles
      */
-    export enum NewPointLabelPosition {
+    export const enum NewPointLabelPosition {
         /** Position is not defined. */
         None = 0,
 
@@ -114,7 +114,7 @@ module powerbi {
      * Rectangle orientation, defined by vertical vs horizontal and which direction
      * the "base" is at.
      */
-    export enum NewRectOrientation {
+    export const enum NewRectOrientation {
         /** Rectangle with no specific orientation. */
         None,
 
@@ -192,11 +192,15 @@ module powerbi {
         /** The identity of the data point associated with the data label */
         identity: powerbi.visuals.SelectionId;
 
+        /** The key of the data point associated with the data label (used if identity is not unique to each expected label) */
+        key?: string;
+
         /** The font size of the data point associated with the data label */
         fontSize?: number;
 
         /** Second row of text to be displayed in the label, for additional information */
         secondRowText?: string;
+
         /** The calculated weight of the data point associated with the data label */
         weight?: number;
     }
@@ -222,10 +226,13 @@ module powerbi {
         /** The fill color of the data label */
         fill: string;
 
+        /** A unique key for data points (used if key cannot be obtained from the identity) */
+        key?: string;
+
         /** The text size of the data label */
         fontSize?: number;
 
-        /**"A text anchor used to override the default label text-anchor (middle)"*/
+        /** A text anchor used to override the default label text-anchor (middle) */
         textAnchor?: string; 
 
         /** points for reference line rendering */
@@ -463,7 +470,8 @@ module powerbi {
             // Iterates on every series
             for (let labelDataPointsGroup of labelDataPointsGroups) {
                 let maxLabelsToRender = labelDataPointsGroup.maxNumberOfLabels;
-                let labelDataPoints = labelDataPointsGroup.labelDataPoints;
+                // NOTE: we create a copy and modify the copy to keep track of preferred vs. non-preferred labels.
+                let labelDataPoints = _.clone(labelDataPointsGroup.labelDataPoints);
             let preferredLabels: LabelDataPoint[] = [];
                 
                 // Exclude preferred labels
@@ -551,6 +559,7 @@ module powerbi {
                         isVisible: true,
                         fill: isPositionInside ? labelPoint.insideFill : labelPoint.outsideFill,
                         identity: labelPoint.identity,
+                        key: labelPoint.key,
                         fontSize: labelPoint.fontSize,
                         selected: false,
                     };
@@ -603,8 +612,8 @@ module powerbi {
                         text: labelPoint.text,
                         isVisible: true,
                         fill: position === NewPointLabelPosition.Center ? labelPoint.insideFill : labelPoint.outsideFill, // If we ever support "inside" for point-based labels, this needs to be updated
-                        isInsideParent: position === NewPointLabelPosition.Center,
                         identity: labelPoint.identity,
+                        key: labelPoint.key,
                         fontSize: labelPoint.fontSize,
                         selected: false,
                         leaderLinePoints: drawLeaderLines ? DataLabelPointPositioner.getLabelLeaderLineEndingPoint(resultingBoundingBox, position, parentShape) : null,
@@ -615,7 +624,7 @@ module powerbi {
         }
 
         private static tryPositionPoint(grid: LabelArrangeGrid, position: NewPointLabelPosition, labelDataPoint: LabelDataPoint, offset: number): IRect {
-            let labelRect = DataLabelPointPositioner.getLabelRect(labelDataPoint, position, offset);
+            let labelRect = DataLabelPointPositioner.getLabelRect(labelDataPoint.textSize, <LabelParentPoint>labelDataPoint.parentShape, position, offset);
             
             if (!grid.hasConflict(labelRect)) {
                 return labelRect;
@@ -820,35 +829,34 @@ module powerbi {
         export const cos45 = Math.cos(45);
         export const sin45 = Math.sin(45);
 
-        export function getLabelRect(labelDataPoint: LabelDataPoint, position: NewPointLabelPosition, offset: number): IRect {
-            let parentPoint = <LabelParentPoint>labelDataPoint.parentShape;
+        export function getLabelRect(textSize: ISize, parentPoint: LabelParentPoint, position: NewPointLabelPosition, offset: number): IRect {
             switch (position) {
                 case NewPointLabelPosition.Above: {
-                    return DataLabelPointPositioner.above(labelDataPoint.textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.above(textSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.Below: {
-                    return DataLabelPointPositioner.below(labelDataPoint.textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.below(textSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.Left: {
-                    return DataLabelPointPositioner.left(labelDataPoint.textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.left(textSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.Right: {
-                    return DataLabelPointPositioner.right(labelDataPoint.textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.right(textSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.BelowLeft: {
-                    return DataLabelPointPositioner.belowLeft(labelDataPoint.textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.belowLeft(textSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.BelowRight: {
-                    return DataLabelPointPositioner.belowRight(labelDataPoint.textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.belowRight(textSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.AboveLeft: {
-                    return DataLabelPointPositioner.aboveLeft(labelDataPoint.textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.aboveLeft(textSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.AboveRight: {
-                    return DataLabelPointPositioner.aboveRight(labelDataPoint.textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.aboveRight(textSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.Center: {
-                    return DataLabelPointPositioner.center(labelDataPoint.textSize, parentPoint.point);
+                    return DataLabelPointPositioner.center(textSize, parentPoint.point);
                 }
                 default: {
                     debug.assertFail("Unsupported label position");

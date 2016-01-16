@@ -243,23 +243,34 @@ module powerbi.data {
         LessThanOrEqual = 4,
     }
 
-    export interface DataQuery {
-        Commands: QueryCommand[];
-    }
-    
     export interface SemanticQueryDataShapeCommand {
         Query: QueryDefinition;
         Binding: DataShapeBinding;
     }
-    
+
+    /** Only one of the members can be non-null at any one time */
     export interface QueryCommand {
         SemanticQueryDataShapeCommand?: SemanticQueryDataShapeCommand;
         ScriptVisualCommand?: ScriptVisualCommand;
     }
 
+    export interface DataQuery {
+        Commands: QueryCommand[];
+    }
+
+    /** The final (single) result of a DataQuery is cacheable.
+          * The intermediate results coming out of each QueryCommand (a DataQuery.Commands[i]) is not cached nor returned to the client. */
+    export interface DataQueryRequest {
+        Query: DataQuery;
+
+        /** Optional server-side cache key for the semantic query. This CacheKey is not used to the IQueryCache (client-side cache). */
+        CacheKey?: string;
+    }
+
     export interface ScriptInputColumn {
         /** The queryName of the corresponding Select from the associated SemanticQuery providing the data for this column. */ 
         QueryName: string; 
+
         /** The name of this column expected by the script. */
         Name: string;
     }
@@ -342,4 +353,4 @@ module powerbi.data {
         Default,
         Period,
     }
-} 
+}

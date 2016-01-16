@@ -35,7 +35,6 @@ var gulp = require("gulp"),
     visualsBuildRelease = require("./visualsBuild.js").load({ isRelease: true }),
     visualsDownload = require("./visualsDownload.js");
 
-
 var openInBrowser = Boolean(cliParser.cliOptions.openInBrowser);
 
 var filesOption = common.getOptionFromCli(cliParser.cliOptions.files);

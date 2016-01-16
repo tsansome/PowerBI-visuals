@@ -396,8 +396,7 @@ module powerbitests {
 
             gaugeDataBuilder.onDataChanged();
 
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // Check Arc Drawn
                 let backgroundArc = $(".backgroundArc");
                 let foregroundArc = $(".foregroundArc");
@@ -496,8 +495,7 @@ module powerbitests {
             };
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 //Callout value
                 expect($(".mainText").length).toBe(0);
                 
@@ -523,7 +521,6 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
-                
                 //Data labels
                 expect($(".labelText").css("font-size")).toBe("20px");
                 done();
@@ -546,7 +543,6 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
-                
                 //Callout value
                 let mainText = $(".mainText");
                 expect(mainText.length).toBe(1);
@@ -581,9 +577,8 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
-                
                 //Callout value
-                expect($(".mainText").text()).toBe("$1,000.00K");
+                expect($(".mainText").text()).toBe("$1000.00K");
                 
                 //Data labels
                 let labels = $(".labelText");
@@ -612,7 +607,6 @@ module powerbitests {
             gaugeDataBuilder.buildDataView();
             gaugeDataBuilder.onDataChanged();
             setTimeout(() => {
-                
                 //Callout value
                 expect($(".mainText").text()).toBe("500T");
                 
@@ -647,7 +641,6 @@ module powerbitests {
             gaugeDataBuilder.onDataChanged();
 
             setTimeout(() => {
-                
                 //Callout value
                 expect($(".mainText").text()).toBe("$563.73T");
                 
@@ -838,8 +831,7 @@ module powerbitests {
             expect(data).toEqual(expectedValues);
         });
 
-        it("Gauge_formatting_min_max_target", () => {
-            
+        it("Gauge_formatting_min_max_target", () => {    
             // 1
             let dataViewMetadata: powerbi.DataViewMetadata = {
                 columns: [

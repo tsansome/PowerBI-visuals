@@ -145,8 +145,7 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        it('legend dom validation incremental build', (done) => {
-            
+        it('legend dom validation incremental build', (done) => {    
             // Draw the legend once with the 3 states
             legend.drawLegend({ dataPoints: legendData }, viewport);
             setTimeout(() => {
@@ -552,7 +551,7 @@ module powerbitests {
         let viewport: powerbi.IViewport;
         let legend: ILegend;
         let colorStyle = 'color: {0};';
-        let defaultLegendHeight = 65;
+        let defaultLegendHeight = 70;
         let interactivityService: IInteractivityService;
 
         let legendData: powerbi.visuals.LegendDataPoint[] = [
@@ -649,8 +648,7 @@ module powerbitests {
                 expect(legend.getMargins().height).toBe(defaultLegendHeight);
             });
 
-            it('legend dom validation incremental build', (done) => {
-                
+            it('legend dom validation incremental build', (done) => {    
                 // Draw the legend once with the 3 states
                 let initialData: powerbi.visuals.LegendDataPoint[] = legendData;
 

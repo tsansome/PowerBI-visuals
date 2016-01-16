@@ -59,16 +59,9 @@ module powerbi.visuals {
 
         /** Helper class for handling slicer default value  */
         export module DefaultValueHandler {
-            export function getDefaultValue(dataView: DataView): data.SQConstantExpr {
-                let dataViewDefaultValue = DataConversion.getDataViewDefaultValue(dataView);
-                if (dataViewDefaultValue)
-                    return dataViewDefaultValue.value;
-            }
-
             export function getIdentityFields(dataView: DataView): data.SQExpr[] {
-                if (!dataView) {
+                if (!dataView)
                     return;
-                }
 
                 let dataViewCategorical = dataView.categorical;
                 if (!dataViewCategorical || _.isEmpty(dataViewCategorical.categories))

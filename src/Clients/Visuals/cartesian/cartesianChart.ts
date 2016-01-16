@@ -174,6 +174,7 @@ module powerbi.visuals {
     export interface ICartesianVisualHost {
         updateLegend(data: LegendData): void;
         getSharedColors(): IDataColorPalette;
+        triggerRender(suppressAnimations: boolean): void;
     }
 
     export interface ChartAxesLabels {
@@ -209,13 +210,6 @@ module powerbi.visuals {
         y2?: IAxisProperties;
     }
 
-    const AxisPadding: IMargin = {
-        left: 10,
-        right: 15,
-        top: 0,
-        bottom: 12,
-    };
-
     export interface ReferenceLineOptions {
         graphicContext: D3.Selection;
         referenceLineProperties: DataViewObject;
@@ -232,6 +226,7 @@ module powerbi.visuals {
         viewport: IViewport;
         defaultColor: string;
         isHorizontal: boolean;
+        key: string;
     }
 
     type RenderPlotAreaDelegate = (
@@ -247,7 +242,7 @@ module powerbi.visuals {
         public static MinScalarRectThickness = 2;
         public static OuterPaddingRatio = 0.4;
         public static InnerPaddingRatio = 0.2;
-        public static TickLabelPadding = 2;
+        public static TickLabelPadding = 2; // between text labels, used by AxisHelper
 
         private static ClassName = 'cartesianChart';
         private static PlayAxisBottomMargin = 75;
@@ -294,6 +289,7 @@ module powerbi.visuals {
         private scrollableAxes: ScrollableAxes;
         private svgAxes: SvgCartesianAxes;
         private svgBrush: SvgBrush;
+        private renderedPlotArea: IViewport; // to help disable animation when property changes result in layout changes (e.g. 'legend off' should not animate)
 
         // TODO: Remove onDataChanged & onResizing once all visuals have implemented update.
         private dataViews: DataView[];
@@ -771,6 +767,7 @@ module powerbi.visuals {
             cartesianOptions.cartesianHost = {
                 updateLegend: data => this.legend.drawLegend(data, this.currentViewport),
                 getSharedColors: () => this.sharedColorPalette,
+                triggerRender: (suppressAnimations: boolean) => this.render(suppressAnimations),
             };
             cartesianOptions.chartType = this.type;
 
@@ -842,7 +839,7 @@ module powerbi.visuals {
                 width: this.currentViewport.width - legendMargins.width
             };
 
-            let padding = Prototype.inherit(AxisPadding);
+            let padding = Prototype.inherit(SvgCartesianAxes.AxisPadding);
             if (this.isPlayAxis()) {
                 viewport.height -= CartesianChart.PlayAxisBottomMargin;
             }
@@ -857,10 +854,19 @@ module powerbi.visuals {
                 viewport,
                 padding,
                 hideAxisLabels,
-                CartesianChart.TextProperties
-            );
+                CartesianChart.TextProperties);
+
+            // Even if the caller thinks animations are ok, now that we've laid out the axes and legend we should disable animations
+            // if the plot area changed. Animations for property changes like legend on/off are not desired.
+            let plotAreaHasChanged: boolean =
+                !this.renderedPlotArea
+                || (this.renderedPlotArea.height !== axesLayout.plotArea.height ||
+                    this.renderedPlotArea.width !== axesLayout.plotArea.width);
+            suppressAnimations = suppressAnimations || plotAreaHasChanged;
 
             this.scrollableAxes.render(axesLayout, this.layers, suppressAnimations, (layers, axesLayout, suppressAnimations) => this.renderPlotArea(layers, axesLayout, suppressAnimations, legendMargins));
+
+            this.renderedPlotArea = axesLayout.plotArea;
         }
 
         private getPlotAreaRect(axesLayout: CartesianAxesLayout, legendMargins: IViewport): IRect {
@@ -906,7 +912,7 @@ module powerbi.visuals {
             layers: ICartesianVisual[],
             axesLayout: CartesianAxesLayout,
             suppressAnimations: boolean,
-            legendMargins: IViewport) {
+            legendMargins: IViewport): void {
             debug.assertValue(layers, 'layers');
 
             let axes = axesLayout.axes;
@@ -983,7 +989,7 @@ module powerbi.visuals {
             }
         }
 
-        private getReferenceLineDataLabels(axes: CartesianAxisProperties, plotArea: IViewport): LabelDataPoint[] {
+        private getReferenceLineLabels(axes: CartesianAxisProperties, plotArea: IViewport): LabelDataPoint[] {
             let refLineDefaultColor = this.sharedColorPalette.getColorByIndex(0).value;
             let referenceLineLabels: LabelDataPoint[] = [];
             if (this.y1AxisReferenceLines) {
@@ -996,14 +1002,18 @@ module powerbi.visuals {
                             axes: axes,
                             viewport: plotArea,
                             defaultColor: refLineDefaultColor,
-                            isHorizontal: isHorizontal
+                            isHorizontal: isHorizontal,
+                            key: JSON.stringify({
+                                type: 'y1AxisReferenceLine',
+                                id: referenceLineProperties.id,
+                            }),
                         };
 
                         referenceLineLabels.push(ReferenceLineHelper.createLabelDataPoint(y1RefLineLabelOptions));
                     }
                 }
             }
-
+            
             if (this.xAxisReferenceLines) {
                 for (let referenceLineProperties of this.xAxisReferenceLines) {
                     let object: DataViewObject = referenceLineProperties.object;
@@ -1014,7 +1024,11 @@ module powerbi.visuals {
                             axes: axes,
                             viewport: plotArea,
                             defaultColor: refLineDefaultColor,
-                            isHorizontal: isHorizontal
+                            isHorizontal: isHorizontal,
+                            key: JSON.stringify({
+                                type: 'xAxisReferenceLine',
+                                id: referenceLineProperties.id,
+                            }),
                         };
 
                         referenceLineLabels.push(ReferenceLineHelper.createLabelDataPoint(xRefLineLabelOptions));
@@ -1110,11 +1124,11 @@ module powerbi.visuals {
                 }
             }
 
-            let referenceLineDataLabels = this.getReferenceLineDataLabels(axes, plotArea);
-            if (!_.isEmpty(referenceLineDataLabels)) {
+            let referenceLineLabels = this.getReferenceLineLabels(axes, plotArea);
+            if (!_.isEmpty(referenceLineLabels)) {
                 labelDataPointGroups.unshift({
-                    labelDataPoints: referenceLineDataLabels,
-                    maxNumberOfLabels: referenceLineDataLabels.length,
+                    labelDataPoints: referenceLineLabels,
+                    maxNumberOfLabels: referenceLineLabels.length,
                 });
             }
 
@@ -1131,15 +1145,7 @@ module powerbi.visuals {
                     clearCatcher: this.clearCatcher,
                 };
 
-                if (this.isPlayAxis()) {
-                    let cartesianPlayBehavior = new CartesianChartBehavior([new PlayChartWebBehavior()]);
-                    // the visual doesn't have its behavior available, so we have to set the child behavior on the playBehaviorOptions here.
-                    (<PlayBehaviorOptions>layerBehaviorOptions[0]).visualBehavior = this.behavior['behaviors'][0];
-                    this.interactivityService.bind(dataPoints, cartesianPlayBehavior, behaviorOptions);
-                }
-                else {
-                    this.interactivityService.bind(dataPoints, this.behavior, behaviorOptions);
-                }
+                this.interactivityService.bind(dataPoints, this.behavior, behaviorOptions);
             }
         }
 
@@ -1499,6 +1505,7 @@ module powerbi.visuals {
         plotArea: IViewport;
         preferredPlotArea: IViewport;
         tickLabelMargins: any;
+        tickPadding: IMargin;
     }
 
     class SvgBrush {
@@ -1772,6 +1779,13 @@ module powerbi.visuals {
     }
 
     class SvgCartesianAxes {
+        public static AxisPadding: IMargin = {
+            left: 10,
+            right: 10,
+            top: 0,
+            bottom: 12,
+        };
+
         private axisGraphicsContext: D3.Selection;
         private xAxisGraphicsContext: D3.Selection;
         private y1AxisGraphicsContext: D3.Selection;
@@ -1785,9 +1799,9 @@ module powerbi.visuals {
         private valueAxisProperties: DataViewObject;
 
         private static AxisGraphicsContext = createClassAndSelector('axisGraphicsContext');
-        private static TickPaddingY = 10;
         private static TickPaddingRotatedX = 5;
         private static AxisLabelFontSize = 11;
+        private static Y2TickSize = -6;
 
         constructor(private axes: CartesianAxes) {
         }
@@ -1954,9 +1968,10 @@ module powerbi.visuals {
                     yLabelColor = this.valueAxisProperties && this.valueAxisProperties['labelColor'] ? this.valueAxisProperties['labelColor'] : null;
                 }
                 let showY1OnRight = this.axes.shouldShowY1OnRight();
+                let y1TickPadding = showY1OnRight ? axesLayout.tickPadding.right : axesLayout.tickPadding.left;
                 axes.y1.axis
                     .tickSize(-plotArea.width)
-                    .tickPadding(SvgCartesianAxes.TickPaddingY)
+                    .tickPadding(y1TickPadding)
                     .orient(this.axes.getYAxisOrientation().toLowerCase());
 
                 let y1AxisGraphicsElement = this.y1AxisGraphicsContext;
@@ -1979,15 +1994,17 @@ module powerbi.visuals {
                     y1AxisGraphicsElement.selectAll('text')
                         .call(AxisHelper.LabelLayoutStrategy.clip,
                         // Can't use padding space to render text, so subtract that from available space for ellipses calculations
-                        leftRightMarginLimit - AxisPadding.left,
+                        leftRightMarginLimit - y1TickPadding,
                         TextMeasurementService.svgEllipsis);
                 }
 
                 if (axes.y2 && (!this.valueAxisProperties || this.valueAxisProperties['secShow'] == null || this.valueAxisProperties['secShow'])) {
                     y2LabelColor = this.valueAxisProperties && this.valueAxisProperties['secLabelColor'] ? this.valueAxisProperties['secLabelColor'] : null;
 
+                    let y2TickPadding = showY1OnRight ? axesLayout.tickPadding.left : axesLayout.tickPadding.right;
                     axes.y2.axis
-                        .tickPadding(SvgCartesianAxes.TickPaddingY)
+                        .tickSize(SvgCartesianAxes.Y2TickSize)
+                        .tickPadding(y2TickPadding)
                         .orient(showY1OnRight ? yAxisPosition.left.toLowerCase() : yAxisPosition.right.toLowerCase());
 
                     if (duration) {
@@ -2009,7 +2026,7 @@ module powerbi.visuals {
                         this.y2AxisGraphicsContext.selectAll('text')
                             .call(AxisHelper.LabelLayoutStrategy.clip,
                             // Can't use padding space to render text, so subtract that from available space for ellipses calculations
-                            leftRightMarginLimit - AxisPadding.right,
+                            leftRightMarginLimit - y2TickPadding,
                             TextMeasurementService.svgEllipsis);
                     }
                 }
@@ -2434,6 +2451,7 @@ module powerbi.visuals {
                 plotArea: plotArea,
                 preferredPlotArea: preferredPlotArea,
                 tickLabelMargins: tickLabelMargins,
+                tickPadding: padding,
             };
 
             this.lastLeft = margin.left;

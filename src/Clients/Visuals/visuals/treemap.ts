@@ -28,7 +28,6 @@
 
 module powerbi.visuals {
     import CssConstants = jsCommon.CssConstants;
-    import StringExtensions = jsCommon.StringExtensions;
 
     export interface TreemapConstructorOptions {
         animator?: ITreemapAnimator;
@@ -771,7 +770,7 @@ module powerbi.visuals {
             if (node.depth !== 1)
                 return false;
 
-            if (StringExtensions.isNullOrEmpty(node.name))
+            if (_.isEmpty(node.name))
                 return false;
 
             // Check if the room is enough for text with or without ellipse
@@ -797,7 +796,7 @@ module powerbi.visuals {
                 return false;
             }
 
-            if (StringExtensions.isNullOrEmpty(node.name))
+            if (_.isEmpty(node.name))
                 return false;
             
             // Check if the room is enough for text with or without ellipse

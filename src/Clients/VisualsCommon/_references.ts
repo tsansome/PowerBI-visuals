@@ -27,7 +27,6 @@
 /// <reference path="typedefs/typedefs.ts"/>
 
 /// <reference path="DOMConstants.ts"/>
-/// <reference path="CssConstants.ts"/>
 /// <reference path="serviceError.ts"/>
 /// <reference path="services/build.ts"/>
 /// <reference path="services/geoTaggingAnalyzerService.ts"/>
@@ -37,6 +36,7 @@
 /// <reference path="Controls/DomFactory.ts"/>
 /// <reference path="Double.ts"/>
 /// <reference path="color.ts"/>
+/// <reference path="CssConstants.ts"/>
 /// <reference path="debug.ts"/>
 /// <reference path="DragDrop.ts"/>
 /// <reference path="Errors.ts"/>

@@ -214,7 +214,7 @@ module powerbi.visuals {
                 showUrl: UrlHelper.isValidUrl(columnItem, formattedValue),
                 showImage: UrlHelper.isValidImage(columnItem, formattedValue),
                 isLeftMost: isLeftMost
-              };
+            };
         }
         
         /**
@@ -349,7 +349,7 @@ module powerbi.visuals {
             let columnIndex = TableHierarchyNavigator.getIndex(this.tableDataView.columns, item);
             cell.extension.setContainerStyle(TableBinder.columnHeaderClassName);
             cell.extension.disableDragResize();
-            cell.extension.contentHost.textContent = item.displayName;
+            cell.extension.setTextAndTooltip(item.displayName);
 
             if (this.sortIconsEnabled())
                 TablixUtils.appendSortImageToColumnHeader(item, cell);
@@ -373,7 +373,7 @@ module powerbi.visuals {
 
         public unbindColumnHeader(item: any, cell: controls.ITablixCell): void {
             cell.extension.clearContainerStyle();
-            cell.extension.contentHost.textContent = '';
+            cell.extension.clearTextAndTooltip();
 
             if (this.sortIconsEnabled())
                 TablixUtils.removeSortIcons(cell);
@@ -393,8 +393,9 @@ module powerbi.visuals {
                 TablixUtils.appendImgTagToBodyCell(item.textContent, cell);
             else if (!_.isEmpty(item.domContent))
                 $(cell.extension.contentHost).append(item.domContent);
-            else if (item.textContent)
-                cell.extension.contentHost.textContent = item.textContent;
+            else if (item.textContent) {
+                cell.extension.setTextAndTooltip(item.textContent);
+            }
 
             let classNames = item.isTotal ?
                 TableBinder.footerClassName :
@@ -422,7 +423,7 @@ module powerbi.visuals {
 
         public unbindBodyCell(item: TableCell, cell: controls.ITablixCell): void {
             cell.extension.clearContainerStyle();
-            cell.extension.contentHost.textContent = '';
+            cell.extension.clearTextAndTooltip();
         }
         
         /**
@@ -497,6 +498,11 @@ module powerbi.visuals {
         (index: number, width: number): void;
     }
 
+    export interface TableConstructorOptions {
+        isFormattingPropertiesEnabled?: boolean;
+        isTouchEnabled?: boolean;
+    }
+
     export class Table implements IVisual {
         private static preferredLoadMoreThreshold: number = 0.8;
 
@@ -505,6 +511,7 @@ module powerbi.visuals {
         private style: IVisualStyle;
         private formatter: ICustomValueColumnFormatter;
         private isInteractive: boolean;
+        private isTouchEnabled: boolean;
         private getLocalizedString: (stringId: string) => string;
         private hostServices: IVisualHostServices;
 
@@ -517,8 +524,11 @@ module powerbi.visuals {
         private dataView: DataView;
         private isFormattingPropertiesEnabled: boolean;
 
-        constructor(isFormattingPropertiesEnabled?: boolean) {
-            this.isFormattingPropertiesEnabled = isFormattingPropertiesEnabled;
+        constructor(options?: TableConstructorOptions) {
+            if (options) {
+                this.isFormattingPropertiesEnabled = options.isFormattingPropertiesEnabled;
+                this.isTouchEnabled = options.isTouchEnabled;
+            }
         }
 
         public static customizeQuery(options: CustomizeQueryOptions): void {
@@ -620,7 +630,7 @@ module powerbi.visuals {
             this.waitingForSort = false;
         }
 
-        private populateColumnWidths(): void { 
+        private populateColumnWidths(): void {
             if (this.columnWidthManager) {
                 this.columnWidthManager.deserializeTablixColumnWidths();
                 if (this.columnWidthManager.persistColumnWidthsOnHost())
@@ -704,7 +714,7 @@ module powerbi.visuals {
 
             let tablixOptions: controls.TablixOptions = {
                 interactive: this.isInteractive,
-                enableTouchSupport: false,
+                enableTouchSupport: this.isTouchEnabled,
                 layoutKind: layoutKind,
                 fontSize: TablixUtils.getTextSizeInPx(textSize),
             };
@@ -814,7 +824,7 @@ module powerbi.visuals {
 
             if (this.dataView) {
                 TablixUtils.setEnumeration(options, enumeration, this.dataView, this.isFormattingPropertiesEnabled, controls.TablixType.Table);
-        }
+            }
 
             return enumeration.complete();
         }

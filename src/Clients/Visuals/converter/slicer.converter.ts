@@ -31,52 +31,64 @@ module powerbi.visuals {
 
     /** Helper module for converting a DataView into SlicerData. */
     export module DataConversion {
-        export function convert(dataView: DataView, localizedSelectAllText: string, interactivityService: IInteractivityService | ISelectionHandler, hostServices: IVisualHostServices): IPromise<SlicerData> {
+        export function convert(dataView: DataView, localizedSelectAllText: string, interactivityService: IInteractivityService | ISelectionHandler, hostServices: IVisualHostServices): SlicerData {
             debug.assertValue(hostServices, 'hostServices');
             if (!dataView || !dataView.categorical || _.isEmpty(dataView.categorical.categories))
-                return hostServices.promiseFactory().reject();
+                return;
 
             let category = dataView.categorical.categories[0];
             let identityFields = category.identityFields;
             if (!identityFields)
-                return hostServices.promiseFactory().reject();
+                return;
 
             let filter: data.SemanticFilter = <data.SemanticFilter>(
                 dataView.metadata &&
                 dataView.metadata.objects &&
                 DataViewObjects.getValue(dataView.metadata.objects, visuals.slicerProps.filterPropertyIdentifier));
 
-            let analyzer = hostServices.filterAnalyzer(filter, identityFields);
+            let analyzer = hostServices.analyzedFilter({
+                dataView: dataView,
+                defaultValuePropertyId: slicerProps.defaultValue,
+                filter: filter,
+                fieldSQExprs: identityFields
+            });
             if (!analyzer)
-                return hostServices.promiseFactory().reject();
+                return;
 
-            if (filter) {
-                let slicerData = getSlicerData(filter, analyzer, dataView.metadata, category, localizedSelectAllText, <IInteractivityService>interactivityService, hostServices);
-                return hostServices.promiseFactory().resolve<SlicerData>(slicerData);
+            if (analyzer.hasDefaultFilterOverride()) {
+                (<ISelectionHandler>interactivityService).handleClearSelection();
+                let filterPropertyIdentifier = slicerProps.filterPropertyIdentifier;
+                let properties: { [propertyName: string]: DataViewPropertyValue } = {};
+                properties[filterPropertyIdentifier.propertyName] = analyzer.filter;
+                let instance = {
+                    objectName: filterPropertyIdentifier.objectName,
+                    selector: undefined,
+                    properties: properties
+                };
+
+                let changes: VisualObjectInstancesToPersist = {
+                    merge: [instance]
+                };
+                hostServices.persistProperties(changes);
             }
 
-            return analyzer.hasDefaultFilterOverride()
-                .then((result) => {
-                    if (result === true)
-                        (<ISelectionHandler>interactivityService).handleClearSelection();
+            let slicerData = getSlicerData(filter, analyzer, dataView.metadata, category, localizedSelectAllText, <IInteractivityService>interactivityService, hostServices);
+            return slicerData;
 
-                    let slicerData = getSlicerData(filter, analyzer, dataView.metadata, category, localizedSelectAllText, <IInteractivityService>interactivityService, hostServices);
-                    return slicerData;
-                });
         }
 
         function getSlicerData(
             filter: data.SemanticFilter,
-            analyzer: IFilterAnalyzer,
+            analyzer: AnalyzedFilter,
             dataViewMetadata: DataViewMetadata,
             category: DataViewCategoryColumn,
             localizedSelectAllText: string, interactivityService: IInteractivityService, hostServices: IVisualHostServices): SlicerData {
             let isInvertedSelectionMode: boolean = interactivityService && interactivityService.isSelectionModeInverted();
             let hasSelectionOverride: boolean = false;
-            let selectedScopeIds = analyzer.selectedIdentities();
+            let selectedScopeIds = analyzer.selectedIdentities;
             hasSelectionOverride = !_.isEmpty(selectedScopeIds);
             if (filter)
-                isInvertedSelectionMode = analyzer.isNotFilter();
+                isInvertedSelectionMode = analyzer.isNotFilter;
 
             if (interactivityService)
                 interactivityService.setSelectionModeInverted(isInvertedSelectionMode);
@@ -151,6 +163,7 @@ module powerbi.visuals {
                 slicerSettings: defaultSettings,
                 slicerDataPoints: slicerDataPoints,
                 hasSelectionOverride: hasSelectionOverride,
+                defaultValue: analyzer.defaultValue,
             };
 
             return slicerData;
@@ -191,12 +204,6 @@ module powerbi.visuals {
             }
 
             return defaultSettings;
-        }
-
-        export function getDataViewDefaultValue(dataView: DataView): DefaultValueDefinition {
-            if (dataView && dataView.metadata && !_.isEmpty(dataView.metadata.columns)) {
-                return DataViewObjects.getValue<DefaultValueDefinition>(dataView.metadata.columns[0].objects, slicerProps.defaultValue);
-            }
         }
     }
 }

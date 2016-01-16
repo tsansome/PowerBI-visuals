@@ -133,7 +133,7 @@ module powerbi.data {
             prototype = DataViewPivotCategoricalToPrimaryGroups.unpivotResult(prototype, transforms.selects, dataViewMappings);
 
             let splits = transforms.splits;
-            if (ArrayExtensions.isUndefinedOrEmpty(splits)) {
+            if (_.isEmpty(splits)) {
                 return [transformDataView(prototype, objectDescriptors, dataViewMappings, transforms, colorAllocatorFactory, dataRoles)];
             }
 
@@ -305,28 +305,10 @@ module powerbi.data {
          * Get the column format. Order of precendence is:
          *  1. Select format
          *  2. Column format
-         *  3. Default PowerView policy for column type
          */
         function getFormatForColumn(select: DataViewSelectTransform, column: DataViewMetadataColumn): string {
             // TODO: we already copied the select.Format to column.format, we probably don't need this check
-            if (select.format)
-                return select.format;
-
-            if (column.format)
-                return column.format;
-
-            // TODO: deprecate this, default format string logic has been added to valueFormatter
-            let type = column.type;
-            if (type) {
-                if (type.dateTime)
-                    return 'd';
-                if (type.integer)
-                    return 'g';
-                if (type.numeric)
-                    return '#,0.00';
-            }
-
-            return undefined;
+            return select.format || column.format;
         }
 
         /**
@@ -1462,8 +1444,8 @@ module powerbi.data {
             debug.assertAnyValue(objectDescs, 'objectDescs');
             debug.assertAnyValue(objectDefns, 'objectDefns');
 
-            if ((!queryMetadata || ArrayExtensions.isUndefinedOrEmpty(queryMetadata.Select)) &&
-                ArrayExtensions.isUndefinedOrEmpty(visualElements) &&
+            if ((!queryMetadata || _.isEmpty(queryMetadata.Select)) &&
+                _.isEmpty(visualElements) &&
                 !objectDefns)
                 return;
 
@@ -1703,6 +1685,7 @@ module powerbi.data {
                         currentGroup.identity = value.identity;
 
                         let source = value.source;
+
                         // allow null, which will be formatted as (Blank).
                         if (source.groupName !== undefined)
                             currentGroup.name = source.groupName;
@@ -1737,7 +1720,7 @@ module powerbi.data {
         }
 
         function determineCategoricalTransformation(categorical: DataViewCategorical, dataViewMappings: DataViewMapping[]): CategoricalDataViewTransformation {
-            if (!categorical || ArrayExtensions.isUndefinedOrEmpty(dataViewMappings))
+            if (!categorical || _.isEmpty(dataViewMappings))
                 return;
 
             let categories = categorical.categories;
@@ -1745,7 +1728,7 @@ module powerbi.data {
                 return;
 
             let values = categorical.values;
-            if (ArrayExtensions.isUndefinedOrEmpty(values))
+            if (_.isEmpty(values))
                 return;
 
             if (values.grouped().some(vg => !!vg.identity))
@@ -1776,7 +1759,7 @@ module powerbi.data {
         }
 
         function shouldPivotMatrix(matrix: DataViewMatrix, dataViewMappings: DataViewMapping[]): boolean {
-            if (!matrix || ArrayExtensions.isUndefinedOrEmpty(dataViewMappings))
+            if (!matrix || _.isEmpty(dataViewMappings))
                 return;
 
             let rowLevels = matrix.rows.levels;

@@ -660,8 +660,7 @@ module powerbitests {
 
             cardBuilder.onResizing(1000, 200);
 
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // No word wrapping, category label should be cut
                 expect($('.card .label')[0].textContent).toContain('…');
                 expect($('.card .label tspan').length).toBe(0);

@@ -32,22 +32,22 @@ module powerbi.visuals {
             {
                 name: 'Indicator',
                 kind: VisualDataRoleKind.Measure,
-                displayName: data.createDisplayNameGetter('Role_DisplayName_Indicator'),
-                description: data.createDisplayNameGetter('Visual_KPI_Indicator_Description')
-            }, {
-                name: 'Goal',
-                kind: VisualDataRoleKind.Measure,
-                displayName: data.createDisplayNameGetter('Role_DisplayName_Goal'),
-                description: data.createDisplayNameGetter('Visual_KPI_Goal_Description')
+                displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_Indicator'),
+                description: data.createDisplayNameGetter('Role_DisplayName_KPI_IndicatorDescription')
             }, {
                 name: 'TrendLine',
                 kind: VisualDataRoleKind.Grouping,
-                displayName: data.createDisplayNameGetter('Role_DisplayName_TrendLine'),
-                description: data.createDisplayNameGetter('Visual_KPI_Trendline_Description')
+                displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_TrendLine'),
+                description: data.createDisplayNameGetter('Role_DisplayName_KPI_Trendline_Description')
+            }, {
+                name: 'Goal',
+                kind: VisualDataRoleKind.Measure,
+                displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_Goal'),
+                description: data.createDisplayNameGetter('Role_DisplayName_KPI_GoalDescription')
             }],
         dataViewMappings: [{
             conditions: [
-                { 'Indicator': { max: 1 }, 'TrendLine': { max: 1 }, 'Goal': { max: 1 } },
+                { 'Indicator': { max: 1 }, 'TrendLine': { max: 1 }, 'Goal': { max: 2 } },
             ],
             categorical: {
                 categories: {
@@ -63,29 +63,71 @@ module powerbi.visuals {
             },
         }],
         objects: {
-            status: {
-                displayName: data.createDisplayNameGetter('Visual_KPI_Status'),
-                description: data.createDisplayNameGetter('Visual_KPI_Status'),
+            general: {
                 properties: {
-                    direction: {
-                        displayName: data.createDisplayNameGetter('Visual_KPI_Direction'),
-                        description: data.createDisplayNameGetter('Visual_KPI_Direction'),
-                        type: { enumeration: kpiDirection.type }
+                    formatString: {
+                        type: { formatting: { formatString: true } },
+                    },
+                },
+            },
+            indicator: {
+                displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_Indicator'),
+                description: data.createDisplayNameGetter('Role_DisplayName_KPI_IndicatorDescription'),
+                properties: {
+                    indicatorDisplayUnits: {
+                        displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
+                        description: data.createDisplayNameGetter('Visual_DisplayUnitsDescription'),
+                        type: { formatting: { labelDisplayUnits: true } }
+                    },
+                    indicatorPrecision: {
+                        displayName: data.createDisplayNameGetter('Visual_Precision'),
+                        description: data.createDisplayNameGetter('Visual_PrecisionDescription'),
+                        placeHolderText: data.createDisplayNameGetter('Visual_Precision_Auto'),
+                        type: { numeric: true }
+                    },
+                    kpiFormat: {
+                        displayName: data.createDisplayNameGetter('TaskPane_Format'),
+                        type: { text: true },
+                    },
+                    fontSize: {
+                        displayName: data.createDisplayNameGetter('Visual_TextSize'),
+                        type: { formatting: { fontSize: true } }
                     }
                 }
             },
-            format: {
-                displayName: data.createDisplayNameGetter('Visual_KPI_Format'),
-                description: data.createDisplayNameGetter('Visual_KPI_Format'),
+            trendline: {
+                displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_TrendLine'),
+                description: data.createDisplayNameGetter('Role_DisplayName_KPI_Trendline_Description'),
                 properties: {
                     show: {
                         displayName: data.createDisplayNameGetter('Visual_Show'),
                         type: { bool: true }
+                    }
+                }
+            },
+            goals: {
+                displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_Goals'),
+                description: data.createDisplayNameGetter('Role_DisplayName_KPI_GoalDescription'),
+                properties: {
+                    showGoal: {
+                        displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_Show_Goal'),
+                        type: { bool: true }
                     },
-                    kpiFormat: {
-                        type: { text: true },
-                        displayName: data.createDisplayNameGetter('TaskPane_Format'),
+                    showDistance: {
+                        displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_Show_Distance'),
+                        type: { bool: true }
                     },
+                }
+            },
+            status: {
+                displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_Status'),
+                description: data.createDisplayNameGetter('Role_DisplayName_KPI_Status'),
+                properties: {
+                    direction: {
+                        displayName: data.createDisplayNameGetter('Role_DisplayName_KPI_Direction'),
+                        description: data.createDisplayNameGetter('Role_DisplayName_KPI_Direction'),
+                        type: { enumeration: kpiDirection.type }
+                    }
                 }
             }
         },

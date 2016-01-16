@@ -33,12 +33,6 @@ module powerbi.visuals.plugins {
         capabilities: samples.Sunburst.capabilities,
         create: () => new samples.Sunburst()
     };
-    
-    export let cheerMeter: IVisualPlugin = {
-        name: 'cheerMeter',
-        capabilities: CheerMeter.capabilities,
-        create: () => new CheerMeter()
-    };
 
     export let consoleWriter: IVisualPlugin = {
         name: 'consoleWriter',
@@ -56,13 +50,6 @@ module powerbi.visuals.plugins {
         name: 'asterPlot',
         capabilities: samples.AsterPlot.capabilities,
         create: () => new samples.AsterPlot()
-    };
-
-    export let owlGauge: IVisualPlugin = {
-        name: 'owlGauge',
-        watermarkKey: 'gauge',
-        capabilities: OwlGauge.capabilities,
-        create: () => new OwlGauge()
     };
 
     export let streamGraph: IVisualPlugin = {
@@ -136,5 +123,11 @@ module powerbi.visuals.plugins {
         name: "bulletChart",
         capabilities: samples.BulletChart.capabilities,
         create: () => new samples.BulletChart()
+    };
+
+    export var forceGraph: IVisualPlugin = {
+        name: "forceGraph",
+        capabilities: samples.ForceGraph.capabilities,
+        create: () => new samples.ForceGraph()
     };
 }

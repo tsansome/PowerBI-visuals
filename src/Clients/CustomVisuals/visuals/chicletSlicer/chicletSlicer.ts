@@ -149,9 +149,9 @@ module powerbi.visuals.samples {
         }
 
         private setTotalRows(): void {
-            let count = this._data.length;
-            let rows = Math.min(this.options.rows, count);
-            let columns = Math.min(this.options.columns, count);
+            var count = this._data.length;
+            var rows = Math.min(this.options.rows, count);
+            var columns = Math.min(this.options.columns, count);
 
             if ((columns > 0) && (rows > 0)) {
                 this._totalColumns = columns;
@@ -174,17 +174,17 @@ module powerbi.visuals.samples {
         }
 
         public render(): void {
-            let options = this.options;
-            let visibleGroupContainer = this.visibleGroupContainer;
-            let rowHeight = options.rowHeight || TableView.defaultRowHeight;
-            let groupedData: any[] = [];
-            for (let i: number = 0; i < this._totalRows; i++) {
-                let k: number = i * this._totalColumns;
+            var options = this.options;
+            var visibleGroupContainer = this.visibleGroupContainer;
+            var rowHeight = options.rowHeight || TableView.defaultRowHeight;
+            var groupedData: any[] = [];
+            for (var i: number = 0; i < this._totalRows; i++) {
+                var k: number = i * this._totalColumns;
                 groupedData.push(this._data.slice(k, k + this._totalColumns));
             }
 
             visibleGroupContainer.selectAll(".row").remove();
-            let cellSelection = visibleGroupContainer.selectAll(".row")
+            var cellSelection = visibleGroupContainer.selectAll(".row")
                 .data(groupedData)
                 .enter()
                 .append("div")
@@ -199,7 +199,7 @@ module powerbi.visuals.samples {
                 .call(d => options.enter(d));
             cellSelection.order();
 
-            let cellUpdateSelection = visibleGroupContainer.selectAll('.cell:not(.transitioning)');
+            var cellUpdateSelection = visibleGroupContainer.selectAll('.cell:not(.transitioning)');
 
             cellUpdateSelection.call(d => options.update(d));
             cellUpdateSelection.style({ 'height': (rowHeight > 0) ? rowHeight + 'px' : 'auto' });
@@ -215,7 +215,7 @@ module powerbi.visuals.samples {
     }
 
     // TODO: Generate these from above, defining twice just introduces potential for error
-    export let chicletSlicerProps = {
+    export var chicletSlicerProps = {
         general: {
             orientation: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'orientation' },
             columns: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'columns' },
@@ -245,7 +245,7 @@ module powerbi.visuals.samples {
             outline: <DataViewObjectPropertyIdentifier>{ objectName: 'rows', propertyName: 'outline' },
             outlineColor: <DataViewObjectPropertyIdentifier>{ objectName: 'rows', propertyName: 'outlineColor' },
             outlineWeight: <DataViewObjectPropertyIdentifier>{ objectName: 'rows', propertyName: 'outlineWeight' },
-
+            borderStyle: <DataViewObjectPropertyIdentifier>{ objectName: 'rows', propertyName: 'borderStyle' },
         },
         images: {
             imageSplit: <DataViewObjectPropertyIdentifier>{ objectName: 'images', propertyName: 'imageSplit' },
@@ -255,15 +255,26 @@ module powerbi.visuals.samples {
         selectedPropertyIdentifier: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'selected' },
         filterPropertyIdentifier: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'filter' },
         formatString: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' },
-
     };
 
-    module ChicletSlicerShowDisabled {
-        export let INPLACE: string = 'Inplace';
-        export let BOTTOM: string = 'Bottom';
-        export let HIDE: string = 'Hide';
+    module ChicletBorderStyle {
+        export var ROUNDED: string = 'Rounded';
+        export var CUT: string = 'Cut';
+        export var SQUARE: string = 'Square';
 
-        export let type: IEnumType = createEnumType([
+        export var type: IEnumType = createEnumType([
+            { value : ROUNDED, displayName: ChicletBorderStyle.ROUNDED },
+            { value: CUT, displayName: ChicletBorderStyle.CUT },
+            { value: SQUARE, displayName: ChicletBorderStyle.SQUARE },
+        ]);
+    }
+
+    module ChicletSlicerShowDisabled {
+        export var INPLACE: string = 'Inplace';
+        export var BOTTOM: string = 'Bottom';
+        export var HIDE: string = 'Hide';
+
+        export var type: IEnumType = createEnumType([
             { value: INPLACE, displayName: ChicletSlicerShowDisabled.INPLACE },
             { value: BOTTOM, displayName: ChicletSlicerShowDisabled.BOTTOM },
             { value: HIDE, displayName: ChicletSlicerShowDisabled.HIDE },
@@ -271,10 +282,10 @@ module powerbi.visuals.samples {
     }
 
     module Orientation {
-        export let HORIZONTAL: string = 'Horizontal';
-        export let VERTICAL: string = 'Vertical';
+        export var HORIZONTAL: string = 'Horizontal';
+        export var VERTICAL: string = 'Vertical';
 
-        export let type: IEnumType = createEnumType([
+        export var type: IEnumType = createEnumType([
             { value: HORIZONTAL, displayName: HORIZONTAL },
             { value: VERTICAL, displayName: VERTICAL }
         ]);
@@ -340,6 +351,7 @@ module powerbi.visuals.samples {
             background: string;
             outlineColor: string;
             outlineWeight: number;
+            borderStyle: string;
         };
         slicerItemContainer: {
             marginTop: number;
@@ -440,11 +452,11 @@ module powerbi.visuals.samples {
                             type: { numeric: true }
                         },
                         outlineColor: {
-                            displayName: data.createDisplayNameGetter('Visual_outlineColor'),
+                            displayName: 'Outline Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         outlineWeight: {
-                            displayName: data.createDisplayNameGetter('Visual_outlineWeight'),
+                            displayName: 'Outline Weight',
                             type: { numeric: true }
                         }
                     }
@@ -489,14 +501,17 @@ module powerbi.visuals.samples {
                             type: { formatting: { outline: true } }
                         },
                         outlineColor: {
-                            displayName: data.createDisplayNameGetter('Visual_outlineColor'),
+                            displayName: 'Outline Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         outlineWeight: {
-                            displayName: data.createDisplayNameGetter('Visual_outlineWeight'),
+                            displayName: 'Outline Weight',
                             type: { numeric: true }
                         },
-
+                        borderStyle: {
+                            displayName: 'Outline Style',
+                            type: { enumeration: ChicletBorderStyle.type }
+                        },
                     }
                 },
                 images: {
@@ -558,7 +573,7 @@ module powerbi.visuals.samples {
         private hostServices: IVisualHostServices;
         private waitingForData: boolean;
         private textProperties: TextProperties = {
-            'fontFamily': 'Tahoma, Verdana, Geneva, sans-serif',
+            'fontFamily': 'Segoe UI, Tahoma, Verdana, Geneva, sans-serif',
             'fontSize': '14px',
         };
         private static ItemContainer: ClassAndSelector = createClassAndSelector('slicerItemContainer');
@@ -614,6 +629,7 @@ module powerbi.visuals.samples {
                     background: '#ffffff',
                     outlineColor: '#000000',
                     outlineWeight: 1,
+                    borderStyle: 'Cut',
 
                 },
                 slicerItemContainer: {
@@ -647,15 +663,14 @@ module powerbi.visuals.samples {
                 !dataView.categorical.categories ||
                 !dataView.categorical.categories[0] ||
                 !dataView.categorical.categories[0].values ||
-                !(dataView.categorical.categories[0].values.length > 0) ||
-                !dataView.categorical.values) {
+                !(dataView.categorical.categories[0].values.length > 0)) {
                 return;
             }
-            let converter = new ChicletSlicerChartConversion.ChicletSlicerConverter(dataView, interactivityService);
+            var converter = new ChicletSlicerChartConversion.ChicletSlicerConverter(dataView, interactivityService);
             converter.convert();
-            let slicerData: ChicletSlicerData;
-            let defaultSettings: ChicletSlicerSettings = this.DefaultStyleProperties();
-            let objects: DataViewObjects = dataView.metadata.objects;
+            var slicerData: ChicletSlicerData;
+            var defaultSettings: ChicletSlicerSettings = this.DefaultStyleProperties();
+            var objects: DataViewObjects = dataView.metadata.objects;
             if (objects) {
                 defaultSettings.general.orientation = DataViewObjects.getValue<string>(objects, chicletSlicerProps.general.orientation, defaultSettings.general.orientation);
                 defaultSettings.general.columns = DataViewObjects.getValue<number>(objects, chicletSlicerProps.general.columns, defaultSettings.general.columns);
@@ -683,13 +698,13 @@ module powerbi.visuals.samples {
                 defaultSettings.slicerText.outline = DataViewObjects.getValue<string>(objects, chicletSlicerProps.rows.outline, defaultSettings.slicerText.outline);
                 defaultSettings.slicerText.outlineColor = DataViewObjects.getFillColor(objects, chicletSlicerProps.rows.outlineColor, defaultSettings.slicerText.outlineColor);
                 defaultSettings.slicerText.outlineWeight = DataViewObjects.getValue<number>(objects, chicletSlicerProps.rows.outlineWeight, defaultSettings.slicerText.outlineWeight);
+                defaultSettings.slicerText.borderStyle = DataViewObjects.getValue<string>(objects, chicletSlicerProps.rows.borderStyle, defaultSettings.slicerText.borderStyle);
 
                 defaultSettings.images.imageSplit = DataViewObjects.getValue<number>(objects, chicletSlicerProps.images.imageSplit, defaultSettings.images.imageSplit);
                 defaultSettings.images.stretchImage = DataViewObjects.getValue<boolean>(objects, chicletSlicerProps.images.stretchImage, defaultSettings.images.stretchImage);
                 defaultSettings.images.bottomImage = DataViewObjects.getValue<boolean>(objects, chicletSlicerProps.images.bottomImage, defaultSettings.images.bottomImage);
             }
-            let categories: DataViewCategoricalColumn = dataView.categorical.categories[0];
-
+            var categories: DataViewCategoricalColumn = dataView.categorical.categories[0];
             slicerData = {
                 categorySourceName: categories.source.displayName,
                 formatString: valueFormatter.getFormatString(categories.source, chicletSlicerProps.formatString),
@@ -715,38 +730,6 @@ module powerbi.visuals.samples {
             this.initContainer();
         }
 
-        public onDataChanged(options: VisualDataChangedOptions): void {
-            if (!options.dataViews || !options.dataViews[0]) {
-                return;
-            }
-
-            let dataView,
-                dataViews = options.dataViews;
-
-            let existingDataView: DataView = this.dataView;
-            if (dataViews && dataViews.length > 0) {
-                dataView = this.dataView = dataViews[0];
-            }
-
-            if (!dataView ||
-                !dataView.categorical ||
-                !dataView.categorical.values ||
-                !dataView.categorical.values[0] ||
-                !dataView.categorical.values[0].values) {
-                return;
-            }
-
-            let resetScrollbarPosition = false;
-            // Null check is needed here. If we don't check for null, selecting a value on loadMore event will evaluate the below condition to true and resets the scrollbar
-            if (options.operationKind !== undefined) {
-                resetScrollbarPosition = options.operationKind !== VisualDataChangeOperationKind.Append
-                    && !DataViewAnalysis.hasSameCategoryIdentity(existingDataView, this.dataView);
-            }
-
-            this.updateInternal(resetScrollbarPosition);
-            this.waitingForData = false;
-        }
-
         public update(options: VisualUpdateOptions) {
             if (!options ||
                 !options.dataViews ||
@@ -755,10 +738,10 @@ module powerbi.visuals.samples {
                 return;
             }
 
-            let existingDataView = this.dataView;
+            var existingDataView = this.dataView;
             this.dataView = options.dataViews[0];
 
-            let resetScrollbarPosition: boolean = true;
+            var resetScrollbarPosition: boolean = true;
             if (existingDataView) {
                 resetScrollbarPosition = !DataViewAnalysis.hasSameCategoryIdentity(existingDataView, this.dataView);
             }
@@ -780,12 +763,12 @@ module powerbi.visuals.samples {
         }
 
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] {
-            let data: ChicletSlicerData = this.slicerData;
+            var data: ChicletSlicerData = this.slicerData;
             if (!data) {
                 return;
             }
 
-            let objectName = options.objectName;
+            var objectName = options.objectName;
             switch (objectName) {
                 case 'rows':
                     return this.enumerateRows(data);
@@ -799,7 +782,7 @@ module powerbi.visuals.samples {
         }
 
         private enumerateHeader(data: ChicletSlicerData): VisualObjectInstance[] {
-            let slicerSettings: ChicletSlicerSettings = this.settings;
+            var slicerSettings: ChicletSlicerSettings = this.settings;
             return [{
                 selector: null,
                 objectName: 'header',
@@ -817,7 +800,7 @@ module powerbi.visuals.samples {
         }
 
         private enumerateRows(data: ChicletSlicerData): VisualObjectInstance[] {
-            let slicerSettings: ChicletSlicerSettings = this.settings;
+            var slicerSettings: ChicletSlicerSettings = this.settings;
             return [{
                 selector: null,
                 objectName: 'rows',
@@ -833,12 +816,13 @@ module powerbi.visuals.samples {
                     outlineColor: slicerSettings.slicerText.outlineColor,
                     outlineWeight: slicerSettings.slicerText.outlineWeight,
                     fontColor: slicerSettings.slicerText.fontColor,
+                    borderStyle: slicerSettings.slicerText.borderStyle,
                 }
             }];
         }
 
         private enumerateGeneral(data: ChicletSlicerData): VisualObjectInstance[] {
-            let slicerSettings: ChicletSlicerSettings = this.settings;
+            var slicerSettings: ChicletSlicerSettings = this.settings;
 
             return [{
                 selector: null,
@@ -854,7 +838,7 @@ module powerbi.visuals.samples {
         }
 
         private enumerateImages(data: ChicletSlicerData): VisualObjectInstance[] {
-            let slicerSettings: ChicletSlicerSettings = this.settings;
+            var slicerSettings: ChicletSlicerSettings = this.settings;
             return [{
                 selector: null,
                 objectName: 'images',
@@ -868,8 +852,8 @@ module powerbi.visuals.samples {
         private updateInternal(resetScrollbarPosition: boolean) {
             this.updateSlicerBodyDimensions();
 
-            let localizedSelectAllText: string = 'Select All';
-            let data = ChicletSlicer.converter(this.dataView, localizedSelectAllText, this.interactivityService);
+            var localizedSelectAllText: string = 'Select All';
+            var data = ChicletSlicer.converter(this.dataView, localizedSelectAllText, this.interactivityService);
             if (!data) {
                 this.tableView.empty();
                 return;
@@ -887,10 +871,12 @@ module powerbi.visuals.samples {
                         return 1;
                     }
                 });
+            } else if (this.settings.general.showDisabled === ChicletSlicerShowDisabled.HIDE){
+                data.slicerDataPoints = data.slicerDataPoints.filter(x => x.selectable);
             }
 
-            let height: number = this.settings.slicerText.height > 0 ? this.settings.slicerText.height :
-                (data.slicerDataPoints[0].imageURL !== '' ? 100 : 25);
+            var height: number = this.settings.slicerText.height > 0 ? this.settings.slicerText.height :
+                (data.slicerDataPoints.length === 0 || data.slicerDataPoints[0].imageURL !== '' ? 100 : 25);
 
             this.tableView
                 .rowHeight(height)
@@ -900,16 +886,15 @@ module powerbi.visuals.samples {
                 .columns(this.settings.general.columns)
                 .data(data.slicerDataPoints,
                 (d: ChicletSlicerDataPoint) => $.inArray(d, data.slicerDataPoints),
-                resetScrollbarPosition
-                )
+                resetScrollbarPosition)
                 .viewport(this.getSlicerBodyViewport(this.currentViewport))
                 .render();
         }
 
         private initContainer() {
-            let settings: ChicletSlicerSettings = this.settings;
-            let slicerBodyViewport: IViewport = this.getSlicerBodyViewport(this.currentViewport);
-            let slicerContainer: D3.Selection = d3.select(this.element.get(0))
+            var settings: ChicletSlicerSettings = this.settings;
+            var slicerBodyViewport: IViewport = this.getSlicerBodyViewport(this.currentViewport);
+            var slicerContainer: D3.Selection = d3.select(this.element.get(0))
                 .append('div')
                 .classed(ChicletSlicer.Container.class, true);
 
@@ -942,9 +927,9 @@ module powerbi.visuals.samples {
                     'width': '100%',
                 });
 
-            let rowEnter = (rowSelection: D3.Selection) => {
-                let settings: ChicletSlicerSettings = this.settings;
-                let listItemElement = rowSelection.append('li')
+            var rowEnter = (rowSelection: D3.Selection) => {
+                var settings: ChicletSlicerSettings = this.settings;
+                var listItemElement = rowSelection.append('li')
                     .classed(ChicletSlicer.ItemContainer.class, true)
                     .style({
                         'margin-left': PixelConverter.toString(settings.slicerItemContainer.marginLeft),
@@ -962,9 +947,9 @@ module powerbi.visuals.samples {
                     });
             };
 
-            let rowUpdate = (rowSelection: D3.Selection) => {
-                let settings: ChicletSlicerSettings = this.settings;
-                let data = this.slicerData;
+            var rowUpdate = (rowSelection: D3.Selection) => {
+                var settings: ChicletSlicerSettings = this.settings;
+                var data = this.slicerData;
                 if (data && settings) {
                     this.slicerHeader.classed('hidden', !settings.header.show);
                     this.slicerHeader.select(ChicletSlicer.HeaderText.selector)
@@ -981,12 +966,12 @@ module powerbi.visuals.samples {
                     this.slicerBody
                         .classed('slicerBody-horizontal', settings.general.orientation === Orientation.HORIZONTAL);
 
-                    let slicerText = rowSelection.selectAll(ChicletSlicer.LabelText.selector);
+                    var slicerText = rowSelection.selectAll(ChicletSlicer.LabelText.selector);
 
-                    let formatString = data.formatString;
+                    var formatString = data.formatString;
                     slicerText.text((d: ChicletSlicerDataPoint) => valueFormatter.format(d.category, formatString));
 
-                    let slicerImg = rowSelection.selectAll('.slicer-img-wrapper');
+                    var slicerImg = rowSelection.selectAll('.slicer-img-wrapper');
                     slicerImg
                         .style('height', settings.images.imageSplit + '%')
                         .classed('hidden', (d: ChicletSlicerDataPoint) => {
@@ -1020,18 +1005,18 @@ module powerbi.visuals.samples {
                         'border-color': settings.slicerText.outlineColor,
                         'border-width': this.getBorderWidth(settings.slicerText.outline, settings.slicerText.outlineWeight),
                         'font-size': PixelConverter.fromPoint(settings.slicerText.textSize),
+                        'border-radius': this.getBorderRadius(settings.slicerText.borderStyle),
                     });
-                    rowSelection.style('display', (d: ChicletSlicerDataPoint) => (d.selectable || settings.general.showDisabled !== ChicletSlicerShowDisabled.HIDE) ? 'inline-block' : 'none');
                     this.slicerBody.style('background-color', settings.slicerText.background);
 
                     if (this.interactivityService && this.slicerBody) {
-                        let slicerBody = this.slicerBody.attr('width', this.currentViewport.width);
-                        let slicerItemContainers = slicerBody.selectAll(ChicletSlicer.ItemContainer.selector);
-                        let slicerItemLabels = slicerBody.selectAll(ChicletSlicer.LabelText.selector);
-                        let slicerItemInputs = slicerBody.selectAll(ChicletSlicer.Input.selector);
-                        let slicerClear = this.slicerHeader.select(ChicletSlicer.Clear.selector);
+                        var slicerBody = this.slicerBody.attr('width', this.currentViewport.width);
+                        var slicerItemContainers = slicerBody.selectAll(ChicletSlicer.ItemContainer.selector);
+                        var slicerItemLabels = slicerBody.selectAll(ChicletSlicer.LabelText.selector);
+                        var slicerItemInputs = slicerBody.selectAll(ChicletSlicer.Input.selector);
+                        var slicerClear = this.slicerHeader.select(ChicletSlicer.Clear.selector);
 
-                        let behaviorOptions: ChicletSlicerBehaviorOptions = {
+                        var behaviorOptions: ChicletSlicerBehaviorOptions = {
                             dataPoints: data.slicerDataPoints,
                             slicerItemContainers: slicerItemContainers,
                             slicerItemLabels: slicerItemLabels,
@@ -1054,11 +1039,11 @@ module powerbi.visuals.samples {
                 }
             };
 
-            let rowExit = (rowSelection: D3.Selection) => {
+            var rowExit = (rowSelection: D3.Selection) => {
                 rowSelection.remove();
             };
 
-            let tableViewOptions: TableViewViewOptions = {
+            var tableViewOptions: TableViewViewOptions = {
                 rowHeight: this.getRowHeight(),
                 columnWidth: this.settings.slicerText.width,
                 orientation: this.settings.general.orientation,
@@ -1084,9 +1069,9 @@ module powerbi.visuals.samples {
         }
 
         private getSlicerBodyViewport(currentViewport: IViewport): IViewport {
-            let settings = this.settings;
-            let headerHeight = (settings.header.show) ? this.getHeaderHeight() : 0;
-            let slicerBodyHeight = currentViewport.height - (headerHeight + settings.header.borderBottomWidth);
+            var settings = this.settings;
+            var headerHeight = (settings.header.show) ? this.getHeaderHeight() : 0;
+            var slicerBodyHeight = currentViewport.height - (headerHeight + settings.header.borderBottomWidth);
             return {
                 height: slicerBodyHeight,
                 width: currentViewport.width
@@ -1094,7 +1079,7 @@ module powerbi.visuals.samples {
         }
 
         private updateSlicerBodyDimensions(): void {
-            let slicerViewport: IViewport = this.getSlicerBodyViewport(this.currentViewport);
+            var slicerViewport: IViewport = this.getSlicerBodyViewport(this.currentViewport);
             this.slicerBody
                 .style({
                     'height': PixelConverter.toString(slicerViewport.height),
@@ -1109,15 +1094,14 @@ module powerbi.visuals.samples {
 
         private getHeaderHeight(): number {
             return TextMeasurementService.estimateSvgTextHeight(
-                this.getTextProperties(this.settings.header.textSize)
-            );
+                this.getTextProperties(this.settings.header.textSize));
         }
 
         private getRowHeight(): number {
-            let textSettings = this.settings.slicerText;
-            return textSettings.height !== 0 ? textSettings.height : TextMeasurementService.estimateSvgTextHeight(
-                this.getTextProperties(textSettings.textSize)
-            );
+            var textSettings = this.settings.slicerText;
+            return textSettings.height !== 0
+                ? textSettings.height
+                : TextMeasurementService.estimateSvgTextHeight(this.getTextProperties(textSettings.textSize));
         }
 
         private getBorderStyle(outlineElement: string): string {
@@ -1142,13 +1126,23 @@ module powerbi.visuals.samples {
                     return outlineElement.replace("1", outlineWeight.toString());
             }
         }
+
+        private getBorderRadius(borderType: string): string {
+            switch(borderType){
+                case ChicletBorderStyle.ROUNDED:
+                    return "10px";
+                case ChicletBorderStyle.SQUARE:
+                    return "0px";
+                default:
+                    return "5px";
+            }
+        }
     }
 
     module ChicletSlicerChartConversion {
         export class ChicletSlicerConverter {
             private dataViewCategorical: DataViewCategorical;
             private dataViewMetadata: DataViewMetadata;
-            private seriesCount: number;
             private category: DataViewCategoryColumn;
             private categoryIdentities: DataViewScopeIdentity[];
             private categoryValues: any[];
@@ -1162,10 +1156,9 @@ module powerbi.visuals.samples {
 
             public constructor(dataView: DataView, interactivityService: IInteractivityService) {
 
-                let dataViewCategorical = dataView.categorical;
+                var dataViewCategorical = dataView.categorical;
                 this.dataViewCategorical = dataViewCategorical;
                 this.dataViewMetadata = dataView.metadata;
-                this.seriesCount = dataViewCategorical.values ? dataViewCategorical.values.length : 0;
 
                 if (dataViewCategorical.categories && dataViewCategorical.categories.length > 0) {
                     this.category = dataViewCategorical.categories[0];
@@ -1187,15 +1180,15 @@ module powerbi.visuals.samples {
                 // If category exists, we render labels using category values. If not, we render labels
                 // using measure labels.
                 if (this.categoryValues) {
-                    let objects = this.dataViewMetadata ? <any>this.dataViewMetadata.objects : undefined;
+                    var objects = this.dataViewMetadata ? <any>this.dataViewMetadata.objects : undefined;
 
-                    let isInvertedSelectionMode = undefined;
-                    let numberOfScopeIds: number;
+                    var isInvertedSelectionMode = undefined;
+                    var numberOfScopeIds: number;
                     if (objects && objects.general && objects.general.filter) {
                         if (!this.categoryColumnRef)
                             return;
-                        let filter = <powerbi.data.SemanticFilter>objects.general.filter;
-                        let scopeIds = powerbi.data.SQExprConverter.asScopeIdsContainer(filter, this.categoryColumnRef);
+                        var filter = <powerbi.data.SemanticFilter>objects.general.filter;
+                        var scopeIds = powerbi.data.SQExprConverter.asScopeIdsContainer(filter, this.categoryColumnRef);
                         if (scopeIds) {
                             isInvertedSelectionMode = scopeIds.isNot;
                             numberOfScopeIds = scopeIds.scopeIds ? scopeIds.scopeIds.length : 0;
@@ -1215,25 +1208,25 @@ module powerbi.visuals.samples {
                         }
                     }
 
-                    let hasSelection: boolean = undefined;
+                    var hasSelection: boolean = undefined;
 
-                    for (let idx = 0; idx < this.categoryValues.length; idx++) {
-                        let selected = isCategoryColumnSelected(chicletSlicerProps.selectedPropertyIdentifier, this.category, idx);
+                    for (var idx = 0; idx < this.categoryValues.length; idx++) {
+                        var selected = isCategoryColumnSelected(chicletSlicerProps.selectedPropertyIdentifier, this.category, idx);
                         if (selected != null) {
                             hasSelection = selected;
                             break;
                         }
                     }
 
-                    let dataViewCategorical = this.dataViewCategorical;
-                    let formatStringProp = chicletSlicerProps.formatString;
-                    let value: number = -Infinity;
-                    let imageURL: string = '';
+                    var dataViewCategorical = this.dataViewCategorical;
+                    var formatStringProp = chicletSlicerProps.formatString;
+                    var value: number = -Infinity;
+                    var imageURL: string = '';
 
-                    for (let categoryIndex: number = 0, categoryCount = this.categoryValues.length; categoryIndex < categoryCount; categoryIndex++) {
-                        let categoryIdentity = this.category.identity ? this.category.identity[categoryIndex] : null;
-                        let categoryIsSelected = isCategoryColumnSelected(chicletSlicerProps.selectedPropertyIdentifier, this.category, categoryIndex);
-                        let selectable: boolean = true;
+                    for (var categoryIndex: number = 0, categoryCount = this.categoryValues.length; categoryIndex < categoryCount; categoryIndex++) {
+                        var categoryIdentity = this.category.identity ? this.category.identity[categoryIndex] : null;
+                        var categoryIsSelected = isCategoryColumnSelected(chicletSlicerProps.selectedPropertyIdentifier, this.category, categoryIndex);
+                        var selectable: boolean = true;
 
                         if (hasSelection != null) {
                             if (isInvertedSelectionMode) {
@@ -1257,14 +1250,14 @@ module powerbi.visuals.samples {
                             this.numberOfCategoriesSelectedInData++;
                         }
 
-                        let categoryValue = this.categoryValues[categoryIndex];
-                        let categoryLabel = valueFormatter.format(categoryValue, this.categoryFormatString);
+                        var categoryValue = this.categoryValues[categoryIndex];
+                        var categoryLabel = valueFormatter.format(categoryValue, this.categoryFormatString);
 
-                        if (this.seriesCount > 0) {
+                        if (this.dataViewCategorical.values) {
                         
                             // Series are either measures in the multi-measure case, or the single series otherwise
-                            for (let seriesIndex: number = 0; seriesIndex < this.seriesCount; seriesIndex++) {
-                                let seriesData = dataViewCategorical.values[seriesIndex];
+                            for (var seriesIndex: number = 0; seriesIndex < this.dataViewCategorical.values.length; seriesIndex++) {
+                                var seriesData = dataViewCategorical.values[seriesIndex];
                                 if (seriesData.values[categoryIndex] != null) {
                                     value = seriesData.values[categoryIndex];
                                     if (seriesData.highlights) {
@@ -1272,6 +1265,9 @@ module powerbi.visuals.samples {
                                     }
                                     if (seriesData.source.groupName && seriesData.source.groupName !== '') {
                                         imageURL = converterHelper.getFormattedLegendLabel(seriesData.source, dataViewCategorical.values, formatStringProp);
+                                        if (!/^(ftp|http|https):\/\/[^ "]+$/.test(imageURL)) {
+                                            imageURL = undefined;
+                                        }
                                     }
                                 }
                             }
@@ -1314,11 +1310,11 @@ module powerbi.visuals.samples {
         private slicerSettings: ChicletSlicerSettings;
 
         public bindEvents(options: ChicletSlicerBehaviorOptions, selectionHandler: ISelectionHandler): void {
-            let filterPropertyId = chicletSlicerProps.filterPropertyIdentifier;
-            let slicers = this.slicers = options.slicerItemContainers;
+            var filterPropertyId = chicletSlicerProps.filterPropertyIdentifier;
+            var slicers = this.slicers = options.slicerItemContainers;
             this.slicerItemLabels = options.slicerItemLabels;
             this.slicerItemInputs = options.slicerItemInputs;
-            let slicerClear = options.slicerClear;
+            var slicerClear = options.slicerClear;
             this.dataPoints = options.dataPoints;
             this.interactivityService = options.interactivityService;
             this.slicerSettings = options.slicerSettings;
@@ -1343,18 +1339,18 @@ module powerbi.visuals.samples {
                 if (!d.selectable) {
                     return;
                 }
-                let settings: ChicletSlicerSettings = this.slicerSettings;
+                var settings: ChicletSlicerSettings = this.slicerSettings;
                 d3.event.preventDefault();
                 if (d3.event.altKey && settings.general.multiselect) {
-                    let selectedIndexes = jQuery.map(this.dataPoints, function(d, index) { if (d.selected) return index; });
-                    let selIndex = selectedIndexes.length > 0 ? (selectedIndexes[selectedIndexes.length - 1]) : 0;
+                    var selectedIndexes = jQuery.map(this.dataPoints, function(d, index) { if (d.selected) return index; });
+                    var selIndex = selectedIndexes.length > 0 ? (selectedIndexes[selectedIndexes.length - 1]) : 0;
                     if (selIndex > index) {
-                        let temp = index;
+                        var temp = index;
                         index = selIndex;
                         selIndex = temp;
                     }
                     selectionHandler.handleClearSelection();
-                    for (let i = selIndex; i <= index; i++) {
+                    for (var i = selIndex; i <= index; i++) {
                         selectionHandler.handleSelection(this.dataPoints[i], true /* isMultiSelect */);
                     }
                 }
@@ -1364,7 +1360,7 @@ module powerbi.visuals.samples {
                 else {
                     selectionHandler.handleSelection(d, false /* isMultiSelect */);
                 }
-                selectionHandler.persistSelectionFilter(filterPropertyId);     
+                selectionHandler.persistSelectionFilter(filterPropertyId);
             });
 
             slicerClear.on("click", (d: SelectableDataPoint) => {
@@ -1399,7 +1395,7 @@ module powerbi.visuals.samples {
         }
 
         public styleSlicerInputs(slicers: D3.Selection, hasSelection: boolean) {
-            let settings = this.slicerSettings;
+            var settings = this.slicerSettings;
             slicers.each(function(d: ChicletSlicerDataPoint) {
                 d3.select(this).style({
                     'background': d.selectable ? (d.selected ? settings.slicerText.selectedColor : settings.slicerText.unselectedColor)

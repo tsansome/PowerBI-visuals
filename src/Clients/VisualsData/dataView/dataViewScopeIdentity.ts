@@ -27,8 +27,7 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi {
-    import ArrayExtensions = jsCommon.ArrayExtensions;
-
+    
     /** Encapsulates the identity of a data scope in a DataView. */
     export interface DataViewScopeIdentity {
         /** Predicate expression that identifies the scope. */
@@ -58,7 +57,7 @@ module powerbi {
         }
 
         export function filterFromIdentity(identities: DataViewScopeIdentity[], isNot?: boolean): data.SemanticFilter {
-            if (ArrayExtensions.isUndefinedOrEmpty(identities))
+            if (_.isEmpty(identities))
                 return;
             
             let exprs: data.SQExpr[] = [];
@@ -70,7 +69,7 @@ module powerbi {
         }
 
         export function filterFromExprs(orExprs: data.SQExpr[], isNot?: boolean): data.SemanticFilter {
-            if (ArrayExtensions.isUndefinedOrEmpty(orExprs))
+            if (_.isEmpty(orExprs))
                 return;
 
             let resultExpr: data.SQExpr;

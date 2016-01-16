@@ -73,7 +73,7 @@ module powerbi.visuals.controls.TouchUtils {
         }
     }
 
-    export enum SwipeDirection {
+    export const enum SwipeDirection {
         /**
          * Swipe gesture moves along the y-axis at an angle within an established threshold.
          */

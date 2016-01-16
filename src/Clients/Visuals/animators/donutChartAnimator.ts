@@ -108,7 +108,7 @@ module powerbi.visuals {
             highlightShapes.exit()
                 .remove();
 
-            NewDataLabelUtils.drawDefaultLabels(options.labelGraphicsContext, options.labels, false);
+            NewDataLabelUtils.drawDefaultLabels(options.labelGraphicsContext, options.labels, false, true);
             NewDataLabelUtils.drawLabelLeaderLines(options.labelGraphicsContext, options.labels);
 
             return {
@@ -122,7 +122,7 @@ module powerbi.visuals {
             let shapes = this.animateDefaultShapes(options);
 
             let highlightShapes = this.animateDefaultHighlightShapes(options);
-            NewDataLabelUtils.drawDefaultLabels(options.labelGraphicsContext, options.labels, false);
+            NewDataLabelUtils.drawDefaultLabels(options.labelGraphicsContext, options.labels, false, true);
             NewDataLabelUtils.drawLabelLeaderLines(options.labelGraphicsContext, options.labels);
 
             return {
@@ -189,7 +189,7 @@ module powerbi.visuals {
             highlightShapes.exit()
                 .remove();
 
-            NewDataLabelUtils.drawDefaultLabels(options.labelGraphicsContext, options.labels, false);
+            NewDataLabelUtils.drawDefaultLabels(options.labelGraphicsContext, options.labels, false, true);
             NewDataLabelUtils.drawLabelLeaderLines(options.labelGraphicsContext, options.labels);
 
             return {

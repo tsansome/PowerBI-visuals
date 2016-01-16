@@ -60,6 +60,7 @@ module powerbi.visuals {
         slicerDataPoints: SlicerDataPoint[];
         slicerSettings: SlicerSettings;
         hasSelectionOverride?: boolean;
+        defaultValue?: DefaultValueDefinition;
     }
 
     export interface SlicerDataPoint extends SelectableDataPoint {
@@ -135,7 +136,7 @@ module powerbi.visuals {
                 },
                 selection: {
                     selectAllCheckboxEnabled: false,
-                    singleSelect: true
+                    singleSelect: true,
                 },
             };
         }
@@ -208,20 +209,20 @@ module powerbi.visuals {
             }
         }
 
+        public onClearSelection(): void {
+            if (this.interactivityService)
+                this.interactivityService.clearSelection();
+        }
+
         private render(resetScrollbarPosition: boolean, stopWaitingForData?: boolean): void {
             let localizedSelectAllText = this.hostServices.getLocalizedString(DisplayNameKeys.SelectAll);
-            DataConversion.convert(this.dataView, localizedSelectAllText, this.interactivityService, this.hostServices).then(
-                data => {
-                    if (!data) {
-                        return;
-                    }
-
-                    data.slicerSettings.general.outlineWeight = data.slicerSettings.general.outlineWeight < 0 ? 0 : data.slicerSettings.general.outlineWeight;
-                    this.settings = data.slicerSettings;
-                    this.slicerData = data;
-
-                    let slicerOrientation = SettingsHelper.areSettingsDefined(data) && data.slicerSettings.general && data.slicerSettings.general.orientation ?
-                        data.slicerSettings.general.orientation : Slicer.DefaultStyleProperties().general.orientation;
+            this.slicerData = DataConversion.convert(this.dataView, localizedSelectAllText, this.interactivityService, this.hostServices);
+            if (this.slicerData) {
+                this.slicerData.slicerSettings.general.outlineWeight = Math.max(this.slicerData.slicerSettings.general.outlineWeight, 0);
+                this.settings = this.slicerData.slicerSettings;
+                // TODO: Do we need to check SettingsHelper.areSettingsDefined(), etc. here? Can we just do value validation and coercion in the same place that we create the slicerSettings?
+                let slicerOrientation = SettingsHelper.areSettingsDefined(this.slicerData) && this.slicerData.slicerSettings.general && this.slicerData.slicerSettings.general.orientation ?
+                    this.slicerData.slicerSettings.general.orientation : Slicer.DefaultStyleProperties().general.orientation;
 
                     let orientationHasChanged = this.orientationHasChanged(slicerOrientation);
                     if (orientationHasChanged) {
@@ -230,11 +231,11 @@ module powerbi.visuals {
                         this.element.empty();
                         this.initializeSlicerRenderer(slicerOrientation);
                     }
-                    this.slicerRenderer.render({ dataView: this.dataView, data: data, viewport: this.currentViewport, renderAsImage: this.renderAsImage, resetScrollbarPosition: resetScrollbarPosition });
+            }
+            this.slicerRenderer.render({ dataView: this.dataView, data: this.slicerData, viewport: this.currentViewport, renderAsImage: this.renderAsImage, resetScrollbarPosition: resetScrollbarPosition });
 
                     if (stopWaitingForData)
                         this.waitingForData = false;
-                });
         }
 
         private orientationHasChanged(slicerOrientation: SlicerOrientation): boolean {
@@ -304,7 +305,7 @@ module powerbi.visuals {
                 objectName: 'selection',
                 properties: {
                     selectAllCheckboxEnabled: selectAllCheckboxEnabled,
-                    singleSelect: singleSelect
+                    singleSelect: singleSelect,
                 }
             }];
         }

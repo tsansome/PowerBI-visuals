@@ -117,6 +117,15 @@ module powerbitests {
             }
         ];
 
+        // 1 paragraph, with invalid url
+        let paragraphs6: Paragraph[] = [
+            {
+                textRuns: [
+                    { value: "Power BI", url: "javascript:document.write('hack');" }
+                ],
+            }
+        ];
+
         describe("", () => {
             let host: IVisualHostServices;
             let $element: JQuery;
@@ -209,6 +218,17 @@ module powerbitests {
                         let $urlRun = $paragraph2Spans.eq(0);
                         expect($urlRun.text()).toEqual("Power BI");
                         expect(getUrl($urlRun)).toEqual("http://www.powerbi.com");
+                    });
+
+                    it('should not diplay invalid urls', () => {
+                        textbox.onDataChanged({ dataViews: buildParagraphsDataView(paragraphs6) });
+
+                        let $divs = getViewModeParagraphDivs($element);
+
+                        let $paragraph1 = $divs.eq(0);
+                        let $urlRun = $paragraph1.children().eq(0);
+                        expect($urlRun.text()).toEqual("Power BI");
+                        expect(getUrl($urlRun)).toBeUndefined();
                     });
 
                     describe("theme font", () => {
@@ -433,6 +453,16 @@ module powerbitests {
                         expect($urlRun.text()).toEqual("Power BI");
                         expect(getUrl($urlRun)).toEqual("http://www.powerbi.com");
                     });
+
+                    it('should not diplay invalid urls', () => {
+                        textbox.onDataChanged({ dataViews: buildParagraphsDataView(paragraphs6) });
+
+                        let $divs = getEditModeParagraphDivs($element);
+
+                        let $urlRun = $divs.eq(0);
+                        expect($urlRun.text()).toEqual("Power BI");
+                        expect(getUrl($urlRun)).toBeUndefined();
+                    });
                 });
             });
 
@@ -492,8 +522,7 @@ module powerbitests {
                     });
 
                     describe('with focus outside editor', () => {
-                        beforeEach(() => {
-                            
+                        beforeEach(() => {    
                             // Set focus to document body
                             (<HTMLElement>document.activeElement).blur();
                             expect(document.activeElement).toBe(document.body);
@@ -1005,8 +1034,7 @@ module powerbitests {
                     linkButton.find("div").mousedown();
                 }
 
-                function setSelectValue($select: JQuery, value: any): void {
-                    
+                function setSelectValue($select: JQuery, value: any): void {    
                     // See powerbi.visuals.RichText.Toolbar.setSelectValue() for description.
                     // NOTE: For unit tests case we have to use document.createEvent() because PhantomJS does
                     // not appear to support new UIEvent (https://github.com/ariya/phantomjs/issues/11289).

@@ -58,10 +58,14 @@ module powerbi.visuals {
             if (!backgroundImageEnabled)
                 return;
 
+            let transparency = (background && background.transparency);
+            if (transparency == null)
+                transparency = getDefaultTransparency();
+
             let backgroundObject: VisualObjectInstance = {
                 selector: null,
                 properties: {
-                    transparency: (background && background.transparency) || getDefaultTransparency(),
+                    transparency: transparency,
                     image: (background && background.image)
                 },
                 objectName: 'plotArea',

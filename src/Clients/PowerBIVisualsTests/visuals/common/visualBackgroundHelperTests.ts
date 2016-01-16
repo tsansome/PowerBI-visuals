@@ -124,6 +124,26 @@ module powerbitests {
                 });
             });
 
+            it('transparency (zero)', () => {
+                let enumeration = new ObjectEnumerationBuilder();
+                let background: visuals.VisualBackground = {
+                    transparency: 0,
+                };
+
+                let instance: VisualObjectInstance = {
+                    selector: null,
+                    properties: {
+                        image: undefined,
+                        transparency: 0,
+                    },
+                    objectName: 'plotArea',
+                };
+                visualBackgroundHelper.enumeratePlot(enumeration, background, true);
+                expect(enumeration.complete()).toEqual({
+                    instances: [instance],
+                });
+            });
+
             it('all together', () => {
                 let enumeration = new ObjectEnumerationBuilder();
                 let background: visuals.VisualBackground = {
@@ -195,7 +215,6 @@ module powerbitests {
             });
 
             it('create and remove background element', () => {
-                
                 // Create element
                 let backgroundData: visuals.VisualBackground = {
                     image: {

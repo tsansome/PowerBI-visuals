@@ -158,7 +158,7 @@ module powerbi.visuals {
         width: number;
     }
 
-    enum NavigationArrowType {
+    const enum NavigationArrowType {
         Increase,
         Decrease
     }
@@ -480,7 +480,7 @@ module powerbi.visuals {
 
         private calculateTitleLayout(title: string): TitleLayout {
             let width = 0;
-            let hasTitle = !jsCommon.StringExtensions.isNullOrEmpty(title);
+            let hasTitle = !_.isEmpty(title);
 
             if (hasTitle) {
                 let isHorizontal = this.isTopOrBottom(this.orientation);
@@ -859,8 +859,9 @@ module powerbi.visuals {
     }
 
     class CartesianChartInteractiveLegend implements ILegend {
-        private static LegendHeight = 65;
+        private static LegendHeight = 70;
         private static LegendContainerClass = 'interactive-legend';
+        private static LegendContainerSelector = '.interactive-legend';
         private static LegendTitleClass = 'title';
         private static LegendItem = 'item';
         private static legendPlaceSelector = '\u25A0';
@@ -868,11 +869,11 @@ module powerbi.visuals {
         private static legendColorCss = 'color';
         private static legendItemNameClass = 'itemName';
         private static legendItemMeasureClass = 'itemMeasure';
-        private element: JQuery;
+        private legendContainerParent: D3.Selection;
         private legendContainerDiv: D3.Selection;
 
         constructor(element: JQuery) {
-            this.element = element;
+            this.legendContainerParent = d3.select(element.get(0));
         }
 
         public static getIconClass(chartType: LegendIcon): string {
@@ -898,16 +899,18 @@ module powerbi.visuals {
             let data = legendData.dataPoints;
             debug.assertValue(data, 'dataPoints');
             if (data.length < 1) return;
-            let legendContainerDiv = this.legendContainerDiv;
-            if (!legendContainerDiv) {
+
+            let legendContainerDiv = this.legendContainerParent.select(CartesianChartInteractiveLegend.LegendContainerSelector);
+            if (legendContainerDiv.empty()) {
                 if (!data.length) return;
                 let divToPrepend = $('<div></div>')
                     .height(this.getMargins().height)
                     .addClass(CartesianChartInteractiveLegend.LegendContainerClass);
                 // Prepending, as legend should always be on topmost visual.
-                this.element.prepend(divToPrepend);
-                this.legendContainerDiv = legendContainerDiv = d3.select(divToPrepend.get(0));
+                $(this.legendContainerParent[0]).prepend(divToPrepend);
+                legendContainerDiv = d3.select(divToPrepend.get(0));
             }
+            this.legendContainerDiv = legendContainerDiv;
 
             // Construct the legend title and items.
             this.drawTitle(data);

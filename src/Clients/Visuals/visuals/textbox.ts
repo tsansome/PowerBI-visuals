@@ -116,7 +116,7 @@ module powerbi.visuals {
                 }
 
                 this.element.empty();
-                this.element.append(Textbox.convertParagraphsToHtml(this.paragraphs));
+                this.element.append(RichTextConversion.convertParagraphsToHtml(this.paragraphs));
             }
             else {
                 // Showing the Quill editor.
@@ -129,7 +129,7 @@ module powerbi.visuals {
                     this.element.append(this.editor.getElement());
                 }
 
-                this.editor.setContents(Textbox.convertParagraphsToOps(this.paragraphs));
+                this.editor.setContents(RichTextConversion.convertParagraphsToOps(this.paragraphs));
             }
 
             this.updateSize();
@@ -142,7 +142,7 @@ module powerbi.visuals {
                 return;
 
             let contents: quill.Delta = this.editor.getContents();
-            this.paragraphs = Textbox.convertDeltaToParagraphs(contents);
+            this.paragraphs = RichTextConversion.convertDeltaToParagraphs(contents);
 
             let changes: VisualObjectInstance[] = [{
                 objectName: 'general',
@@ -159,8 +159,10 @@ module powerbi.visuals {
             if (this.editor)
                 this.editor.resize(this.viewport);
         }
+    }
 
-        private static convertDeltaToParagraphs(contents: quill.Delta): Paragraphs {
+    module RichTextConversion {
+        export function convertDeltaToParagraphs(contents: quill.Delta): Paragraphs {
             let paragraphs: Paragraphs = [];
             let paragraph: Paragraph = { textRuns: [] };
 
@@ -200,10 +202,10 @@ module powerbi.visuals {
                             let span = text.substring(start, end);
                             let textRun: TextRun = { value: span };
                             if (attributes) {
-                                if (attributes.link !== undefined)
+                                if (attributes.link !== undefined && jsCommon.Utility.isValidUrl(attributes.link))
                                     textRun.url = attributes.link;
 
-                                let textStyle = Textbox.convertFormatAttributesToTextStyle(attributes);
+                                let textStyle = convertFormatAttributesToTextStyle(attributes);
                                 if (textStyle)
                                     textRun.textStyle = textStyle;
                             }
@@ -238,7 +240,7 @@ module powerbi.visuals {
             return paragraphs;
         }
 
-        private static convertParagraphsToHtml(paragraphs: Paragraphs): JQuery {
+        export function convertParagraphsToHtml(paragraphs: Paragraphs): JQuery {
             let $paragraphs: JQuery = $();
 
             for (let paragraphIndex = 0, len = paragraphs.length; paragraphIndex < len; ++paragraphIndex) {
@@ -282,14 +284,20 @@ module powerbi.visuals {
                     }
 
                     let text = textRunDef.value;
-                    if (!jsCommon.StringExtensions.isNullOrEmpty(text))
+                    if (!_.isEmpty(text))
                         isParagraphEmpty = false;
 
                     if (textRunDef.url !== undefined) {
-                        let $link = $('<a>')
-                            .attr('href', textRunDef.url)
-                            .attr('target', '_blank')
-                            .text(text);
+                        let $link: JQuery;
+                        if (jsCommon.Utility.isValidUrl(textRunDef.url)) {
+                            $link = $('<a>')
+                                .attr('href', textRunDef.url)
+                                .attr('target', '_blank')
+                                .text(text);
+                        }
+                        else {
+                            $link = $('<span>').text(text);
+                        }
 
                         $textRun.append($link);
                     }
@@ -310,7 +318,7 @@ module powerbi.visuals {
             return $paragraphs;
         }
 
-        private static convertParagraphsToOps(paragraphs: Paragraphs): quill.Op[] {
+        export function convertParagraphsToOps(paragraphs: Paragraphs): quill.Op[] {
             let ops: quill.InsertOp[] = [];
 
             for (let paragraphIndex = 0, len = paragraphs.length; paragraphIndex < len; ++paragraphIndex) {
@@ -340,7 +348,7 @@ module powerbi.visuals {
 
                     let text = textRunDef.value;
 
-                    if (textRunDef.url)
+                    if (textRunDef.url && jsCommon.Utility.isValidUrl(textRunDef.url))
                         formats.link = textRunDef.url;
 
                     let op: quill.InsertOp = {
@@ -363,7 +371,7 @@ module powerbi.visuals {
             return ops;
         }
 
-        private static convertFormatAttributesToTextStyle(attributes: quill.FormatAttributes): TextRunStyle {
+        function convertFormatAttributesToTextStyle(attributes: quill.FormatAttributes): TextRunStyle {
             let style: TextRunStyle = {};
 
             // NOTE: Align is taken care of when converting to paragraphs.
@@ -574,21 +582,14 @@ module powerbi.visuals {
                     return;
 
                 let text = this.editor.getText();
-                let urlRegex = /http[s]?:\/\/(\S)+/gi;
 
-                // Find and format all urls in the text
-                // TODO: This can be a bit expensive, maybe include a cap here for text with many urls?
-                let matches;
-                while ((matches = urlRegex.exec(text)) !== null) {
-                    let url = matches[0];
-                    let start = matches.index;
-                    let end = urlRegex.lastIndex;
-
+                let urlMatches = jsCommon.Utility.findAllValidUrls(text);
+                for (let match of urlMatches) {
                     // Remove existing link
-                    this.editor.formatText(start, end, 'link', false, 'api');
+                    this.editor.formatText(match.start, match.end, 'link', false, 'api');
 
                     // Format as link
-                    this.editor.formatText(start, end, 'link', url, 'api');
+                    this.editor.formatText(match.start, match.end, 'link', match.text, 'api');
                 }
 
                 // Force link tooltip to update on URL change

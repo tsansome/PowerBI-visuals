@@ -111,10 +111,10 @@ module powerbi {
         }
 
         /**
-         * This method measures the height of the text with the given SVG text properties.
+         * This method return the rect with the given SVG text properties.
          * @param textProperties The text properties to use for text measurement.
          */
-        export function measureSvgTextHeight(textProperties: TextProperties): number {
+        export function measureSvgTextRect(textProperties: TextProperties): SVGRect {
             debug.assertValue(textProperties, 'textProperties');
 
             ensureDOM();
@@ -133,20 +133,29 @@ module powerbi {
 
             // We're expecting the browser to give a synchronous measurement here
             // We're using SVGTextElement because it works across all browsers 
-            return svgTextElement.node<SVGTextElement>().getBBox().height;
+            return svgTextElement.node<SVGTextElement>().getBBox();
         }
 
         /**
-         * This method estimates the height of the text with the given SVG text properties.
+         * This method measures the height of the text with the given SVG text properties.
+         * @param textProperties The text properties to use for text measurement.
+         */
+        export function measureSvgTextHeight(textProperties: TextProperties): number {
+            return measureSvgTextRect(textProperties).height;
+        }
+
+        /**
+         * This method returns the text Rect with the given SVG text properties.
+         * Does NOT return text width; obliterates text value
          * @param {TextProperties} textProperties - The text properties to use for text measurement
          */
-        export function estimateSvgTextHeight(textProperties: TextProperties, tightFightForNumeric: boolean = false): number {
+        function estimateSvgTextRect(textProperties: TextProperties): SVGRect {
             debug.assertValue(textProperties, 'textProperties');
 
             let propertiesKey = textProperties.fontFamily + textProperties.fontSize;
-            let height: number = ephemeralStorageService.getData(propertiesKey);
+            let rect: SVGRect = ephemeralStorageService.getData(propertiesKey);
 
-            if (height == null) {
+            if (rect == null) {
                 // To estimate we check the height of a particular character, once it is cached, subsequent
                 // calls should always get the height from the cache (regardless of the text).
                 let estimatedTextProperties: TextProperties = {
@@ -155,13 +164,33 @@ module powerbi {
                     text: "M",
                 };
 
-                height = measureSvgTextHeight(estimatedTextProperties);
-                ephemeralStorageService.setData(propertiesKey, height);
+                rect = measureSvgTextRect(estimatedTextProperties);
+                ephemeralStorageService.setData(propertiesKey, rect);
             }
 
-            if (tightFightForNumeric) {
+            return rect;
+        }
+
+        /**
+         * This method returns the text Rect with the given SVG text properties.
+         * @param {TextProperties} textProperties - The text properties to use for text measurement
+         */
+        export function estimateSvgTextBaselineDelta(textProperties: TextProperties): number {
+            let rect = estimateSvgTextRect(textProperties);
+            return rect.y + rect.height;
+        }
+
+        /**
+         * This method estimates the height of the text with the given SVG text properties.
+         * @param {TextProperties} textProperties - The text properties to use for text measurement
+         */
+        export function estimateSvgTextHeight(textProperties: TextProperties, tightFightForNumeric: boolean = false): number {
+            let height = estimateSvgTextRect(textProperties).height;
+
+            //TODO: replace it with new baseline calculation
+            if (tightFightForNumeric)
                 height *= 0.7;
-            }
+
             return height;
         }
 
@@ -222,7 +251,7 @@ module powerbi {
          * Compares labels text size to the available size and renders ellipses when the available size is smaller.
          * @param textProperties The text properties (including text content) to use for text measurement.
          * @param maxWidth The maximum width available for rendering the text.
-        */
+         */
         export function getTailoredTextOrDefault(properties: TextProperties, maxWidth: number): string {
             debug.assertValue(properties, 'properties');
             debug.assertValue(properties.text, 'properties.text');
@@ -279,7 +308,7 @@ module powerbi {
          * Compares labels text size to the available size and renders ellipses when the available size is smaller.
          * @param textElement The SVGTextElement containing the text to render.
          * @param maxWidth The maximum width available for rendering the text.
-        */
+         */
         export function svgEllipsis(textElement: SVGTextElement, maxWidth: number): void {
             debug.assertValue(textElement, 'textElement');
 
@@ -299,7 +328,7 @@ module powerbi {
          * @param maxWidth - the maximum width available
          * @param maxHeight - the maximum height available (defaults to single line)
          * @param linePadding - (optional) padding to add to line height
-        */
+         */
         export function wordBreak(textElement: SVGTextElement, maxWidth: number, maxHeight: number, linePadding: number = 0): void {
             debug.assertValue(textElement, 'textElement');
 
@@ -331,13 +360,13 @@ module powerbi {
         }
 
         /**
-       * Word break textContent of span element into <span>s
-       * Each span will be the height of a single line of text
-       * @param textElement - the element containing the text to wrap
-       * @param maxWidth - the maximum width available
-       * @param maxHeight - the maximum height available (defaults to single line)
-       * @param linePadding - (optional) padding to add to line height
-      */
+         * Word break textContent of span element into <span>s
+         * Each span will be the height of a single line of text
+         * @param textElement - the element containing the text to wrap
+         * @param maxWidth - the maximum width available
+         * @param maxHeight - the maximum height available (defaults to single line)
+         * @param linePadding - (optional) padding to add to line height
+         */
         export function wordBreakOverflowingText(textElement: any, maxWidth: number, maxHeight: number, linePadding: number = 0): void {
             debug.assertValue(textElement, 'textElement');
 

@@ -38,7 +38,6 @@ module powerbitests {
         let dataColors = new powerbi.visuals.DataColorPalette();
 
         it("Check get color no duplicates until wrap-around", () => {
-            
             // Note (param 0): Since conditional formatting is currently not supported, the datavalue param is ignored. For now the
             //                 test will pass in various objects just to make sure we don"t crash. Once conditional formatting is
             //                 supported we should pass in objects that will excercise that the conditional formatting code.

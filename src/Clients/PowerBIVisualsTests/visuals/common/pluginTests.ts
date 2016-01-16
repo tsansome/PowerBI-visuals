@@ -74,7 +74,6 @@ module powerbitests {
         }
 
         function setData(v: powerbi.IVisual, objectDescs: DataViewObjectDescriptors): void {
-            
             // full
             changeData(v, objectDescs, [{
                 metadata: dataViewMetadataTwoColumn,

@@ -53,12 +53,7 @@ module powerbitests {
 
         it("measureSvgTextWidth", () => {
             let getTextWidth = (fontSize: number) => {
-                let textProperties: TextProperties = {
-                    fontFamily: "Arial",
-                    fontSize: fontSize + "px",
-                    text: "PowerBI rocks!",
-                };
-
+                let textProperties = getTextProperties(fontSize);
                 return TextMeasurementService.measureSvgTextWidth(textProperties);
             };
 
@@ -67,43 +62,85 @@ module powerbitests {
 
         it("estimateSvgTextHeight", () => {
             let getTextHeight = (fontSize: number) => {
-                let textProperties: TextProperties = {
-                    fontFamily: "Arial",
-                    fontSize: fontSize + "px",
-                    text: "PowerBI rocks!",
-                };
-
+                let textProperties = getTextProperties(fontSize);
                 return TextMeasurementService.estimateSvgTextHeight(textProperties);
             };
 
             expect(getTextHeight(10)).toBeLessThan(getTextHeight(12));
         });
 
+        it("estimateSvgTextBaselineDelta", () => {
+            let getTextBaselineDelta = (fontSize: number) => {
+                let textProperties = getTextProperties(fontSize);
+                return TextMeasurementService.estimateSvgTextBaselineDelta(textProperties);
+            };
+
+            expect(getTextBaselineDelta(10)).toBeLessThan(getTextBaselineDelta(20));
+        });
+
         it("estimateSvgTextHeight numeric", () => {
             let getTextHeight = (fontSize: number, numeric) => {
-                let textProperties: TextProperties = {
-                    fontFamily: "Arial",
-                    fontSize: fontSize + "px",
-                    text: "PowerBI rocks!",
-                };
-
+                let textProperties = getTextProperties(fontSize);
                 return TextMeasurementService.estimateSvgTextHeight(textProperties, numeric);
             };
 
             expect(getTextHeight(12, true)).toBeLessThan(getTextHeight(12, false));
         });
 
+        describe('estimate cache', () => {
+            let setDataSpy: jasmine.Spy;
+
+            beforeEach(() => {
+                powerbi.ephemeralStorageService['clearCache']();
+                setDataSpy = spyOn(powerbi.ephemeralStorageService, 'setData');
+                setDataSpy.and.callThrough();
+            });
+
+            it("estimateSvgTextHeight does cache", () => {
+                TextMeasurementService.estimateSvgTextHeight(getTextProperties(10, 'A', 'RandomFont'));
+                TextMeasurementService.estimateSvgTextHeight(getTextProperties(10, 'B', 'RandomFont'));
+                TextMeasurementService.estimateSvgTextHeight(getTextProperties(14, 'C', 'RandomFont'));
+                TextMeasurementService.estimateSvgTextHeight(getTextProperties(14, 'D', 'RandomFont'));
+                TextMeasurementService.estimateSvgTextHeight(getTextProperties(10, 'E', 'RandomFont2'));
+                TextMeasurementService.estimateSvgTextHeight(getTextProperties(10, 'F', 'RandomFont2'));
+
+                expect(setDataSpy.calls.count()).toBe(3);
+            });
+
+            it("estimateSvgTextBaselineDelta does cache", () => {
+                TextMeasurementService.estimateSvgTextBaselineDelta(getTextProperties(10, 'A', 'RandomFont'));
+                TextMeasurementService.estimateSvgTextBaselineDelta(getTextProperties(10, 'B', 'RandomFont'));
+                TextMeasurementService.estimateSvgTextBaselineDelta(getTextProperties(14, 'C', 'RandomFont'));
+                TextMeasurementService.estimateSvgTextBaselineDelta(getTextProperties(14, 'D', 'RandomFont'));
+                TextMeasurementService.estimateSvgTextBaselineDelta(getTextProperties(10, 'E', 'RandomFont2'));
+                TextMeasurementService.estimateSvgTextBaselineDelta(getTextProperties(10, 'F', 'RandomFont2'));
+
+                expect(setDataSpy.calls.count()).toBe(3);
+            });
+        });
+
         it("measureSvgTextHeight", () => {
             let getTextHeight = (fontSize: number) => {
-                let textProperties: TextProperties = {
-                    fontFamily: "Arial",
-                    fontSize: fontSize + "px",
-                    text: "PowerBI rocks!",
-                };
+                let textProperties = getTextProperties(fontSize);
                 return TextMeasurementService.measureSvgTextHeight(textProperties);
             };
 
             expect(getTextHeight(10)).toBeLessThan(getTextHeight(12));
+        });
+
+        it("measureSvgTextRect", () => {
+            let getTextRect = (fontSize: number) => {
+                let textProperties = getTextProperties(fontSize);
+                return TextMeasurementService.measureSvgTextRect(textProperties);
+            };
+
+            let smallRect = getTextRect(10);
+            let largeRect = getTextRect(14);
+
+            expect(smallRect.height).toBeLessThan(largeRect.height);
+            //the y point of the rect is at the top of the rect, the y point of the text is (almost) at the bottom of the text.
+            //both y will be less than 0, testing the absolute y value.
+            expect(Math.abs(smallRect.y)).toBeLessThan(Math.abs(largeRect.y));
         });
 
         it("getMeasurementProperties", () => {
@@ -362,6 +399,14 @@ module powerbitests {
             element.text(text);
             
             return element;
+        }
+
+        function getTextProperties(fontSize: number, text?: string, fontFamily?: string): TextProperties {
+            return {
+                fontFamily: fontFamily ? fontFamily : "Arial",
+                fontSize: fontSize + "px",
+                text: text ? text : "PowerBI rocks!",
+            };
         }
     });
 }

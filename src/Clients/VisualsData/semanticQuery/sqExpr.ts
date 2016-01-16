@@ -28,6 +28,7 @@
 
 module powerbi.data {
     import StringExtensions = jsCommon.StringExtensions;
+
     /** Represents an immutable expression within a SemanticQuery. */
     export /*abstract*/ class SQExpr {
         constructor() {
@@ -891,6 +892,31 @@ module powerbi.data {
                 ValueType.fromExtendedType(ExtendedType.Text),
                 value,
                 valueEncoded || PrimitiveValueEncoding.text(value));
+        }
+
+        /** Returns an SQExpr that evaluates to the constant value. */
+        export function typedConstant(value: PrimitiveValue, type: ValueType): SQConstantExpr {
+            if (value == null)
+                return nullConstant();
+
+            if (_.isBoolean(value)) {
+                return boolean(<boolean>value);
+            }
+
+            if (_.isString(value)) {
+                return text(<string>value);
+            }
+
+            if (_.isNumber(value)) {
+                if (type.integer && Double.isInteger(<number>value))
+                    return integer(<number>value);
+
+                return double(<number>value);
+            }
+
+            if (value instanceof Date) {
+                return dateTime(value);
+            }
         }
 
         export function setAggregate(expr: SQExpr, aggregate: QueryAggregateFunction): SQExpr {

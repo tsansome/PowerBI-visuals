@@ -43,7 +43,7 @@ module powerbitests {
     let donutColors = powerbi.visuals.visualStyles.create().colorPalette.dataColors;
 
     const labelsElement = '.donutChart .label';
-    const fontFamily = 'Tahoma';
+    const fontFamily = 'wf_standard-font';
 
     powerbitests.mocks.setLocale();
 
@@ -905,8 +905,7 @@ module powerbitests {
                 }, DefaultWaitForRender);
             });
 
-            it('Data labels with multiple formats', (done) => {
-                
+            it('Data labels with multiple formats', (done) => {    
                 //override view port size
                 element = powerbitests.helpers.testDom('1500', '1500');
                 v.init({
@@ -1011,6 +1010,56 @@ module powerbitests {
                     expect($(labels[0]).attr('y')).toBeGreaterThan($(labels[2]).attr('y'));
                     done();
                 }, DefaultWaitForRender);
+            });
+
+            it('Data labels split to two lines', () => {
+                let catagorylabelElement = '.donutChart .catagorylabel';
+                let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
+                dataViewMetadataWithLabels.objects = {
+                    labels: { show: true, labelStyle: LabelStyle.both },
+                };
+
+                v.onResizing({ height: 500, width: 700 });
+
+                v.onDataChanged({
+                    dataViews: [{
+                        metadata: dataViewMetadataWithLabels,
+                        categorical: {
+                            categories: [{
+                                source: dataViewMetadataWithLabels.columns[0],
+                                values: ['Category Label 1', 'Category Label 2'],
+                                identity: [mocks.dataViewScopeIdentity('Category Label 1'),
+                                    mocks.dataViewScopeIdentity('Category Label 2')],
+                                identityFields: [categoryColumnRef],
+                            }],
+                            values: DataViewTransform.createValueColumns([{
+                                source: dataViewMetadataWithLabels.columns[1],
+                                values: [150, 150],
+                                subtotal: 300
+                            }])
+                        }
+                    }]
+                });
+                let labels = element.find(labelsElement);
+                expect($(labels[0]).text()).toBe("Category Label 1 (150)");
+                expect($(labels[1]).text()).toBe("Category Label 2 (150)");
+
+                // Label should be split into two lines
+                v.onResizing({ height: 500, width: 500 });
+                labels = element.find(labelsElement);
+                expect($(labels[0]).text()).toBe("150");
+                expect($(labels[1]).text()).toBe("150");
+
+                labels = element.find(catagorylabelElement);
+                expect($(labels[0]).text()).toBe("Category Label 1");
+                expect($(labels[1]).text()).toBe("Category Label 2");
+
+                // Label should be split into two lines and be truncated
+                v.onResizing({ height: 500, width: 300 });
+                labels = element.find(catagorylabelElement);
+                expect($(labels[0]).text()).toContain("…");
+                expect($(labels[1]).text()).toContain("…");
+
             });
         });
 
@@ -1283,7 +1332,7 @@ module powerbitests {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(v[1].source.queryName, v[1].identity, buildSelector(categoryQueryName, categoryIdentities[0])), null),
                         measure: -300,
                         value: 0.3,
-                        index: 0,
+                        index: 1,
                         label: 'col3',
                         tooltipInfo: [{ displayName: "col1", value: "a" }, { displayName: "col3", value: "-300" }],
                         color: sliceColors[0],
@@ -1292,7 +1341,7 @@ module powerbitests {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(v[0].source.queryName, v[0].identity, buildSelector(categoryQueryName, categoryIdentities[1])), null),
                         measure: 0,
                         value: 0.0,
-                        index: 1,
+                        index: 2,
                         label: 'col2',
                         tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: "col2", value: "0" }],
                         color: sliceColors[1],
@@ -1301,7 +1350,7 @@ module powerbitests {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(v[1].source.queryName, v[1].identity, buildSelector(categoryQueryName, categoryIdentities[1])), null),
                         measure: 300,
                         value: 0.3,
-                        index: 1,
+                        index: 3,
                         label: 'col3',
                         tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: "col3", value: "300" }],
                         color: sliceColors[1],
@@ -1310,7 +1359,7 @@ module powerbitests {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(v[0].source.queryName, v[0].identity, buildSelector(categoryQueryName, categoryIdentities[2])), null),
                         measure: 150,
                         value: 0.15,
-                        index: 2,
+                        index: 4,
                         label: 'col2',
                         tooltipInfo: [{ displayName: "col1", value: "c" }, { displayName: "col2", value: "150" }],
                         color: sliceColors[2],
@@ -1319,7 +1368,7 @@ module powerbitests {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(v[1].source.queryName, v[1].identity, buildSelector(categoryQueryName, categoryIdentities[2])), null),
                         measure: -50,
                         value: 0.05,
-                        index: 2,
+                        index: 5,
                         label: 'col3',
                         tooltipInfo: [{ displayName: "col1", value: "c" }, { displayName: "col3", value: "-50" }],
                         color: sliceColors[2],
@@ -1573,7 +1622,7 @@ module powerbitests {
                             measure: -300,
                             label: 'col3',
                             value: 0.3,
-                            index: 0,
+                            index: 1,
                             tooltipInfo: [{ displayName: "col1", value: "a" }, { displayName: "col3", value: "-300" }],
                             color: sliceColors[0],
                             strokeWidth: 0,
@@ -1582,7 +1631,7 @@ module powerbitests {
                             measure: 0,
                             label: 'col2',
                             value: 0,
-                            index: 1,
+                            index: 2,
                             tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: "col2", value: "0" }],
                             color: sliceColors[1],
                             strokeWidth: 0,
@@ -1591,7 +1640,7 @@ module powerbitests {
                             measure: 300,
                             label: 'col3',
                             value: 0.3,
-                            index: 1,
+                            index: 3,
                             tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: "col3", value: "300" }],
                             color: sliceColors[1],
                             strokeWidth: 0,
@@ -1600,7 +1649,7 @@ module powerbitests {
                             label: 'col2',
                             measure: 150,
                             value: 0.15,
-                            index: 2,
+                            index: 4,
                             tooltipInfo: [{ displayName: "col1", value: "c" }, { displayName: "col2", value: "150" }],
                             color: sliceColors[2],
                             strokeWidth: 0,
@@ -1609,7 +1658,7 @@ module powerbitests {
                             label: 'col3',
                             measure: -50,
                             value: 0.05,
-                            index: 2,
+                            index: 5,
                             tooltipInfo: [{ displayName: "col1", value: "c" }, { displayName: "col3", value: "-50" }],
                             color: sliceColors[2],
                             strokeWidth: 0,
@@ -1701,8 +1750,7 @@ module powerbitests {
                 expect(actualData.legendData.dataPoints[0].label).toBe('col1');
             });
 
-            it('non-categorical multi-measure, with slicing', () => {
-                
+            it('non-categorical multi-measure, with slicing', () => {    
                 // Explicitly set the color for the first measure.
                 let columnWithColor = powerbi.Prototype.inherit(dataViewMetadata3Measure.columns[0]);
                 columnWithColor.objects = { dataPoint: { fill: { solid: { color: 'red' } } } };
@@ -2076,26 +2124,25 @@ module powerbitests {
             });
 
             it('with highlights', () => {
-                
                 // categorical, multi-measure slices, with highlights
                 let dataView: powerbi.DataView = {
                     categorical: {
-                    categories: [{
-                        source: dataViewMetadata1Category2Measure.columns[0],
-                        values: ['a', 'b', 'c'],
-                        identity: categoryIdentities,
-                        identityFields: [categoryColumnRef],
-                    }],
-                    values: DataViewTransform.createValueColumns([
-                        {
+                        categories: [{
+                            source: dataViewMetadata1Category2Measure.columns[0],
+                            values: ['a', 'b', 'c'],
+                            identity: categoryIdentities,
+                            identityFields: [categoryColumnRef],
+                        }],
+                        values: DataViewTransform.createValueColumns([
+                            {
                                 source: dataViewMetadata1Category2Measure.columns[1],
-                            values: [-200, null, 150],
+                                values: [-200, null, 150],
                                 highlights: [-100, null, 15],
                             },
                             {
                                 source: dataViewMetadata1Category2Measure.columns[2],
-                            values: [-300, 300, -50],
-                            highlights: [-150, 75, 50],
+                                values: [-300, 300, -50],
+                                highlights: [-150, 75, 50],
                             }
                         ])
                     },
@@ -2112,23 +2159,23 @@ module powerbitests {
                 let categoryQueryName = dataView.categorical.categories[0].source.queryName;
                 let highlightDisplayName = powerbi.visuals.ToolTipComponent.localizationOptions.highlightedValueDisplayName;
                 let expectSlices: DonutDataPoint[] = [
-                        {
+                    {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(categoryQueryName, categoryIdentities[0]), 'col2'),
                         measure: -200,
                         label: 'col2',
-                            highlightRatio: 0.5,
+                        highlightRatio: 0.5,
                         value: 0.2,
-                            index: 0,
+                        index: 0,
                         tooltipInfo: [{ displayName: "col1", value: "a" }, { displayName: "col2", value: "-200" }, { displayName: highlightDisplayName, value: "-100" }],
-                            color: sliceColors[0],
+                        color: sliceColors[0],
                         strokeWidth: 0,
-                        }, {
+                    }, {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(categoryQueryName, categoryIdentities[0]), 'col3'),
                         measure: -300,
                         label: 'col3',
                         highlightRatio: 0.5,
                         value: 0.3,
-                        index: 0,
+                        index: 1,
                         tooltipInfo: [{ displayName: "col1", value: "a" }, { displayName: "col3", value: "-300" }, { displayName: highlightDisplayName, value: "-150" }],
                         color: sliceColors[0],
                         labelFormatString: undefined,
@@ -2139,20 +2186,20 @@ module powerbitests {
                         label: 'col2',
                         highlightRatio: 1e-9,
                         value: 0,
-                        index: 1,
+                        index: 2,
                         tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: "col2", value: "0" }],
                         color: sliceColors[1],
                         labelFormatString: undefined,
                         strokeWidth: 0,
                     }, {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(categoryQueryName, categoryIdentities[1]), 'col3'),
-                            measure: 300,
+                        measure: 300,
                         label: 'col3',
                         highlightRatio: 0.25,
-                            value: 0.3,
-                            index: 1,
+                        value: 0.3,
+                        index: 3,
                         tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: "col3", value: "300" }, { displayName: highlightDisplayName, value: "75" }],
-                            color: sliceColors[1],
+                        color: sliceColors[1],
                         labelFormatString: undefined,
                         strokeWidth: 0,
                     }, {
@@ -2161,19 +2208,19 @@ module powerbitests {
                         highlightRatio: 0.1,
                         measure: 150,
                         value: 0.15,
-                        index: 2,
+                        index: 4,
                         tooltipInfo: [{ displayName: "col1", value: "c" }, { displayName: "col2", value: "150" }, { displayName: highlightDisplayName, value: "15" }],
                         color: sliceColors[2],
                         strokeWidth: 0,
-                        }, {
+                    }, {
                         identity: SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(categoryQueryName, categoryIdentities[2]), 'col3'),
                         label: 'col3',
                         highlightRatio: 1,
                         measure: -50,
                         value: 0.05,
-                            index: 2,
+                        index: 5,
                         tooltipInfo: [{ displayName: "col1", value: "c" }, { displayName: "col3", value: "-50" }, { displayName: highlightDisplayName, value: "50" }],
-                            color: sliceColors[2],
+                        color: sliceColors[2],
                         labelFormatString: undefined,
                         strokeWidth: 0,
                     }].map(buildDataPoint);
@@ -2188,8 +2235,7 @@ module powerbitests {
             });
 
             //validate tooltip on highlighted values, the first tooptip is regular because highlighted value is 0, another tooltips are highlighted tooltips 
-            it('with highlights - special case tooltip validation',() => {
-                
+            it('with highlights - special case tooltip validation',() => {    
                 // categorical, multi-measure slices, zero-highlight as special case
                 let dataView: powerbi.DataView = {
                     categorical: {
@@ -2293,8 +2339,7 @@ module powerbitests {
                 expect(actualData.dataPoints[2].data.tooltipInfo).toEqual(tooltipInfo3);
             });
      
-            it('with highlights that overflow', () => {
-                
+            it('with highlights that overflow', () => {    
                 // categorical, no slicing - with OverFlow
                 let dataView: powerbi.DataView = {
                     categorical: {
@@ -2347,7 +2392,7 @@ module powerbitests {
                         label: 'col3',
                         value: 0.24,
                         highlightRatio: 1.0,
-                        index: 0,
+                        index: 1,
                         tooltipInfo: [{ displayName: "col1", value: "a" }, { displayName: "col3", value: "-300" }, { displayName: highlightName, value: "-150" }],
                         color: sliceColors[0],
                         labelFormatString: undefined,
@@ -2359,7 +2404,7 @@ module powerbitests {
                         measureFormat: "\$#,0;(\$#,0);\$#,0",
                         value: 0.0,
                         highlightRatio: 1.0,
-                        index: 1,
+                        index: 2,
                         tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: "col2", value: "$0" }],
                         color: sliceColors[1],
                         labelFormatString: undefined,
@@ -2371,7 +2416,7 @@ module powerbitests {
                         measureFormat: undefined,
                         value: 0.12,
                         highlightRatio: 1.0,
-                        index: 1,
+                        index: 3,
                         tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: "col3", value: "300" }, { displayName: highlightName, value: "75" }],
                         color: sliceColors[1],
                         labelFormatString: undefined,
@@ -2383,7 +2428,7 @@ module powerbitests {
                         label: 'col2',
                         value: 0.4,
                         highlightRatio: 1.0,
-                        index: 2,
+                        index: 4,
                         tooltipInfo: [{ displayName: "col1", value: "c" }, { displayName: "col2", value: "$150" }, { displayName: highlightName, value: "$250" }],
                         color: sliceColors[2],
                         labelFormatString: undefined,
@@ -2395,7 +2440,7 @@ module powerbitests {
                         label: 'col3',
                         value: 0.08,
                         highlightRatio: 1.0,
-                        index: 2,
+                        index: 5,
                         tooltipInfo: [{ displayName: "col1", value: "c" }, { displayName: "col3", value: "-50" }, { displayName: highlightName, value: "50" }],
                         color: sliceColors[2],
                         labelFormatString: undefined,
@@ -2912,7 +2957,6 @@ module powerbitests {
         });
 
         it('pie chart dom validation with very long labels', (done) => {
-
             //make sure category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
             dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.category } };
@@ -2971,7 +3015,6 @@ module powerbitests {
             setTimeout(() => {
                 expect($('.donutChart')).toBeInDOM();
                 if (interactiveChart) {
-                    
                     // Culling is disabled on interactive charts
                     expect($('.donutChart .slice').length).toBe(3);
                 }
@@ -3027,7 +3070,6 @@ module powerbitests {
         });
 
         it('pie chart radius calculation validation', (done) => {
-
             // spy on calculateRadius() method
             let pieChart: any = v;
             spyOn(pieChart, 'calculateRadius').and.callThrough();
@@ -3149,7 +3191,6 @@ module powerbitests {
 
         it('pie chart selecting a slice triggers select', () => {
             if (interactiveChart) {
-                
                 // not applicable to interactive charts
                 expect($('.donutChart')).toBeInDOM();
                 return;
@@ -3186,7 +3227,6 @@ module powerbitests {
 
         it('pie chart highlighted slice select', (done) => {
             if (interactiveChart) {
-                
                 // not applicable to interactive charts
                 expect($('.donutChart')).toBeInDOM();
                 done();
@@ -3233,7 +3273,6 @@ module powerbitests {
 
         it('pie chart selecting a highlighted slice triggers select', () => {
             if (interactiveChart) {
-                
                 // not applicable to interactive charts
                 expect($('.donutChart')).toBeInDOM();
                 return;
@@ -3379,8 +3418,8 @@ module powerbitests {
                 for (let i = 0; i < slices.length; i++) {
                     expect(slices[i].style.strokeWidth).toBe("0px");
                 }
-                    done();
-                }, DefaultWaitForRender);
+                done();
+            }, DefaultWaitForRender);
         });
 
         it('pie chart stroke validation - categorical multi-measure', (done) => {
@@ -3544,7 +3583,6 @@ module powerbitests {
         });
 
         it('pie chart labels visibility - moving guide line up or down by 25% of the slice perimeter where labels are truncated ', (done) => {
-            
             //category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
             dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.data } };
@@ -3611,7 +3649,7 @@ module powerbitests {
         });
 
         it('pie chart labels visibility - moving guide line up or down by 25% of the slice perimeter where labels have conflict', (done) => {
-            
+           
             //category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
             dataViewMetadataTwoColumnLabels.objects = { labels: { show: true, labelStyle: LabelStyle.data } };
@@ -3638,6 +3676,43 @@ module powerbitests {
                 let labels = element.find(labelsElement);
                 if (!interactiveChart) 
                     expect($(labels).length).toBe(3);
+                else
+                    expect($(labels).length).toBe(0);
+
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it('pie chart labels visibility - moving guide line up or down by 25% of the slice perimeter where lines have conflict', (done) => {
+            
+            //category labels on
+            let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
+            dataViewMetadataTwoColumnLabels.objects = { categoryLabels: { show: false }, labels: { show: true } };
+            v.onResizing({ height: 600, width: 600 });
+            v.onDataChanged({
+                dataViews: [{
+                    metadata: dataViewMetadataTwoColumnLabels,
+                    categorical: {
+                        categories: [{
+                            source: dataViewMetadataTwoColumnLabels.columns[0],
+                            values: ['John Domo', 'Delta Force', 'Jean Tablau'],
+                            identity: [mocks.dataViewScopeIdentity('a'), mocks.dataViewScopeIdentity('b'), mocks.dataViewScopeIdentity('c')],
+                            identityFields: [categoryColumnRef],
+                        }],
+                        values: DataViewTransform.createValueColumns([{
+                            source: dataViewMetadataTwoColumnLabels.columns[1],
+                            values: [300, 5, 5],
+                        }])
+                    }
+                }]
+            });
+
+            setTimeout(() => {
+                let labels = element.find(labelsElement);
+                if (!interactiveChart) {
+                    //Third label has a conflict with diagonal line of second label
+                    expect($(labels).length).toBe(2);
+                }
                 else
                     expect($(labels).length).toBe(0);
 
@@ -3688,7 +3763,7 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        it('pie chart labels visibility - validate font-family', (done) => {
+        xit('pie chart labels visibility - validate font-family', (done) => {
             
             //category labels on
             let dataViewMetadataTwoColumnLabels = powerbi.Prototype.inherit(dataViewMetadataTwoColumn);
@@ -3708,7 +3783,7 @@ module powerbitests {
                             source: dataViewMetadataTwoColumnLabels.columns[1],
                             values: [300, 140, 400],
                         }])
-                    }
+                }
                 }]
             });
 
@@ -3998,8 +4073,7 @@ module powerbitests {
         it('legend - test that there is only one interactive legend', (done) => {
             v.onResizing({ height: 600, width: 600 });
 
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // interactive-legend is the type of interactive legend for all visuals except donut, for this visual we have special legend called donutLegend
                 expect($('.interactive-legend')).not.toBeInDOM();
                 expect($('.donutLegend')).toBeInDOM();
@@ -4091,8 +4165,7 @@ module powerbitests {
             // drag on the legend
             pieLegend.dragLegend(swipeLeft);
 
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // items should be rotated
                 let rotatedLegendItems = $('.legend-item');
                 if (swipeLeft) {
@@ -4242,8 +4315,7 @@ module powerbitests {
                 dataViews: [dataView]
             });
 
-            setTimeout(() => {
-                
+            setTimeout(() => {    
                 // Check legend is hidden
                 expect($('.legend').attr('orientation')).toBe(LegendPosition.None.toString());
                 let points = <VisualObjectInstanceEnumerationObject>v.enumerateObjectInstances({ objectName: 'dataPoint' });

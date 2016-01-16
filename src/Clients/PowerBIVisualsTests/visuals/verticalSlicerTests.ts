@@ -33,8 +33,16 @@ module powerbitests {
 
     powerbitests.mocks.setLocale();
 
+    const slicerTextClassSelector = ".slicerText";
+    const slicerHeaderClassSelector = ".slicerHeader";
+
     describe("VerticalSlicer", () => {
         let builder: slicerHelper.TestBuilder;
+        let longSlicerItems = ["First Slicer Long Name for testing",
+            "Second Slicer Long Name for testing",
+            "Third Slicer Long Name for testing"];
+        let dataViewMetadataWithLongName = slicerHelper.buildDataViewMetadataWithLongName();
+
         beforeEach(() => {
             builder = new slicerHelper.TestBuilder(SlicerOrientation.Vertical);
         });
@@ -54,9 +62,11 @@ module powerbitests {
                 expect($(".slicerContainer .slicerHeader .clear")).toBeInDOM();
                 expect($(".slicerContainer .slicerBody")).toBeInDOM();
                 expect($(".slicerContainer .slicerBody .row .slicerText")).toBeInDOM();
-                expect($(".slicerText").length).toBe(6);
-                expect($(".slicerText").first().text()).toBe(slicerHelper.SelectAllTextKey);
-                expect($(".slicerText").last().text()).toBe("Banana");
+                expect($(slicerTextClassSelector).length).toBe(6);
+                expect($(slicerTextClassSelector).first().text()).toBe(slicerHelper.SelectAllTextKey);
+                expect($(slicerTextClassSelector).first().attr('title')).toBe(slicerHelper.SelectAllTextKey);
+                expect($(slicerTextClassSelector).last().text()).toBe("Banana");
+                expect($(slicerTextClassSelector).last().attr('title')).toBe("Banana");
 
                 expect(powerbi.visuals.valueFormatter.format).toHaveBeenCalledWith("Apple", undefined);
                 expect(powerbi.visuals.valueFormatter.format).toHaveBeenCalledWith("Orange", undefined);
@@ -94,9 +104,45 @@ module powerbitests {
                 expect($(".slicerContainer .slicerBody")).toBeInDOM();
                 expect($(".slicerContainer .slicerBody .row .slicerText")).toBeInDOM();
 
-                expect($(".slicerText").length).toBe(4);
-                expect($(".slicerText").first().text()).toBe(slicerHelper.SelectAllTextKey);
-                expect($(".slicerText").last().text()).toBe("Blackberry");
+                expect($(slicerTextClassSelector).length).toBe(4);
+                expect($(slicerTextClassSelector).first().text()).toBe(slicerHelper.SelectAllTextKey);
+                expect($(slicerTextClassSelector).first().attr('title')).toBe(slicerHelper.SelectAllTextKey);
+                expect($(slicerTextClassSelector).last().text()).toBe("Blackberry");
+                expect($(slicerTextClassSelector).last().attr('title')).toBe("Blackberry");
+            });
+
+            it("DOM Validation - Tooltip of Long Text", () => {
+                let dataView2: powerbi.DataView = {
+                    metadata: dataViewMetadataWithLongName,
+                    categorical: {
+                        categories: [{
+                            source: dataViewMetadataWithLongName.columns[0],
+                            values: longSlicerItems,
+                            identity: [
+                                mocks.dataViewScopeIdentityWithEquality(builder.field, "First"),
+                                mocks.dataViewScopeIdentityWithEquality(builder.field, "Second"),
+                                mocks.dataViewScopeIdentityWithEquality(builder.field, "Third")
+                            ],
+                            identityFields: [builder.field],
+                        }],
+                        values: DataViewTransform.createValueColumns([{
+                            source: builder.dataViewMetadata.columns[1],
+                            values: [40, 25, 22]
+                        }])
+                    }
+                };
+
+                builder.dataViewCategorical = slicerHelper.buildDefaultDataViewCategorical(builder.field);
+
+                helpers.fireOnDataChanged(builder.visual, { dataViews: [dataView2] });
+
+                //Test Slicer header tooltip
+                expect($(slicerHeaderClassSelector)[0].title).toBe(dataView2.metadata.columns[0].displayName);
+
+                //Test Slicer Items tooltip
+                for (let i = 0; i < dataView2.categorical.categories[0].values.length; i++) {
+                    expect($(slicerTextClassSelector)[i].title).toBe(dataView2.categorical.categories[0].values[i]);
+                }
             });
 
             it("DOM Validation - Image Slicer", () => {
@@ -161,20 +207,19 @@ module powerbitests {
                         selected: false
                     }];
 
-                let expectedSlicerData = {
+                let expectedSlicerData: powerbi.visuals.SlicerData = {
                     categorySourceName: "Fruit",
                     slicerSettings: powerbi.visuals.Slicer.DefaultStyleProperties(),
                     slicerDataPoints: dataPoints,
                     hasSelectionOverride: false,
+                    defaultValue: undefined,
                 };
                 expectedSlicerData.slicerSettings.selection.selectAllCheckboxEnabled = true;
                 expectedSlicerData.slicerSettings.selection.singleSelect = false;
                 jasmine.clock().tick(0);
-                powerbi.visuals.DataConversion.convert(builder.dataView, slicerHelper.SelectAllTextKey, null, builder.hostServices).then(
-                    slicerData => {
-                        expect(slicerData.slicerDataPoints.length).toBe(6);
-                        expect(slicerData).toEqual(expectedSlicerData);
-                    });
+                let slicerData = powerbi.visuals.DataConversion.convert(builder.dataView, slicerHelper.SelectAllTextKey, null, builder.hostServices);
+                expect(slicerData.slicerDataPoints.length).toBe(6);
+                expect(slicerData).toEqual(expectedSlicerData);
             });
             
             xit("Resize", () => {
@@ -247,12 +292,14 @@ module powerbitests {
             xit("Scrolling", (done) => {
                 loadFirstSegment();
 
-                expect($(".slicerText").eq(0).text()).toBe(dv1.categorical.categories[0].values[0]); // Fruit 0
+                expect($(slicerTextClassSelector).eq(0).text()).toBe(dv1.categorical.categories[0].values[0]); // Fruit 0
+                expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dv1.categorical.categories[0].values[0]);
 
                 // Scroll by 10 items, assert first rendered element is #10
                 scrollBy(10);
                 helpers.executeWithDelay(() => {
-                    expect($(".slicerText").eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dv1.categorical.categories[0].values[10]);
                     done();
                 }, DefaultWaitForRender);
             });
@@ -263,11 +310,13 @@ module powerbitests {
                 // Scroll by 10 items, assert first rendered element is #10
                 scrollBy(10);
                 helpers.executeWithDelay(() => {
-                    expect($(".slicerText").eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dv1.categorical.categories[0].values[10]);
 
                     // Select an item -> No Reset
                     $(".slicerText").eq(1).trigger('click');
-                    expect($(".slicerText").eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dv1.categorical.categories[0].values[10]); 
                     done();
                 }, DefaultWaitForRender);
             });
@@ -278,11 +327,13 @@ module powerbitests {
                 // Scroll by 10 items, assert first rendered element is #10
                 scrollBy(10);
                 helpers.executeWithDelay(() => {
-                    expect($(".slicerText").eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dv1.categorical.categories[0].values[10]); 
 
                     // Appending -> No change
                     loadSecondSegment();
-                    expect($(".slicerText").eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dv1.categorical.categories[0].values[10]);
 
                     done();
                 }, DefaultWaitForRender);
@@ -294,13 +345,16 @@ module powerbitests {
                 // Scroll by 10 items, assert first rendered element is #10
                 scrollBy(10);
                 helpers.executeWithDelay(() => {
-                    expect($(".slicerText").eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).text()).toBe(dv1.categorical.categories[0].values[10]); // Fruit 10
+                    expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dv1.categorical.categories[0].values[10]); 
 
                     // Filtering -> Scroll reset -> First rendered element
                     loadFilteredSegment();
-                    expect($(".slicerText").eq(0).text()).toBe(dvFiltered.categorical.categories[0].values[0]); // Fruit 50
+                    expect($(slicerTextClassSelector).eq(0).text()).toBe(dvFiltered.categorical.categories[0].values[0]); // Fruit 50
+                    expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dvFiltered.categorical.categories[0].values[0]);
                     // asserting translate position is 0
-                    expect($(".slicerText").eq(0).text()).toBe(dvFiltered.categorical.categories[0].values[0]); // Fruit 50
+                    expect($(slicerTextClassSelector).eq(0).text()).toBe(dvFiltered.categorical.categories[0].values[0]); // Fruit 50
+                    expect($(slicerTextClassSelector).eq(0).attr('title')).toBe(dvFiltered.categorical.categories[0].values[0]);
                     expect($('.visibleGroup').eq(0).css('transform').split(',')[5].split(')')[0].trim()).toBe("0");
                     done();
                 }, DefaultWaitForRender);

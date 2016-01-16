@@ -454,7 +454,7 @@ module powerbi.data {
 
         /** Merges a list of SemanticFilters into one. */
         public static merge(filters: SemanticFilter[]): SemanticFilter {
-            if (ArrayExtensions.isUndefinedOrEmpty(filters))
+            if (_.isEmpty(filters))
                 return null;
 
             if (filters.length === 1)

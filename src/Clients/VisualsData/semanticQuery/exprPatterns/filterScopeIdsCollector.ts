@@ -73,6 +73,7 @@ module powerbi.data {
             this.isNot = false;
             this.keyExprsCount = null;
             this.valueExprs = [];
+
             // Need to drop the entitylet before create the scopeIdentity. The ScopeIdentity created on the client is used to
             // compare the ScopeIdentity came from the server. But server doesn't have the entity variable concept, so we will
             // need to drop it in order to use JsonComparer.

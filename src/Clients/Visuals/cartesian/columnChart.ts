@@ -1094,7 +1094,9 @@ module powerbi.visuals {
                     //set click interaction on the visual
                     this.svg.on('click', dragMove);
                     //set click interaction on the background
-                    d3.select(ColumnChartSvg).on('click', dragMove);
+                    d3.select(ColumnChartSvg)
+                        .on('click', dragMove)
+                        .style('touch-action', 'none');
                     let drag = d3.behavior.drag()
                         .origin(Object)
                         .on("drag", dragMove);

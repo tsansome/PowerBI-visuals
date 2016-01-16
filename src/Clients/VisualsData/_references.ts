@@ -79,5 +79,6 @@
 /// <reference path="semanticQuery\sqExprUtils.ts"/>
 /// <reference path="semanticQuery\semanticQueryRewriter.ts"/>
 /// <reference path="semanticQuery\semanticQuery.ts"/>
+/// <reference path="dataView\dataViewBuilder.ts"/>
 /// <reference path="services\formattingService.ts"/>
 /// <reference path="services\serialization\sqExprShortSerializer.ts"/>

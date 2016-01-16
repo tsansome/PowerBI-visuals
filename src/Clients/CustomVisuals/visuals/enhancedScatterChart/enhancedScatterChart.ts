@@ -1641,7 +1641,7 @@ module powerbi.visuals.samples {
             else {
                 dataLabelUtils.cleanDataLabels(this.mainGraphicsG);
             }
-            var behaviorOptions: ScatterBehaviorOptions = undefined;
+            var behaviorOptions = undefined;
             if (this.interactivityService) {
                 behaviorOptions = {
                     host: this.cartesianVisualHost,

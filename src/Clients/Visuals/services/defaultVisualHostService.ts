@@ -154,13 +154,13 @@ module powerbi.visuals {
         public shouldRetainSelection(): boolean { return false; }
         public geocoder(): IGeocoder { return services.createGeocoder(); }
         public promiseFactory(): IPromiseFactory { return createJQueryPromiseFactory(); }
-        public filterAnalyzer(filter: data.SemanticFilter, fieldSQExprs: data.SQExpr[]): IFilterAnalyzer {
+        public analyzedFilter(options: FilterAnalyzerOptions): AnalyzedFilter {
             return {
-                isNotFilter: ()=> false,
-                selectedIdentities: () => [],
-                hasDefaultFilterOverride: () => {
-                    return this.promiseFactory().resolve<boolean>(false);
-                }
+                isNotFilter: false,
+                selectedIdentities: [],
+                hasDefaultFilterOverride: () => false,
+                filter: undefined,
+                defaultValue: undefined,
             };
         }
         private static beautify(format: string): string {

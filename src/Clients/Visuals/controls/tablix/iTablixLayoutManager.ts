@@ -28,7 +28,7 @@
 
 module powerbi.visuals.controls {
 
-    export enum TablixCellType {
+    export const enum TablixCellType {
         CornerCell,
         RowHeader,
         ColumnHeader,

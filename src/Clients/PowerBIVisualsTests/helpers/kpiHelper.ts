@@ -28,9 +28,9 @@
 
 module powerbitests.kpiHelper {
     import ValueType = powerbi.ValueType;
-    import DataViewTransform = powerbi.data.DataViewTransform;        
+    import DataViewTransform = powerbi.data.DataViewTransform;
 
-    export function buildDataViewForRedTrend(): powerbi.DataView {        
+    export function buildDataViewForRedTrend(): powerbi.DataView {
         let dataViewMetadata: powerbi.DataViewMetadata = buildDefaultDataViewMetadata();
         let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategoricalForRedTrend();
         let dataView: powerbi.DataView = {
@@ -42,32 +42,32 @@ module powerbitests.kpiHelper {
     }
 
     function buildDefaultDataViewMetadata(): powerbi.DataViewMetadata {
-        return {
-            columns: [
-                { displayName: "TrendLine", type: ValueType.fromDescriptor({ text: true }) },
-                { displayName: "Indicator", type: ValueType.fromDescriptor({ numeric: true }), isMeasure: true, roles: { "Indicator": true } },
-                { displayName: "Goal", isMeasure: true }]
-        };
+        return buildDataViewMetadata(true, true, true, false);
     }
 
-    function buildDataViewCategoricalForRedTrend(): powerbi.DataViewCategorical {        
+    function buildDataViewCategoricalForRedTrend(): powerbi.DataViewCategorical {
         let dataViewMetadata = buildDefaultDataViewMetadata();
         let dataViewCategorical = {
             categories: [{
                 source: dataViewMetadata.columns[0],
-                values: ["Apple", "Orange", "Kiwi", "Grapes", "Banana"],   
+                values: [1, 2, 3, 4, 5],
                 identity: [
-                    mocks.dataViewScopeIdentity("Apple"),
-                    mocks.dataViewScopeIdentity("Orange"),
-                    mocks.dataViewScopeIdentity("Kiwi"),
-                    mocks.dataViewScopeIdentity("Grapes"),
-                    mocks.dataViewScopeIdentity("Banana")
-                ],            
+                    mocks.dataViewScopeIdentity(1),
+                    mocks.dataViewScopeIdentity(2),
+                    mocks.dataViewScopeIdentity(3),
+                    mocks.dataViewScopeIdentity(4),
+                    mocks.dataViewScopeIdentity(5)
+                ],
             }],
-            values: DataViewTransform.createValueColumns([{
-                source: dataViewMetadata.columns[1],                
-                values: [20, 10, 30, 15, 12]
-            },
+            values: DataViewTransform.createValueColumns([
+                {
+                    source: dataViewMetadata.columns[0],
+                    values: [1, 2, 3, 4, 5]
+                },
+                {
+                    source: dataViewMetadata.columns[1],
+                    values: [20, 10, 30, 15, 12]
+                },
                 {
                     source: dataViewMetadata.columns[2],
                     values: [20, 20, 20, 20, 20]
@@ -79,8 +79,22 @@ module powerbitests.kpiHelper {
 
     export function buildDataViewForGreenTrend(): powerbi.DataView {
         let dataView = buildDataViewForRedTrend();
-        dataView.categorical.values[0].values = [20, 10, 30, 15, 25];
-          
+        dataView.categorical.values[1].values = [20, 10, 30, 15, 25];
+
+        return dataView;
+    }
+
+    export function buildDataViewForYellowTrend(): powerbi.DataView {
+        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadata(true, true, true, true);
+
+        let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategorical(
+            dataViewMetadata.columns[0], dataViewMetadata.columns[1], dataViewMetadata.columns[2], dataViewMetadata.columns[3]);
+
+        let dataView: powerbi.DataView = {
+            metadata: dataViewMetadata,
+            categorical: dataViewCategorical
+        };
+
         return dataView;
     }
 
@@ -95,11 +109,106 @@ module powerbitests.kpiHelper {
         return dataView;
     }
 
+    export function buildDataViewWithMissingIndicator(): powerbi.DataView {
+        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadataForNoGoal();
+        let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategoricalForNoGoal();
+
+        dataViewMetadata.columns.pop();
+        dataViewCategorical.values.pop();
+
+        let dataView: powerbi.DataView = {
+            metadata: dataViewMetadata,
+            categorical: dataViewCategorical
+        };
+
+        return dataView;
+    }
+    
+    export function buildDataViewWithMissingIndicatorWITHGoal(): powerbi.DataView {
+        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadata(true, false, true, true);
+        let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategorical(dataViewMetadata.columns[0], null, dataViewMetadata.columns[1], dataViewMetadata.columns[2]);
+
+        let dataView: powerbi.DataView = {
+            metadata: dataViewMetadata,
+            categorical: dataViewCategorical
+        };
+
+        return dataView;
+    }
+
+    export function buildDataViewWithMissingTrendline(): powerbi.DataView {
+        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadata(false, true, false, false);
+        let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategorical(null, dataViewMetadata.columns[0], null, null);
+
+        let dataView: powerbi.DataView = {
+            metadata: dataViewMetadata,
+            categorical: dataViewCategorical
+        };
+
+        return dataView;
+    }
+
+    export function buildDataViewWithMissingTrendlineWITHGoal(): powerbi.DataView {
+        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadata(false, true, true, true);
+        let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategorical(null, dataViewMetadata.columns[0], dataViewMetadata.columns[1], dataViewMetadata.columns[2]);
+
+        let dataView: powerbi.DataView = {
+            metadata: dataViewMetadata,
+            categorical: dataViewCategorical
+        };
+
+        return dataView;
+    }
+
+    export function buildDataViewWithMissingTrendlineAndIndicator(): powerbi.DataView {
+        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadata(false, false, false, false);
+        let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategorical(null, null, null, null);
+
+        let dataView: powerbi.DataView = {
+            metadata: dataViewMetadata,
+            categorical: dataViewCategorical
+        };
+
+        return dataView;
+    }
+
+    export function buildDataViewWithMissingTrendlineAndIndicatorBUTWithGoals(): powerbi.DataView {
+        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadata(false, false, true, true);
+        let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategorical(null, null, dataViewMetadata.columns[0], dataViewMetadata.columns[1]);
+
+        let dataView: powerbi.DataView = {
+            metadata: dataViewMetadata,
+            categorical: dataViewCategorical
+        };
+
+        return dataView;
+    }
+
     function buildDataViewMetadataForNoGoal(): powerbi.DataViewMetadata {
+        return buildDataViewMetadata(true, true, false, false);
+    }
+
+    function buildDataViewMetadata(trendline: boolean, indicator: boolean, lowGoal: boolean, highGoal: boolean): powerbi.DataViewMetadata {
+        let columns: powerbi.DataViewMetadataColumn[] = [];
+
+        if (trendline) {
+            columns.push({ displayName: "TrendLine", type: ValueType.fromDescriptor({ text: true }), roles: { "TrendLine": true } });
+        }
+
+        if (indicator) {
+            columns.push({ displayName: "Indicator", isMeasure: true, type: ValueType.fromDescriptor({ numeric: true }), roles: { "Indicator": true } });
+        }
+
+        if (lowGoal) {
+            columns.push({ displayName: "Goal", isMeasure: true, roles: { "Goal": true } });
+        }
+
+        if (highGoal) {
+            columns.push({ displayName: "Goal", isMeasure: true, roles: { "Goal": true } });
+        }
+
         return {
-            columns: [
-                { displayName: "Fruit", type: ValueType.fromDescriptor({ text: true }) },
-                { displayName: "Indicator", isMeasure: true, type: ValueType.fromDescriptor({ numeric: true }), roles: { "Indicator": true } },]          
+            columns: columns
         };
     }
 
@@ -108,26 +217,100 @@ module powerbitests.kpiHelper {
         let dataViewCategorical = {
             categories: [{
                 source: dataViewMetadata.columns[0],
-                values: ["Apple", "Orange", "Kiwi", "Grapes", "Banana"],
+                values: [1, 2, 3, 4, 5],
                 identity: [
-                    mocks.dataViewScopeIdentity("Apple"),
-                    mocks.dataViewScopeIdentity("Orange"),
-                    mocks.dataViewScopeIdentity("Kiwi"),
-                    mocks.dataViewScopeIdentity("Grapes"),
-                    mocks.dataViewScopeIdentity("Banana")
+                    mocks.dataViewScopeIdentity(1),
+                    mocks.dataViewScopeIdentity(2),
+                    mocks.dataViewScopeIdentity(3),
+                    mocks.dataViewScopeIdentity(4),
+                    mocks.dataViewScopeIdentity(5)
                 ],
             }],
-            values: DataViewTransform.createValueColumns([{
-                source: dataViewMetadata.columns[1],
-                values: [20, 10, 30, 15, 18]
-            }])
+            values: DataViewTransform.createValueColumns([
+                {
+                    source: dataViewMetadata.columns[0],
+                    values: [1, 2, 3, 4, 5]
+                },
+                {
+                    source: dataViewMetadata.columns[1],
+                    values: [20, 10, 30, 15, 12]
+                }])
+        };
+
+        return dataViewCategorical;
+    }
+
+    function buildDataViewCategorical(trendlineMetaDataColumn: powerbi.DataViewMetadataColumn, indicatorMetaDataColumn: powerbi.DataViewMetadataColumn,
+        lowGoalMetaDataColumn: powerbi.DataViewMetadataColumn, highGoalMetaDataColumn: powerbi.DataViewMetadataColumn): powerbi.DataViewCategorical {
+
+        let dataViewValueColumns: powerbi.DataViewValueColumn[] = [];
+
+        let sourceColumn: powerbi.DataViewMetadataColumn;
+
+        if (trendlineMetaDataColumn) {
+            dataViewValueColumns.push({
+                source: trendlineMetaDataColumn,
+                values: [1, 2, 3, 4, 5]
+            });
+
+            sourceColumn = trendlineMetaDataColumn;
+        }
+
+        if (indicatorMetaDataColumn) {
+            dataViewValueColumns.push({
+                source: indicatorMetaDataColumn,
+                values: [20, 10, 30, 15, 12]
+            });
+
+            if (!sourceColumn) {
+                sourceColumn = indicatorMetaDataColumn;
+            }
+        }
+
+        if (lowGoalMetaDataColumn) {
+            dataViewValueColumns.push({
+                source: lowGoalMetaDataColumn,
+                values: [1, 1, 1, 1, 1]
+            });
+        }
+
+        if (highGoalMetaDataColumn) {
+            dataViewValueColumns.push({
+                source: highGoalMetaDataColumn,
+                values: [100, 200, 300, 400, 500]
+            });
+        }
+
+        let source: powerbi.DataViewMetadataColumn;
+        let values: number[];
+        let identity: powerbi.DataViewScopeIdentity[];
+
+        if (trendlineMetaDataColumn && indicatorMetaDataColumn) {
+            source = sourceColumn;
+            values = [1, 2, 3, 4, 5];
+            identity = [
+                mocks.dataViewScopeIdentity(1),
+                mocks.dataViewScopeIdentity(2),
+                mocks.dataViewScopeIdentity(3),
+                mocks.dataViewScopeIdentity(4),
+                mocks.dataViewScopeIdentity(5)
+            ];
+        }
+
+        let dataViewCategorical = {
+            categories: [{
+                source: source,
+                values: values,
+                identity: identity,
+            }],
+            values: DataViewTransform.createValueColumns(dataViewValueColumns)
         };
 
         return dataViewCategorical;
     }
 
     export function buildDataViewForGreenNoTrend(): powerbi.DataView {
-        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadataForGreenNoTrend();
+        let dataViewMetadata: powerbi.DataViewMetadata = buildDataViewMetadataForNoTrend();
         let dataViewCategorical: powerbi.DataViewCategorical = buildDataViewCategoricalForGreenNoTrend();
         let dataView: powerbi.DataView = {
             metadata: dataViewMetadata,
@@ -137,24 +320,20 @@ module powerbitests.kpiHelper {
         return dataView;
     }
 
-    function buildDataViewMetadataForGreenNoTrend(): powerbi.DataViewMetadata {
-        return {
-            columns: [                
-                { displayName: "Indicator", isMeasure: true, type: ValueType.fromDescriptor({ numeric: true }), roles: { "Indicator": true } }, 
-                { displayName: "Goal", isMeasure: true, roles: { "Goal": true }}]
-        };
+    function buildDataViewMetadataForNoTrend(): powerbi.DataViewMetadata {
+        return buildDataViewMetadata(false, true, true, false);
     }
 
     function buildDataViewCategoricalForGreenNoTrend(): powerbi.DataViewCategorical {
-        let dataViewMetadata = buildDataViewMetadataForGreenNoTrend();
-        let dataViewCategorical = {         
+        let dataViewMetadata = buildDataViewMetadataForNoTrend();
+        let dataViewCategorical = {
             values: DataViewTransform.createValueColumns([{
                 source: dataViewMetadata.columns[0],
                 values: [20]
             },
                 {
                     source: dataViewMetadata.columns[1],
-                    values: [15]                
+                    values: [15]
                 }])
         };
 

@@ -31,12 +31,16 @@ module powerbi.visuals {
     import createClassAndSelector = jsCommon.CssConstants.createClassAndSelector;
 
     export interface ScatterBehaviorOptions {
-        host: ICartesianVisualHost;
-        root: D3.Selection;
-        mainContext: D3.Selection;
-        background: D3.Selection;
         dataPointsSelection: D3.Selection;
         data: ScatterChartData;
+        plotContext: D3.Selection;
+        playOptions?: PlayBehaviorOptions;
+    }
+
+    export interface ScatterMobileBehaviorOptions extends ScatterBehaviorOptions {
+        host: ICartesianVisualHost;
+        root: D3.Selection;
+        background: D3.Selection;
         visualInitOptions: VisualInitOptions;
         xAxisProperties: IAxisProperties;
         yAxisProperties: IAxisProperties;
@@ -46,10 +50,21 @@ module powerbi.visuals {
         private bubbles: D3.Selection;
         private shouldEnableFill: boolean;
         private colorBorder: boolean;
+        private playOptions: PlayBehaviorOptions;
 
         public bindEvents(options: ScatterBehaviorOptions, selectionHandler: ISelectionHandler): void {
             let bubbles = this.bubbles = options.dataPointsSelection;
             let data = options.data;
+
+            // If we are removing play-axis, remove the trace lines as well
+            // TODO: revisit this design, I think ideally this is done when rendering scatter.
+            if (this.playOptions
+                && this.playOptions.traceLineRenderer
+                && (!options.playOptions || !options.playOptions.traceLineRenderer)) {
+                this.playOptions.traceLineRenderer.remove();
+            }
+
+            this.playOptions = options.playOptions;
             this.shouldEnableFill = (!data.sizeRange || !data.sizeRange.min) && data.fillPoint;
             this.colorBorder = data.colorBorder;
 
@@ -63,6 +78,17 @@ module powerbi.visuals {
             let colorBorder = this.colorBorder;
             this.bubbles.style("fill-opacity", (d: ScatterChartDataPoint) => (d.size != null || shouldEnableFill) ? ScatterChart.getBubbleOpacity(d, hasSelection) : 0);
             this.bubbles.style("stroke-opacity", (d: ScatterChartDataPoint) => (d.size != null && colorBorder) ? 1 : ScatterChart.getBubbleOpacity(d, hasSelection));
+
+            if (this.playOptions && this.bubbles) {
+                let selectedPoints = this.bubbles.filter((d: SelectableDataPoint) => d.selected);
+                let traceLineRenderer = this.playOptions.traceLineRenderer;
+                if (selectedPoints && selectedPoints.data().length > 0 && traceLineRenderer != null) {
+                    traceLineRenderer.render(selectedPoints.data(), true);
+                }
+                else {
+                    traceLineRenderer.remove();
+                }
+            }
         }
     }
 
@@ -95,7 +121,7 @@ module powerbi.visuals {
         private xAxisProperties: IAxisProperties;
         private yAxisProperties: IAxisProperties;
 
-        public bindEvents(options: ScatterBehaviorOptions, selectionHandler: ISelectionHandler): void {
+        public bindEvents(options: ScatterMobileBehaviorOptions, selectionHandler: ISelectionHandler): void {
             this.setOptions(options);
 
             if (!options.visualInitOptions || !options.visualInitOptions.interactivity.isInteractiveLegend) {
@@ -107,7 +133,7 @@ module powerbi.visuals {
             this.makeDataPointsSelectable(options.dataPointsSelection);
             this.makeRootSelectable(options.root);
             this.makeDragable(options.root);
-
+            this.disableDefaultTouchInteractions(options.root);
             this.selectRoot();
         }
 
@@ -143,9 +169,13 @@ module powerbi.visuals {
             }
         }
 
-        public setOptions(options: ScatterBehaviorOptions) {
+        private disableDefaultTouchInteractions(selection: D3.Selection): void {
+            selection.style('touch-action', 'none');
+        }
+
+        public setOptions(options: ScatterMobileBehaviorOptions) {
             this.data = options.data;
-            this.mainGraphicsContext = options.mainContext;
+            this.mainGraphicsContext = options.plotContext;
             this.xAxisProperties = options.xAxisProperties;
             this.yAxisProperties = options.yAxisProperties;
             this.host = options.host;

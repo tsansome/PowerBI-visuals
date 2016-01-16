@@ -33,7 +33,9 @@ module powerbitests {
     const enum NavigationDirection {
         Left,
         Right
-    }
+    };
+
+    let dataViewMetadataWithLongName = slicerHelper.buildDataViewMetadataWithLongName();
 
     powerbitests.mocks.setLocale();
 
@@ -86,7 +88,7 @@ module powerbitests {
             jasmine.clock().uninstall();
         });
 
-        xit("DOM validation", () => {
+        it("DOM validation", () => {
             spyOn(powerbi.visuals.valueFormatter, "format").and.callThrough();
 
             helpers.fireOnDataChanged(visual, interactiveDataViewOptions);
@@ -95,13 +97,15 @@ module powerbitests {
             expect($(".horizontalSlicerContainer .headerText")).toBeInDOM();
             expect($(".horizontalSlicerContainer .slicerHeader .clear")).toBeInDOM();
             expect($(".horizontalSlicerContainer .slicerBody")).toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.left.show")).not.toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right.show")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollLeft")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollRight")).not.toBeInDOM();
             expect($(".horizontalSlicerContainer .slicerBody .slicerItemsContainer .slicerText")).toBeInDOM();
             slicerText = getSlicerTextContainer();
             expect(slicerText.length).toBe(6);
             expect(slicerText.first().text()).toBe(slicerHelper.SelectAllTextKey);
+            expect(slicerText.first().attr('title')).toBe(slicerHelper.SelectAllTextKey);
             expect(slicerText.last().text()).toBe("Banana");
+            expect(slicerText.last().attr('title')).toBe("Banana");
 
             expect(powerbi.visuals.valueFormatter.format).toHaveBeenCalledWith("Apple", undefined);
             expect(powerbi.visuals.valueFormatter.format).toHaveBeenCalledWith("Orange", undefined);
@@ -110,23 +114,54 @@ module powerbitests {
             expect(powerbi.visuals.valueFormatter.format).toHaveBeenCalledWith("Banana", undefined);
 
             visual.onResizing(viewport);
-
+            jasmine.clock().tick(0);
             expect($(".horizontalSlicerContainer")).toBeInDOM();
             expect($(".horizontalSlicerContainer .headerText")).toBeInDOM();
             expect($(".horizontalSlicerContainer .slicerHeader .clear")).toBeInDOM();
             expect($(".horizontalSlicerContainer .slicerBody")).toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.left.show")).not.toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right.show")).toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollLeft")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollRight")).toBeInDOM();
+            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right").css("visibility")).toBe("visible");
             expect($(".horizontalSlicerContainer .slicerBody .slicerItemsContainer .slicerText")).toBeInDOM();
             slicerText = getSlicerTextContainer();
             expect(slicerText.length).toBe(4);
             expect(slicerText.first().text()).toBe(WrappedSelectAllTextKey); // This will be wrapped into two columns
+            expect(slicerText.first().attr('title').trim()).toBe(slicerHelper.SelectAllTextKey);
             expect(slicerText.last().text()).toBe("Kiwi");
+            expect(slicerText.last().attr('title')).toBe("Kiwi");
+        });
+
+        it("DOM Validation - Tooltip of Long Text", () => {
+            let dataView2: powerbi.DataView = {
+                metadata: dataViewMetadataWithLongName,
+                categorical: {
+                    categories: [{
+                        source: dataViewMetadataWithLongName.columns[0],
+                        values: slicerHelper.longSlicerItems,
+                        identity: [
+                            mocks.dataViewScopeIdentityWithEquality(field, "First"),
+                            mocks.dataViewScopeIdentityWithEquality(field, "Second"),
+                            mocks.dataViewScopeIdentityWithEquality(field, "Third")
+                        ],
+                        identityFields: [field],
+                    }]
+                }
+            };
+
+            helpers.fireOnDataChanged(visual, { dataViews: [dataView2] });
+
+            //Test Slicer header tooltip
+            expect($(slicerHelper.slicerHeaderClassSelector)[0].title).toBe(dataView2.metadata.columns[0].displayName);
+
+            //Test Slicer Items tooltip
+            for (let i = 0; i < dataView2.categorical.categories[0].values.length; i++) {
+                expect($(slicerHelper.slicerTextClassSelector)[i].title).toBe(dataView2.categorical.categories[0].values[i]);
+            }
         });
 
         it("Text wraps into multiple columns when there is no enough space", () => {
             helpers.fireOnDataChanged(visual, interactiveDataViewOptions);
-
+            jasmine.clock().tick(0);
             expect($(".horizontalSlicerContainer .slicerBody .slicerItemsContainer .slicerText")).toBeInDOM();
             slicerText = getSlicerTextContainer();
             expect(slicerText.length).toBe(6);
@@ -137,72 +172,83 @@ module powerbitests {
                 width: 200
             };
             visual.onResizing(viewport2);
-
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
             expect(slicerText.length).toBe(3);
             expect(slicerText.first().children().length).toBe(2);
             expect(slicerText.first().children().first().text()).toBe("Select");
             expect(slicerText.first().children().last().text()).toBe("All");
+            expect(slicerText.attr('title')).toBe(slicerHelper.SelectAllTextKey);
         });
 
-        xit("Validate scroll behavior", () => {
+        it("Validate scroll behavior", () => {
             visual.onResizing(viewport);
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.left.show")).not.toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right.show")).toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollLeft")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollRight")).toBeInDOM();
             expect(slicerText.length).toBe(4);
             expect(slicerText.last().text()).toBe("Kiwi");
 
             // Right Navigation
             navigate(NavigationDirection.Right);
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.left.show")).toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right.show")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollLeft")).toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollRight")).not.toBeInDOM();
             expect(slicerText.length).toBe(4);
             expect(slicerText.first().text()).toBe("Orange");
             expect(slicerText.last().text()).toBe("Banana");
 
             // Left Navigation
             navigate(NavigationDirection.Left);
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.left.show")).not.toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right.show")).toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollLeft")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollRight")).toBeInDOM();
             expect(slicerText.length).toBe(4);
             expect(slicerText.first().text()).toBe(WrappedSelectAllTextKey);
             expect(slicerText.last().text()).toBe("Kiwi");
         });
 
-        xit("Validate scroll behavior with mouseWheel", () => {
+        it("Validate scroll behavior with mouseWheel", () => {
             visual.onResizing(viewport);
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.left.show")).not.toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right.show")).toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollLeft")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollRight")).toBeInDOM();
             expect(slicerText.length).toBe(4);
             expect(slicerText.last().text()).toBe("Kiwi");
+            expect(slicerText.last().attr('title')).toBe("Kiwi");
 
             let slicerBody = $(".slicerBody").get(0);
 
             // Right Navigation
             slicerBody.dispatchEvent(helpers.createMouseWheelEvent("mousewheel", -100));
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.left.show")).toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right.show")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollLeft")).toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollRight")).not.toBeInDOM();
             expect(slicerText.length).toBe(4);
             expect(slicerText.first().text()).toBe("Orange");
+            expect(slicerText.first().attr('title')).toBe("Orange");
             expect(slicerText.last().text()).toBe("Banana");
+            expect(slicerText.last().attr('title')).toBe("Banana");
 
             // Left Navigation
             slicerBody.dispatchEvent(helpers.createMouseWheelEvent("mousewheel", 100));
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.left.show")).not.toBeInDOM();
-            expect($(".horizontalSlicerContainer .slicerBody .navigationArrow.right.show")).toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollLeft")).not.toBeInDOM();
+            expect($(".horizontalSlicerContainer.canScrollRight")).toBeInDOM();
             expect(slicerText.length).toBe(4);
             expect(slicerText.first().text()).toBe(WrappedSelectAllTextKey);
+            expect(slicerText.first().attr('title')).toBe(slicerHelper.SelectAllTextKey);
             expect(slicerText.last().text()).toBe("Kiwi");
+            expect(slicerText.last().attr('title')).toBe("Kiwi");
         });
 
         it("Validate scroll behavior with 1 visible item", () => {
-            
             // smaller dataset          
             let dataview2 = slicerHelper.buildSequenceDataView(field, 0, 3);
             dataview2.metadata.objects = slicerHelper.buildDefaultDataViewObjects(SlicerOrientation.Horizontal);
@@ -214,40 +260,47 @@ module powerbitests {
                 width: 80
             };
             visual.onResizing(viewport);
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
             expect(slicerText.length).toBe(1);
             slicerHelper.validateSlicerItem(WrappedSelectAllTextKey, 0);
 
             // Right Navigation
             navigate(NavigationDirection.Right);
+            jasmine.clock().tick(0);
             slicerText = getSlicerTextContainer();
             slicerHelper.validateSlicerItem("fruit0");
 
             // Right Navigation
             navigate(NavigationDirection.Right);
+            jasmine.clock().tick(0);
             slicerHelper.validateSlicerItem("fruit1");
 
             // Right Navigation
             navigate(NavigationDirection.Right);
+            jasmine.clock().tick(0);
             slicerHelper.validateSlicerItem("fruit2");
 
             // Left Navigation
             navigate(NavigationDirection.Left);
+            jasmine.clock().tick(0);
             slicerHelper.validateSlicerItem("fruit1");
 
             // Left Navigation
             navigate(NavigationDirection.Left);
+            jasmine.clock().tick(0);
             slicerHelper.validateSlicerItem("fruit0");
             
             // Left Navigation
             navigate(NavigationDirection.Left);
+            jasmine.clock().tick(0);
             slicerHelper.validateSlicerItem(WrappedSelectAllTextKey, 0);
         });
 
     });
 
     function getSlicerTextContainer(): JQuery {
-        return $(".slicerText");
+        return $(slicerHelper.slicerTextClassSelector);
     }
 
     function navigate(direction: NavigationDirection): void {

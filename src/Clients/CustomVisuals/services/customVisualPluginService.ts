@@ -111,6 +111,9 @@ module powerbi.visuals.visualPluginFactory {
 
             // Bullet Chart
             createPlugin(this.customVisualPlugins, powerbi.visuals.plugins.bulletChart, () => new samples.BulletChart());
+
+            // Force Graph
+            createPlugin(this.customVisualPlugins, powerbi.visuals.plugins.forceGraph, () => new samples.ForceGraph());
         }
     }
 

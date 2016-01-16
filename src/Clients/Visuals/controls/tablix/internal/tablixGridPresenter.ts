@@ -353,7 +353,7 @@ module powerbi.visuals.controls.internal {
         public setLeadingSpace(leadingSpaces: number): void {
             this._tableCell.style.paddingTop = leadingSpaces + TablixUtils.UnitOfMeasurement;
         }
-   
+
         public onClear(): void {
             this._contentHost.className = "";
             this._contentHostStyle = "";
@@ -378,21 +378,21 @@ module powerbi.visuals.controls.internal {
             HTMLElementUtils.setElementHeight(this._contentHost, -1);
         }
 
-        public setContentHostStyle(style: string) {
+        public setContentHostStyle(style: string): void {
             if (this._contentHostStyle !== style) {
                 this._contentHostStyle = style;
                 this._contentHost.className = this._contentHostStyle;
             }
         }
 
-        public setContainerStyle(style: string) {
+        public setContainerStyle(style: string): void {
             if (this._containerStyle !== style) {
                 this._containerStyle = style;
                 this._tableCell.className = this._containerStyle + " " + TablixCellPresenter._noMarginsStyleName;
             }
         }
 
-        public clearContainerStyle() {
+        public clearContainerStyle(): void {
             this._containerStyle = undefined;
             if (this._tableCell.className !== TablixCellPresenter._noMarginsStyleName)
                 this._tableCell.className = TablixCellPresenter._noMarginsStyleName;
@@ -401,6 +401,16 @@ module powerbi.visuals.controls.internal {
             this._tableCell.style.border = "";
             this._tableCell.style.background = "";
             this._tableCell.style.color = "";
+        }
+
+        public clearTextAndTooltip(): void {
+            this.contentHost.textContent = '';
+            this.contentHost.removeAttribute('title');
+        }
+
+        public setTextAndTooltip(text: string): void {
+            this.contentHost.textContent = text;
+            this.contentHost.title = text;
         }
 
         public enableHorizontalResize(enable: boolean, handler: ITablixResizeHandler): void {

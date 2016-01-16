@@ -79,7 +79,7 @@ module powerbitests {
     let webPluginService = new powerbi.visuals.visualPluginFactory.MinervaVisualPluginService({});
     let dashboardPluginService = new powerbi.visuals.visualPluginFactory.DashboardPluginService({});
 
-    let tableTotals:  powerbi.DataViewObjects = {
+    let tableTotals: powerbi.DataViewObjects = {
         general: {
             totals: true,
             autoSizeColumnWidth: true,
@@ -87,7 +87,7 @@ module powerbitests {
         }
     };
 
-    let tableTotalsIncreasedFontSize:  powerbi.DataViewObjects = {
+    let tableTotalsIncreasedFontSize: powerbi.DataViewObjects = {
         general: {
             totals: true,
             autoSizeColumnWidth: true,
@@ -207,6 +207,22 @@ module powerbitests {
             objects: tableTotalsIncreasedFontSize,
         },
         table: dataViewTableTwoGroups
+    };
+
+    let tableWithLongText: DataView = {
+        metadata: {
+            columns: [groupSource1, groupSource2, measureSource1, measureSource2, measureSource3],
+            objects: tableTotals
+        },
+        table: {
+            columns: [groupSource1, groupSource2, measureSource1, measureSource2, measureSource3],
+            rows: [
+                ["432432432", "a5", 344344, 1043241, 104342],
+                ["g4", "432432432", 114324325, 116, 432432432],
+                ["114324325", "114324325", 43242, 114324325, 3243242334]
+            ],
+            totals: [null, null, null, 114711911, 115367542, 3672424338]
+        }
     };
 
     let tableTwoGroupsThreeMeasures: DataView = {
@@ -2191,6 +2207,30 @@ module powerbitests {
                     ['powervisuals-glyph caret-up', 'powervisuals-glyph caret-down'];
 
                 validateSortIcons(expectedCells);
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it("ensure table elements have tooltip", (done) => {
+
+            let dataView = tableWithLongText;
+            v.onDataChanged({ dataViews: [dataView] });
+
+            setTimeout(() => {
+                //Validate Column Headers title
+                tablixHelper.validateTableColumnHeaderTooltip(ColumnHeaderClassNameIconHidden, dataView);
+
+                //Validate Items Title
+                for (let i = 0; i < dataView.table.rows.length - 1; i++) {
+                    tablixHelper.validateTableRowTooltip(RowClassName, dataView, i);
+                }
+               
+                //Validate last row and title 
+                tablixHelper.validateTableRowTooltip(LastRowClassName, dataView, dataView.table.rows.length - 1);
+
+                //Validate row footer tooltip
+                tablixHelper.validateTableRowFooterTooltip(FooterClassName, dataView, dataView.table.rows.length);
+
                 done();
             }, DefaultWaitForRender);
         });

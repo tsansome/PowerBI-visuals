@@ -471,7 +471,7 @@ module powerbitests {
             setTimeout(() => {
                 expect($(".dataDotChart .axisGraphicsContext .x.axis .tick").length).toBeGreaterThan(0);
                 expect($(".dataDotChart .axisGraphicsContext .y.axis .tick").length).toBeGreaterThan(0);
-                expect($(".dataDotChart .axisGraphicsContext .y.axis .tick").find("text").first().text()).toBe("0M");
+                expect($(".dataDotChart .axisGraphicsContext .y.axis .tick").find("text").first().text()).toBe("0.0M");
                 expect($(".dataDotChart .axisGraphicsContext .y.axis .tick").find("text").last().text()).toBe("0.5M");
                 done();
             }, DefaultWaitForRender);
@@ -548,7 +548,7 @@ module powerbitests {
                 expect($label1.text()).toBe("0.5M");
 
                 let $label3 = $($labels.get(2));
-                expect($label3.text()).toBe("0.49M");
+                expect($label3.text()).toBe("0.5M");
 
                 done();
             }, DefaultWaitForRender);

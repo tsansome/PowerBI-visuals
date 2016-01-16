@@ -166,7 +166,7 @@ module powerbitests {
 
             // Provides category thickness is not set when not defined
             var categoryThickness = <any>axisProperties.categoryThickness;
-            expect(categoryThickness).toBeUndefined();        
+            expect(categoryThickness).toBeUndefined();
 
             // Proves label max width is pixelSpan/tickValues when categoryThickness not defined
             var xLabelMaxWidth = <any>axisProperties.xLabelMaxWidth;
@@ -426,8 +426,7 @@ module powerbitests {
             expect(values[1]).toBe('$500T');
         });
 
-        it('create linear percent value scale', () => {
-            
+        it('create linear percent value scale', () => {    
             // Overriding format and leaving only positive format
             let metaDataColumnPercent: powerbi.DataViewMetadataColumn = {
                 displayName: 'Column',
@@ -707,8 +706,7 @@ module powerbitests {
             expect(actual).toEqual(expected);
         });
 
-        it("getRecommendedTickValues: very precise decimal values and funny d3 zero tick values", () => {
-            
+        it("getRecommendedTickValues: very precise decimal values and funny d3 zero tick values", () => {    
             // Zero value originally returned from d3 ticks() call is "-1.7763568394002505e-17" (i.e. -1e-33)
             var expected = [-0.15000000000000002, -0.10000000000000002, -0.05000000000000002, 0, 0.04999999999999998, 0.09999999999999998];
             var scale = AxisHelper.createLinearScale(400, [-0.150000000000002, .10000000008000006]);
@@ -830,12 +828,12 @@ module powerbitests {
         it('createFormatter: value (millions)', () => {
             let min = 0,
                 max = 2e6,
-                value = 1e6,
                 tickValues = [0, 0.5e6, 1e6, 1.5e6, 2e6];
 
-            expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true)
-                .format(value))
-                .toBe('$1M');
+            let formatter = AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true);
+            expect(formatter.format(tickValues[0])).toBe('$0.0M');
+            expect(formatter.format(tickValues[2])).toBe('$1.0M');
+            expect(formatter.format(tickValues[3])).toBe('$1.5M');
         });
 
         it('createFormatter: value (huge)', () => {
@@ -845,7 +843,7 @@ module powerbitests {
                 tickValues = [0, 1e14, 2e14, 2e14, 4e14, 5e14, 6e14];
 
             // Used to return '5.63732E+14', not the correct currency value
-            let expectedValue = '$563.73T';
+            let expectedValue = '$564T';
             expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true)
                 .format(value))
                 .toBe(expectedValue);
@@ -888,6 +886,44 @@ module powerbitests {
             expect(AxisHelper.createFormatter([min, min], [min, min], dateColumn.type, true, dateColumn.format, 6, [/*not used by datetime*/], 'getValueFn', true)
                 .format(new Date(min)))
                 .toBe('Jul 14');
+        });
+
+        describe('createFormatter: value (detected precision)', () => {
+            it('precision(1)', () => {
+                let min = 0,
+                    max = 200,
+                    value = 1,
+                    tickValues = [0, 0.5, 1, 1.5, 2];
+
+                expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true)
+                    .format(value))
+                    .toBe('$1.0');
+            });
+
+            it('precision(0)', () => {
+                let min = 0,
+                    max = 200,
+                    value = 1,
+                    tickValues = [0, 1, 2, 3, 4];
+
+                expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true)
+                    .format(value))
+                    .toBe('$1');
+            });
+        });
+
+        describe('createFormatter: value (specified precision)', () => {
+            it('precision(2)', () => {
+                let min = 0,
+                    max = 200,
+                    value = 1,
+                    tickValues = [0, 0.5, 1, 1.5, 2];
+
+                let specifiedPrecision = 2;
+                expect(AxisHelper.createFormatter([min, max], [min, max], measureColumn.type, true, measureColumn.format, 6, tickValues, 'getValueFn', true, undefined, specifiedPrecision)
+                    .format(value))
+                    .toBe('$1.00');
+            });
         });
     });
 

@@ -43,7 +43,7 @@ module powerbi {
         /** Reshapes the data view to match the provided schema if possible. If not, returns null */
         export function validateAndReshape(dataView: DataView, dataViewMappings: DataViewMapping[]): ValidateAndReshapeResult {
             if (!dataViewMappings || dataViewMappings.length === 0)
-                return { dataView: dataView, isValid: true };
+                return { dataView: dataView, isValid: true };            
 
             if (dataView) {
                 for (let dataViewMapping of dataViewMappings) {
@@ -78,6 +78,7 @@ module powerbi {
 
         function reshapeCategorical(dataView: DataView, dataViewMapping: DataViewMapping): ValidateAndReshapeResult {
             debug.assertValue(dataViewMapping, 'dataViewMapping');
+
             //The functionality that used to compare categorical.values.length to schema.values doesn't apply any more, we don't want to use the same logic for re-shaping.
             let categoryRoleMapping = dataViewMapping.categorical;
             let categorical = dataView.categorical;

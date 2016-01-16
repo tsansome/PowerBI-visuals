@@ -394,7 +394,7 @@ module powerbi.visuals.samples {
         }
 
         public update(options: VisualUpdateOptions) {
-            if (!options.dataViews && !options.dataViews[0]) {
+            if (!options.dataViews || !options.dataViews[0]) {
                 return;
             };
 

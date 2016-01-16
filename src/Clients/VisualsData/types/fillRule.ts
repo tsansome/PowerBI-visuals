@@ -41,6 +41,7 @@ module powerbi {
     export interface FillRuleGeneric<TColor, TValue> {
         linearGradient2?: LinearGradient2Generic<TColor, TValue>;
         linearGradient3?: LinearGradient3Generic<TColor, TValue>;
+
         // stepped2?
         // ...
     }

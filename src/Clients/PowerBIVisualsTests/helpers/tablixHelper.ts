@@ -29,6 +29,8 @@
 module powerbitests.tablixHelper {
     import CssConstants = jsCommon.CssConstants;
     import DataView = powerbi.DataView;
+    import ValueFormatter = powerbi.visuals.valueFormatter;
+    import TablixUtils = powerbi.visuals.controls.internal.TablixUtils;
 
     export interface TableCellCoordinate {
         row: number;
@@ -222,7 +224,8 @@ module powerbitests.tablixHelper {
     export function validateTable(expectedValues: string[][], selector: string): void {
         var rows = $(selector);
 
-        var result: string[][] = [];
+        var textResult: string[][] = [];
+        var titleResult: string[][] = [];
         var errorString: string = null;
 
         var ilen = rows.length;
@@ -230,7 +233,8 @@ module powerbitests.tablixHelper {
             addError(errorString, "Actual row count " + ilen + " does not match expected number of rows " + expectedValues.length + ".");
 
         for (var i = 0; i < ilen; i++) {
-            result[i] = [];
+            textResult[i] = [];
+            titleResult[i] = [];
             var cells = rows.eq(i).find('td');
 
             var jlen = cells.length;
@@ -238,9 +242,17 @@ module powerbitests.tablixHelper {
                 addError(errorString, "Actual column count " + jlen + " in row " + i + " does not match expected number of columns " + expectedValues[i].length + ".");
 
             for (var j = 0; j < jlen; j++) {
-                result[i][j] = cells.eq(j).text();
-                if (result[i][j] !== expectedValues[i][j])
-                    addError(errorString, "Actual value " + result[i][j] + " in row " + i + " and column " + j + " does not match expected value " + expectedValues[i][j] + ".");
+                textResult[i][j] = cells.eq(j).text();
+                titleResult[i][j] = getTitleOfTablixItem(cells.eq(j));
+                
+                //this check only empty header cells
+                if (titleResult[i][j] === '' && expectedValues[i][j] === "\xa0")
+                    titleResult[i][j] = expectedValues[i][j];
+
+                if (textResult[i][j] !== expectedValues[i][j])
+                    addError(errorString, "Actual value " + textResult[i][j] + " in row " + i + " and column " + j + " does not match expected value " + expectedValues[i][j] + ".");
+                if (titleResult[i][j] !== expectedValues[i][j])
+                    addError(errorString, "Actual tooltip " + textResult[i][j] + " in row " + i + " and column " + j + " does not match expected value " + expectedValues[i][j] + ".");
 
                 if (cells.eq(j).height() <= 1)
                     addError(errorString, "Actual height " + cells.eq(j).height() + " in row " + i + " and column " + j + " is expected to be > 1.");
@@ -248,7 +260,26 @@ module powerbitests.tablixHelper {
         }
 
         expect(errorString).toBeNull();
-        expect(result).toEqual(expectedValues);
+        expect(textResult).toEqual(expectedValues);
+        expect(titleResult).toEqual(expectedValues);
+    }
+
+    function getTitleOfTablixItem(cells: JQuery): string {
+        let titleText = cells.find('div div').attr('title');
+        if (titleText) 
+            return titleText;
+        
+        //The item is url type
+        titleText = cells.find('div div a').attr('title');
+        if (titleText) 
+            return titleText;
+
+        //The item is table header
+        titleText = cells.find('div div:last').attr('title');
+        if (titleText) 
+            return titleText;
+ 
+        return "";
     }
 
     export function validateSortIconClassNames(expectedValues: string[], selector: string): void {
@@ -372,5 +403,54 @@ module powerbitests.tablixHelper {
             return noMarginClass;
 
         return classNames + ' ' + noMarginClass;
+    }
+
+    export function validateTableColumnHeaderTooltip(selector: string, dataView: powerbi.DataView): void {
+        let tableItems = $("tr").eq(0).find(`.${selector} div div:last-child`);
+        let values = dataView.table.columns;
+
+        for (let i = 0; i < values.length; i++) {
+            expect(tableItems[i].textContent).toBe(values[i].displayName);
+            expect(tableItems[i].title).toBe(values[i].displayName);
+        }
+    }
+
+    export function validateTableRowFooterTooltip(selector: string, dataView: powerbi.DataView, index: number): void {
+        let tableItems = $("tr").eq(index + 1).find(`.${selector} div div`);
+        let values = dataView.table.totals;
+        let numOfValue = values.length - 1;
+
+        for (let i = 1; i < numOfValue; i++) {
+            if (values[i]) {
+                let columnFormat: powerbi.DataViewMetadataColumn = dataView.table.columns[i - 1];
+                let formattedValue: string = values[i] ? values[i].toString() : '';
+
+                if (columnFormat) {
+                    formattedValue = ValueFormatter.formatValueColumn(values[i], columnFormat, TablixUtils.TablixFormatStringProp);
+                }
+
+                expect(tableItems[i - 1].textContent).toBe(formattedValue);
+                expect(tableItems[i - 1].title).toBe(formattedValue);
+            }
+        }
+    }
+
+    export function validateTableRowTooltip(selector: string, dataView: powerbi.DataView, index: number): void {
+        let tableItems = $("tr").eq(index + 1).find(`.${selector} div div`);
+        let values = dataView.table.rows[index];
+
+        for (let i = 0; i < values.length; i++) {
+            if (values[i]) {
+                let columnFormat: powerbi.DataViewMetadataColumn = dataView.table.columns[i];
+                let formattedValue: string = values[i].toString();
+
+                if (columnFormat) {
+                    formattedValue = ValueFormatter.formatValueColumn(values[i], columnFormat, TablixUtils.TablixFormatStringProp);
+                }
+
+                expect(tableItems[i].textContent).toBe(formattedValue);
+                expect(tableItems[i].title).toBe(formattedValue);
+            }
+        }
     }
 }

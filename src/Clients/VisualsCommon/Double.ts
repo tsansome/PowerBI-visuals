@@ -480,6 +480,67 @@ module powerbi {
         export function toIncrement(value: number, increment: number): number {
             return Math.round(value / increment) * increment;
         }
+
+        /**
+         * Find multiplicative factor for value in base 10
+         * which will convert value to an integer
+         * Return factor if we hit Infinity
+         * e.g. findFactor(0.2345) => 10000
+         * @param value - value to find integer factor
+         */
+        function findIntegerFactor(value) {
+            let factor = 1;
+            while (!isInteger(value * factor)) {
+                if (Math.abs(value * factor) === Infinity)
+                    break;
+                factor *= 10;
+            }
+
+            return factor;
+        }
+
+        /**
+         * Multiply two values without floating point errors
+         * @param value1 - first value
+         * @param value2 - second value
+         */
+        export function multiply(value1: number, value2: number): number {
+            var factor1 = findIntegerFactor(value1);
+            var factor2 = findIntegerFactor(value2);
+
+            return ((value1 * factor1) * (value2 * factor2)) / (factor1 * factor2);
+        }
+
+        /**
+         * Add two values without floating point errors
+         * @param value1 - first value
+         * @param value2 - second value
+         */
+        export function add(value1: number, value2: number): number {
+            var factor1 = findIntegerFactor(value1);
+            var factor2 = findIntegerFactor(value2);
+            var factor = Math.max(factor1, factor2);
+
+            return ((value1 * factor) + (value2 * factor)) / factor;
+        }
+
+        /**
+         * Subtract two values without floating point errors
+         * @param value1 - first value
+         * @param value2 - second value
+         */
+        export function subtract(value1: number, value2: number): number {
+            return add(value1, -1 * value2);
+        }
+
+        /**
+         * Divide two values without floating point errors
+         * @param value1 - first value
+         * @param value2 - second value
+         */
+        export function divide(value1: number, value2: number): number {
+            return multiply(value1, (1 / value2));
+        }
     }
 
     function applyDefault(value: number, defaultValue: number): number {

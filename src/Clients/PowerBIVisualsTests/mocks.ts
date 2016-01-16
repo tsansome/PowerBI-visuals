@@ -123,28 +123,32 @@ module powerbitests.mocks {
         }
     }
 
-    export function dataViewScopeIdentity(fakeValue: string | number | boolean): powerbi.DataViewScopeIdentity {
+    export function dataViewScopeIdentity(fakeValue: string | number | boolean | Date): powerbi.DataViewScopeIdentity {
         var expr = constExpr(fakeValue);
         return powerbi.data.createDataViewScopeIdentity(expr);
     }
 
-    export function dataViewScopeIdentityWithEquality(keyExpr: powerbi.data.SQExpr, fakeValue: string | number | boolean): powerbi.DataViewScopeIdentity {
+    export function dataViewScopeIdentityWithEquality(keyExpr: powerbi.data.SQExpr, fakeValue: string | number | boolean | Date): powerbi.DataViewScopeIdentity {
         return powerbi.data.createDataViewScopeIdentity(
             powerbi.data.SQExprBuilder.equal(
                 keyExpr,
                 constExpr(fakeValue)));
     }
 
-    function constExpr(fakeValue: string | number | boolean): powerbi.data.SQExpr {
+    function constExpr(fakeValue: string | number | boolean | Date): powerbi.data.SQExpr {
         if (fakeValue === null)
             return SQExprBuilder.nullConstant();
 
         if (fakeValue === true || fakeValue === false)
             return SQExprBuilder.boolean(<boolean>fakeValue);
 
-        return (typeof (fakeValue) === 'number')
-            ? powerbi.data.SQExprBuilder.double(<number>fakeValue)
-            : powerbi.data.SQExprBuilder.text(<string>fakeValue);
+        if (typeof (fakeValue) === 'number')
+            return powerbi.data.SQExprBuilder.double(<number>fakeValue);
+
+        if (fakeValue instanceof Date)
+            return powerbi.data.SQExprBuilder.dateTime(<Date>fakeValue);
+
+        return powerbi.data.SQExprBuilder.text(<string>fakeValue);
     }
 
     export class MockVisualWarning implements powerbi.IVisualWarning {
@@ -193,8 +197,7 @@ module powerbitests.mocks {
             return deferred;
         }
 
-        public geocodeBoundary(latitude: number, longitude: number, category: string, levelOfDetail?: number, maxGeoData?: number): any {
-            
+        public geocodeBoundary(latitude: number, longitude: number, category: string, levelOfDetail?: number, maxGeoData?: number): any {   
             // Only the absoluteString is actually used for drawing, but a few other aspects of the geoshape result are checked for simple things like existence and length
             var result = {
                 locations: [{
@@ -242,8 +245,7 @@ module powerbitests.mocks {
 
         public tryLocationToPixel(location) {
             var result;
-            if (location.length) {
-                
+            if (location.length) {    
                 // It's an array of locations; iterate through the array
                 result = [];
                 for (var i = 0, ilen = location.length; i < ilen; i++) {
@@ -251,7 +253,6 @@ module powerbitests.mocks {
                 }
             }
             else {
-                
                 // It's just a single location
                 result = this.tryLocationToPixelSingle(location);
             }
@@ -267,7 +268,6 @@ module powerbitests.mocks {
         }
 
         public setView(viewOptions): void {
-            
             // No op placeholder; we don't need to bother with zoom/pan for mocking.  Spies can confirm anything about params we care about
         }
     }
@@ -359,7 +359,6 @@ module powerbitests.mocks {
         }
 
         public renderSelection(hasSelection: boolean): void {
-            
             // Stub method to spy on
         }
 
@@ -422,32 +421,31 @@ module powerbitests.mocks {
         }
     }
 
-    export class FilterAnalyzerMock implements powerbi.IFilterAnalyzer {
-        private promiseFactory: powerbi.IPromiseFactory;
-        private filter: powerbi.data.SemanticFilter;
+    export class FilterAnalyzerMock implements powerbi.AnalyzedFilter {
+        public filter: powerbi.data.SemanticFilter;
+        public defaultValue: powerbi.DefaultValueDefinition;
+        public isNotFilter: boolean;
+        public selectedIdentities: powerbi.DataViewScopeIdentity[];
+
         private fieldSQExprs: powerbi.data.SQExpr[];
         private container: powerbi.data.FilterValueScopeIdsContainer;
         public constructor(filter: powerbi.data.SemanticFilter, fieldSQExprs: powerbi.data.SQExpr[]) {
-            this.promiseFactory = powerbi.createJQueryPromiseFactory();
             this.filter = filter;
             this.fieldSQExprs = fieldSQExprs;
-
+            
             if (this.filter)
                 this.container = powerbi.data.SQExprConverter.asScopeIdsContainer(this.filter, this.fieldSQExprs);
             else
                 this.container = { isNot: false, scopeIds: [] };
+
+            this.isNotFilter = this.container && this.container.isNot;
+            this.selectedIdentities = this.container && this.container.scopeIds;
         }
 
-        public isNotFilter(): boolean {
-            return this.container && this.container.isNot;
-        }
+        
 
-        public selectedIdentities(): powerbi.DataViewScopeIdentity[] {
-            return this.container && this.container.scopeIds;
-        }
-
-        public hasDefaultFilterOverride(): powerbi.IPromise<boolean> {
-            return this.promiseFactory.resolve<boolean>(false);
+        public hasDefaultFilterOverride(): boolean {
+            return false;
         }
     }
 }

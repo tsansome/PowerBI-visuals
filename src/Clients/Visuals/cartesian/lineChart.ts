@@ -98,7 +98,7 @@ module powerbi.visuals {
         stackedArea = 1 << 4
     }
 
-    enum LineChartRelativePosition {
+    const enum LineChartRelativePosition {
         none,
         equal,
         lesser,
@@ -177,6 +177,15 @@ module powerbi.visuals {
 
         private overlayRect: D3.Selection;
         private isComboChart: boolean;
+
+        private lastDragMoveXPosition: number;
+        private deferDragMoveOperation = jsCommon.DeferUtility.deferUntilNextFrame(() => {
+            if (this.lastDragMoveXPosition) {
+                let index: number = this.findIndex(this.lastDragMoveXPosition - this.margin.left);
+                this.selectColumn(index);
+                this.lastDragMoveXPosition = undefined;
+            }
+        });
 
         public static customizeQuery(options: CustomizeQueryOptions): void {
             let dataViewMapping = options.dataViewMappings[0];
@@ -313,6 +322,8 @@ module powerbi.visuals {
                     let categorical: DataViewCategorical = dataView.categorical;
                     let tooltipInfo: TooltipDataItem[] = TooltipBuilder.createTooltipInfo(formatStringProp, categorical, categoryValue, value, null, null, seriesIndex);
 
+                    let categoryKey = category && !_.isEmpty(category.identity) && category.identity[categoryIndex] ? category.identity[categoryIndex].key : categoryIndex;
+
                     let dataPoint: LineChartDataPoint = {
                         categoryValue: isDateTime && categoryValue ? categoryValue.getTime() : categoryValue,
                         value: value,
@@ -321,7 +332,7 @@ module powerbi.visuals {
                         tooltipInfo: tooltipInfo,
                         selected: false,
                         identity: identity,
-                        key: JSON.stringify({ ser: key, catIdx: categoryIndex }),
+                        key: JSON.stringify({ series: key, category: categoryKey }),
                         labelFill: dataPointLabelSettings.labelColor,
                         labelFormatString: valuesMetadata.format,
                         labelSettings: dataPointLabelSettings
@@ -501,19 +512,18 @@ module powerbi.visuals {
             if (this.isInteractiveChart) {
                 let rootSvg: EventTarget = LineChart.getInteractiveLineChartDomElement(this.element);
                 let dragMove = () => {
-                    let x: number = d3.mouse(rootSvg)[0];
-
-                    let index: number = this.findIndex(x - this.margin.left);
-                    this.selectColumn(index);
+                    this.lastDragMoveXPosition = d3.mouse(rootSvg)[0];
+                    this.deferDragMoveOperation();
                 };
 
                 // assign drag and onClick events
                 let drag = d3.behavior.drag()
                     .origin(Object)
                     .on("drag", dragMove);
-
-                d3.select(rootSvg).call(drag);
-                d3.select(rootSvg).on('click', dragMove);
+                d3.select(rootSvg)
+                 .style('touch-action', 'none')
+                 .call(drag)
+                 .on('click', dragMove);
             }
         }
 
@@ -698,10 +708,7 @@ module powerbi.visuals {
                 showLabelPerSeries = this.showLabelPerSeries();
 
             //Draw default settings
-            if (this.lineChartLabelDensityEnabled)
-                dataLabelUtils.enumerateLineChartDataLabels(this.getLabelSettingsOptions(enumeration, labelSettings, null, showLabelPerSeries), labelSettings.labelDensity);
-            else
-                dataLabelUtils.enumerateDataLabels(this.getLabelSettingsOptions(enumeration, labelSettings, null, showLabelPerSeries));
+            dataLabelUtils.enumerateDataLabels(this.getLabelSettingsOptions(enumeration, labelSettings, null, showLabelPerSeries));
 
             if (seriesCount === 0)
                 return;
@@ -713,10 +720,7 @@ module powerbi.visuals {
                         labelSettings: LineChartDataLabelsSettings = (series.labelSettings) ? series.labelSettings : this.data.dataLabelsSettings;
 
                     enumeration.pushContainer({ displayName: series.displayName });
-                    if (this.lineChartLabelDensityEnabled)
-                        dataLabelUtils.enumerateLineChartDataLabels(this.getLabelSettingsOptions(enumeration, labelSettings, series), labelSettings.labelDensity);
-                    else
-                        dataLabelUtils.enumerateDataLabels(this.getLabelSettingsOptions(enumeration, labelSettings, series));
+                    dataLabelUtils.enumerateDataLabels(this.getLabelSettingsOptions(enumeration, labelSettings, series));
                     enumeration.popContainer();
                 }
             }
@@ -732,7 +736,7 @@ module powerbi.visuals {
                 selector: series && series.identity ? series.identity.getSelector() : null,
                 showAll: showAll,
                 fontSize: true,
-                labelDensity: true,
+                labelDensity: this.lineChartLabelDensityEnabled,
             };
         }
 
@@ -1145,10 +1149,10 @@ module powerbi.visuals {
                 let selectionSize = updateSelection.size();
                 let endedTransitionCount = 0;
                 transitions.each('end', () => {
-                    // When transitions finish, and it's an interactive chart - select the first column (draw the legend and the handle)
+                    // When transitions finish, and it's an interactive chart - select the last column (draw the legend and the handle)
                     endedTransitionCount++;
                     if (endedTransitionCount === selectionSize) { // all transitions had finished
-                        this.selectColumn(0, true);
+                        this.selectColumn(this.findMaxDataPoint(data.series), true);
                     }
                 });
             }
@@ -1284,6 +1288,18 @@ module powerbi.visuals {
                     return true;
             }
             return false;
+        }
+
+        private findMaxDataPoint(series: LineChartSeries[]): number {
+            if (series.length === 0)
+                return 0;
+            let maxLength: number = 0;
+            for (let singleSeries of series) {
+                let length = singleSeries.data.length;
+                if (length > maxLength)
+                    maxLength = length;
+            }
+            return maxLength - 1;
         }
 
         private getXValue(d: LineChartDataPoint): any {
@@ -1665,7 +1681,8 @@ module powerbi.visuals {
                         parentType: isParentRect ? LabelDataPointParentType.Rectangle : LabelDataPointParentType.Point,
                         parentShape: parentShape,
                         fontSize: labelSettings.fontSize,
-                        identity: undefined,
+                        identity: dataPoint.identity,
+                        key: dataPoint.key,
                     };
 
                     if (showLabelPerSeries) {

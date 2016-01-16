@@ -257,7 +257,7 @@ module powerbi.visuals {
                 radius: 0,
                 validPositions: validPositions,
             };
-
+            
             return {
                 isPreferred: true,
                 text: text,
@@ -271,7 +271,8 @@ module powerbi.visuals {
                 parentType: LabelDataPointParentType.Point,
                 fontSize: 9,
                 identity: null,
-                secondRowText: null
+                secondRowText: null,
+                key: options.key,
             };
         }
     }

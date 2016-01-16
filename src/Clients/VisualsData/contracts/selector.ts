@@ -39,15 +39,11 @@ module powerbi.data {
         id?: string;
     }
 
-    /* tslint:disable:no-unused-expression */
     export type DataRepetitionSelector = DataViewScopeIdentity | DataViewScopeWildcard;
-    /* tslint:enable */
 
     export module Selector {
-        import ArrayExtensions = jsCommon.ArrayExtensions;
-
         export function filterFromSelector(selectors: Selector[], isNot?: boolean): SemanticFilter {
-            if (ArrayExtensions.isUndefinedOrEmpty(selectors))
+            if (_.isEmpty(selectors))
                 return;
 
             let exprs: SQExpr[] = [];

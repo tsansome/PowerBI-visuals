@@ -46,7 +46,7 @@ module powerbi.visuals.controls {
         footerHeight?: number;
     }
 
-    export enum TablixLayoutKind {
+    export const enum TablixLayoutKind {
         /**
          * The default layout is based on DOM measurements and used on the canvas.
          */

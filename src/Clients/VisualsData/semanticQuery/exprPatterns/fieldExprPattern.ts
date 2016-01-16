@@ -170,6 +170,7 @@ module powerbi.data {
 
     interface SourceExprPattern {
         entity?: FieldExprEntityItemPattern;
+
         // TODO: Change FieldExprHierarchyPattern to FieldExprHierarchyLevelPattern
         hierarchy?: FieldExprHierarchyPattern;
         variation?: FieldExprSourceVariationPattern;

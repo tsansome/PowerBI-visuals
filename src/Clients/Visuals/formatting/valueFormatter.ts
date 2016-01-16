@@ -67,6 +67,9 @@ module powerbi.visuals {
         /** Specifies the maximum number of decimal places to show*/
         precision?: number;
 
+        /** Detect axis precision based on value */
+        detectAxisPrecision?: boolean;
+
         /** Specifies the column type of the data value */
         columnType?: ValueType;
     }
@@ -262,14 +265,30 @@ module powerbi.visuals {
                 else if (displayUnitSystem.displayUnit && displayUnitSystem.displayUnit.value > 1)
                     decimals = -MaxScaledDecimalPlaces;
 
+                // Detect axis precision
+                if (options.detectAxisPrecision) {
+                    // Trailing zeroes
+                    forcePrecision = true;
+
+                    let axisValue = options.value;
+                    if (displayUnitSystem.displayUnit && displayUnitSystem.displayUnit.value > 0)
+                        axisValue = axisValue / displayUnitSystem.displayUnit.value;
+
+                    if (Double.isInteger(axisValue))
+                        decimals = 0;
+                    else
+                        decimals = Double.log10(axisValue);
+                }
+
                 return {
                     format: function (value: any): string {
                         let formattedValue: string = getStringFormat(value, true /*nullsAreBlank*/);
                         if (!StringExtensions.isNullOrUndefinedOrWhiteSpaceString(formattedValue))
                             return formattedValue;
 
+                        // Round to Double.DEFAULT_PRECISION
                         if (value && !displayUnitSystem.isScalingUnit() && Math.abs(value) < MaxValueForDisplayUnitRounding && !forcePrecision)
-                            value = Double.roundToPrecision(value, Double.pow10(Double.getPrecision(value)));
+                            value = Double.roundToPrecision(value);
 
                         return singleValueFormattingMode ?
                             displayUnitSystem.formatSingleValue(value, format, decimals, forcePrecision) :
@@ -316,13 +335,11 @@ module powerbi.visuals {
         }
 
         export function formatValueColumn(value: any, column: DataViewMetadataColumn, formatStringProp: DataViewObjectPropertyIdentifier): string {
-            let format = getFormatString(column, formatStringProp);
-
             let valueFormat = getValueFormat(value, column.type);
             if (valueFormat)
-                format = valueFormat;
-
-            return formatCore(value, format);
+                return formatCore(value, valueFormat);
+            else
+                return formatCore(value, getFormatString(column, formatStringProp));
         }
 
         function createDisplayUnitSystem(displayUnitSystemType?: DisplayUnitSystemType): DisplayUnitSystem {
@@ -376,6 +393,11 @@ module powerbi.visuals {
             return (value instanceof Date) && (value2 instanceof Date) && (tickCount !== undefined && tickCount !== null);
         }
 
+        /*
+         * Get the column format. Order of precendence is:
+         *  1. Column format
+         *  2. Default PowerView policy for column type
+         */
         export function getFormatString(column: DataViewMetadataColumn, formatStringProperty: DataViewObjectPropertyIdentifier, suppressTypeFallback?: boolean): string {
             if (column) {
                 if (formatStringProperty) {

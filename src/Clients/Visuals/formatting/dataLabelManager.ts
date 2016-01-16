@@ -32,7 +32,7 @@ module powerbi {
     import IRect = powerbi.visuals.IRect;
 
     /** Defines possible content positions.  */
-    export enum ContentPositions {
+    export const enum ContentPositions {
 
         /** Content position is not defined. */
         None = 0,

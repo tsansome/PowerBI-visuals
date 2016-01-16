@@ -302,6 +302,12 @@ module jsCommon {
         __type: string;
     }
 
+    export interface TextMatch {
+        start: number;
+        end: number;
+        text: string;
+    }
+
     /** 
      * The general utility class.
      */
@@ -322,6 +328,7 @@ module jsCommon {
         public static Undefined = 'undefined';
 
         private static staticContentLocation: string = window.location.protocol + '//' + window.location.host;
+        private static urlRegex = /http[s]?:\/\/(\S)+/gi;
 
         /**
          * Ensures the specified value is not null or undefined. Throws a relevent exception if it is.
@@ -694,8 +701,39 @@ module jsCommon {
          * @returns Whether the provided url is valid.
          */
         public static isValidUrl(url: string): boolean {
-            return !StringExtensions.isNullOrEmpty(url) &&
-                (StringExtensions.startsWithIgnoreCase(url, 'http://') || StringExtensions.startsWithIgnoreCase(url, 'https://'));
+            if (StringExtensions.isNullOrEmpty(url))
+                return false;
+
+            let match = RegExpExtensions.run(Utility.urlRegex, url);
+            return !!match && match.index === 0;
+        }
+
+        /**
+         * Finds all valid urls.
+         * @param text The text to search.
+         * @returns An array of ranges corresponding to the urls.
+         */
+        public static findAllValidUrls(text: string): TextMatch[] {
+            if (StringExtensions.isNullOrEmpty(text))
+                return [];
+
+            // Find all urls in the text.
+            // TODO: This could potentially be expensive, maybe include a cap here for text with many urls?
+            let urlRanges: TextMatch[] = [];
+            let matches: RegExpExecArray;
+            let start = 0;
+            while ((matches = RegExpExtensions.run(Utility.urlRegex, text, start)) !== null) {
+                let url = matches[0];
+                let end = matches.index + url.length;
+                urlRanges.push({
+                    start: matches.index,
+                    end: end,
+                    text: url,
+                });
+                start = end;
+            }
+
+            return urlRanges;
         }
         
         /**
@@ -1010,7 +1048,7 @@ module jsCommon {
         }
     }
 
-    export module DeferUtility {        
+    export module DeferUtility {
         /**
          * Wraps a callback and returns a new function.
          * The function can be called many times but the callback

@@ -311,27 +311,27 @@ module powerbitests {
         });
 
         it("Above positioning", () => {
-            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.Above, offset)).toEqual(createRect(30, 30, 40, 10));
+            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.Above, offset)).toEqual(createRect(30, 30, 40, 10));
         });
 
         it("Below positioning", () => {
-            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.Below, offset)).toEqual(createRect(30, 60, 40, 10));
+            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.Below, offset)).toEqual(createRect(30, 60, 40, 10));
         });
 
         it("Left positioning", () => {
-            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.Left, offset)).toEqual(createRect(0, 45, 40, 10));
+            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.Left, offset)).toEqual(createRect(0, 45, 40, 10));
         });
 
         it("Right positioning", () => {
-            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.Right, offset)).toEqual(createRect(60, 45, 40, 10));
+            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.Right, offset)).toEqual(createRect(60, 45, 40, 10));
         });
 
         it("Center positioning", () => {
-            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.Center, offset)).toEqual(createRect(30, 45, 40, 10));
+            expect(DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.Center, offset)).toEqual(createRect(30, 45, 40, 10));
         });
 
         it("Above Left positioning", () => {
-            let labelRect = DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.AboveLeft, offset);
+            let labelRect = DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.AboveLeft, offset);
             expect(labelRect.left).toBeCloseTo(1, 0);
             expect(labelRect.top).toBeCloseTo(35, 0);
             expect(labelRect.width).toBe(40);
@@ -339,7 +339,7 @@ module powerbitests {
         });
 
         it("Below Left positioning", () => {
-            let labelRect = DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.BelowLeft, offset);
+            let labelRect = DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.BelowLeft, offset);
             expect(labelRect.left).toBeCloseTo(1, 0);
             expect(labelRect.top).toBeCloseTo(55, 0);
             expect(labelRect.width).toBe(40);
@@ -347,7 +347,7 @@ module powerbitests {
         });
 
         it("Above Right positioning", () => {
-            let labelRect = DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.AboveRight, offset);
+            let labelRect = DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.AboveRight, offset);
             expect(labelRect.left).toBeCloseTo(59, 0);
             expect(labelRect.top).toBeCloseTo(35, 0);
             expect(labelRect.width).toBe(40);
@@ -355,7 +355,7 @@ module powerbitests {
         });
 
         it("Below Right positioning", () => {
-            let labelRect = DataLabelPointPositioner.getLabelRect(pointLabelDataPoint, PointLabelPosition.BelowRight, offset);
+            let labelRect = DataLabelPointPositioner.getLabelRect(pointLabelDataPoint.textSize, <LabelParentPoint>pointLabelDataPoint.parentShape, PointLabelPosition.BelowRight, offset);
             expect(labelRect.left).toBeCloseTo(59, 0);
             expect(labelRect.top).toBeCloseTo(55, 0);
             expect(labelRect.width).toBe(40);

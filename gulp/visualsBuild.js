@@ -405,6 +405,22 @@ module.exports.load = function (options) {
         return buildProject("src/Clients/CustomVisuals", "CustomVisuals");
     }
 
+    function copyCustomVisualsJsFile() {
+        var scriptSrc = "src/Clients/CustomVisuals/obj/CustomVisuals.js",
+            playgroundFolder = "src/Clients/PowerBIVisualsPlayground";
+
+        return gulp.src(scriptSrc)
+            .pipe(gulp.dest("build/scripts"))
+            .pipe(gulp.dest(playgroundFolder));
+    }
+
+    gulp.task("build:customVisuals:ts", function () {
+        return visualsCommon.runScriptSequence([
+            buildCustomVisualsTS,
+            copyCustomVisualsJsFile
+        ]);
+    });
+
     function buildCustomVisualsStyles() {
         var fileName = "CustomVisuals.css",
             sources,
@@ -423,31 +439,15 @@ module.exports.load = function (options) {
         return buildLess(sources, destinations, fileName);
     }
 
-    function copyCustomVisualsBuildArtifacts() {
-        var playgroundFolder = "src/Clients/PowerBIVisualsPlayground",
-            scriptSrc = [
-                "src/Clients/CustomVisuals/obj/CustomVisuals.js"
-            ],
-            styleSrc = [
-                "src/Clients/CustomVisuals/obj/CustomVisuals.css"
-            ];
-
-        return merge([
-            gulp.src(scriptSrc)
-                .pipe(gulp.dest("build/scripts"))
-                .pipe(gulp.dest(playgroundFolder)),
-
-            gulp.src(styleSrc)
-                .pipe(gulp.dest("build/scripts"))
-                .pipe(gulp.dest(playgroundFolder))
-        ]);
-    }
+    gulp.task("build:customVisuals:less", function () {
+        return buildCustomVisualsStyles();
+    });
 
     function buildCustomVisuals() {
         return visualsCommon.runScriptSequence([
             buildCustomVisualsTS,
-            buildCustomVisualsStyles,
-            copyCustomVisualsBuildArtifacts]);
+            copyCustomVisualsJsFile,
+            buildCustomVisualsStyles]);
     }
 
     gulp.task("build:customVisuals", function () {

@@ -133,6 +133,7 @@ module powerbi {
 
         /** Client-computed maximum value for a column. */
         maxLocal?: any;
+
         /** Client-computed maximum value for a column. */
         minLocal?: any;
     }
@@ -178,6 +179,7 @@ module powerbi {
 
         /** Client-computed maximum value for a column. */
         maxLocal?: any;
+
         /** Client-computed maximum value for a column. */
         minLocal?: any;
     }
@@ -233,6 +235,7 @@ module powerbi {
 
     export interface DataViewKpiColumnMetadata {
         graphic: string;
+
         // When false, five state KPIs are in: { -2, -1, 0, 1, 2 }. 
         // When true, five state KPIs are in: { -1, -0.5, 0, 0.5, 1 }.
         normalizedFiveStateKpiRange?: boolean;

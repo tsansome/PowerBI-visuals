@@ -28,7 +28,6 @@
 
 module powerbi.data {
     import inherit = Prototype.inherit;
-    import ArrayExtensions = jsCommon.ArrayExtensions;
 
     export module DataViewPivotCategorical {
         /**
@@ -47,7 +46,7 @@ module powerbi.data {
                 return null;
 
             let values = categorical.values;
-            if (ArrayExtensions.isUndefinedOrEmpty(values) || values.source)
+            if (_.isEmpty(values) || values.source)
                 return null;
 
             let category = categories[0],

@@ -255,28 +255,34 @@ module powerbi {
         public get text(): boolean {
             return this.primitiveType === PrimitiveType.Text;
         }
+
         /** Indicates whether the type represents any numeric value. */
         public get numeric(): boolean {
             return EnumExtensions.hasFlag(this.underlyingType, ExtendedType.Numeric);
         }
+
         /** Indicates whether the type represents integer numeric values. */
         public get integer(): boolean {
             return this.primitiveType === PrimitiveType.Integer;
         }
+
         /** Indicates whether the type represents Boolean values. */
         public get bool(): boolean {
             return this.primitiveType === PrimitiveType.Boolean;
         }
+
         /** Indicates whether the type represents any date/time values. */
         public get dateTime(): boolean {
             return this.primitiveType === PrimitiveType.DateTime ||
                 this.primitiveType === PrimitiveType.Date ||
                 this.primitiveType === PrimitiveType.Time;
         }
+
         /** Indicates whether the type represents duration values. */
         public get duration(): boolean {
             return this.primitiveType === PrimitiveType.Duration;
         }
+
         /** Indicates whether the type represents binary values. */
         public get binary(): boolean {
             return this.primitiveType === PrimitiveType.Binary;
@@ -286,24 +292,29 @@ module powerbi {
         public get none(): boolean {
             return this.primitiveType === PrimitiveType.None;
         }
+
         // Extended types
 
         /** Returns an object describing temporal values represented by the type, if it represents a temporal type. */
         public get temporal(): TemporalType {
             return this.temporalType;
         }
+
         /** Returns an object describing geographic values represented by the type, if it represents a geographic type. */
         public get geography(): GeographyType {
             return this.geographyType;
         }
+
         /** Returns an object describing the specific values represented by the type, if it represents a miscellaneous extended type. */
         public get misc(): MiscellaneousType {
             return this.miscType;
         }
+
         /** Returns an object describing the formatting values represented by the type, if it represents a formatting type. */
         public get formatting(): FormattingType {
             return this.formattingType;
         }
+
         /** Returns an object describing the enum values represented by the type, if it represents an enumeration type. */
         public get enum(): IEnumType {
             return this.enumType;
