@@ -310,4 +310,17 @@ module powerbi.visuals.plugins {
         capabilities: capabilities.kpi,
         create: () => new KPIStatusWithHistory()
     };
+
+    export var nodeLink: IVisualPlugin = {
+        name: 'nodeLink',
+        watermarkKey: 'nodeLink',
+        capabilities: nodeLinkCapabilities,
+        create: () => new NodeLink()
+    };
+
+    export var gapAnalysis: IVisualPlugin = {
+        name: 'gapAnalysis',
+        capabilities: GapAnalysisCapabilities,
+        create: () => new GapAnalysis()
+    };
 }
