@@ -191,7 +191,7 @@ module powerbi.visuals {
         private static LabelFunnelPadding = 6;
         private static InnerTextMinimumPadding = 10;
         private static OverflowingHighlightWidthRatio = 0.5;
-        
+
         private svg: D3.Selection;
         private funnelGraphicsContext: D3.Selection;
         private percentGraphicsContext: D3.Selection;
@@ -499,7 +499,7 @@ module powerbi.visuals {
                     }
                     break;
                 case 'labels':
-                    let labelSettingsOptions= FunnelChart.getLabelSettingsOptions(enumeration, this.data.dataLabelsSettings, true, this.labelPositionObjects);
+                    let labelSettingsOptions = FunnelChart.getLabelSettingsOptions(enumeration, this.data.dataLabelsSettings, true, this.labelPositionObjects);
                     dataLabelUtils.enumerateDataLabels(labelSettingsOptions);
                     break;
                 case 'percentBarLabel':
@@ -585,7 +585,7 @@ module powerbi.visuals {
             this.percentGraphicsContext = svg.append('g').classed(FunnelChart.Selectors.percentBar.root.class, true);
             this.funnelGraphicsContext = svg.append('g');
             this.axisGraphicsContext = svg.append('g');
-            
+
             this.updateViewportProperties();
         }
 
@@ -723,7 +723,6 @@ module powerbi.visuals {
                     labelGraphicsContext: this.svg,
                     axisOptions: axisOptions,
                     slicesWithoutHighlights: slicesWithoutHighlights,
-                    colors: this.colors,
                     labelLayout: labelLayout,
                     isHidingPercentBars: isHidingPercentBars,
                     visualInitOptions: this.options,
@@ -756,11 +755,10 @@ module powerbi.visuals {
                 this.interactivityService.bind(slices, this.behavior, behaviorOptions);
 
                 if (this.tooltipsEnabled) {
-                    TooltipManager.addTooltip(shapes, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
                     TooltipManager.addTooltip(interactors, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
                 }
             }
-            else if (this.tooltipsEnabled) {
+            if (this.tooltipsEnabled) {
                 TooltipManager.addTooltip(shapes, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
             }
 
@@ -1001,6 +999,9 @@ module powerbi.visuals {
             graphicsContext.attr('class', 'axis hideLinesOnAxis')
                 .attr('transform', SVGUtil.translate(0, axisOptions.margin.top))
                 .call(xAxis);
+
+            graphicsContext.selectAll('.tick')
+                .call(tooltipUtils.tooltipUpdate, axisOptions.categoryLabels);
         }
 
         public static drawDefaultShapes(data: FunnelData, slices: FunnelSlice[], graphicsContext: D3.Selection, layout: IFunnelLayout, hasSelection: boolean): D3.UpdateSelection {
@@ -1029,7 +1030,7 @@ module powerbi.visuals {
             else
                 return slice.highlight ? slice.highlightValue : slice.value;
         }
-        
+
         public static drawInteractorShapes(slices: FunnelSlice[], graphicsContext: D3.Selection, layout: IFunnelLayout): D3.UpdateSelection {
             // Draw invsible ineractors for just data points which are below threshold
             let needInteractors = slices.filter((d: FunnelSlice) => {
@@ -1080,20 +1081,20 @@ module powerbi.visuals {
 
             // Text
             let text: D3.UpdateSelection = graphicsContext.selectAll(FunnelChart.Selectors.percentBar.text.selector).data(data);
+            let localizedString: string = valueFormatter.getLocalizedString("Percentage1");
             text.exit().remove();
-            text.enter()
-                .append('text')
-                .classed(FunnelChart.Selectors.percentBar.text.class, true);
+            text.enter().append('text').classed(FunnelChart.Selectors.percentBar.text.class, true);
             text
                 .attr(layout.percentBarLayout.text)
                 .text((fp: FunnelPercent) => {
                     return dataLabelUtils.getLabelFormattedText({
                         label: fp.percent,
-                        format: valueFormatter.getLocalizedString("Percentage1"),
+                        format: localizedString,
                         fontSize: percentLabelSettings.fontSize,
                         maxWidth: layout.percentBarLayout.text.maxWidth,
                     });
-                });
+                })
+                .append('title').text((d: FunnelPercent) => formattingService.formatValue(d.percent, localizedString));           
         }
 
         public static drawPercentBars(data: FunnelData, graphicsContext: D3.Selection, layout: IFunnelLayout, isHidingPercentBars: boolean): void {
@@ -1128,8 +1129,8 @@ module powerbi.visuals {
 
         private showCategoryLabels(): boolean {
             if (this.funnelSmallViewPortProperties) {
-                if ((this.funnelSmallViewPortProperties.hideFunnelCategoryLabelsOnSmallViewPort) && (this.currentViewport.height < this.funnelSmallViewPortProperties.minHeightFunnelCategoryLabelsVisible)){
-                        return false;
+                if ((this.funnelSmallViewPortProperties.hideFunnelCategoryLabelsOnSmallViewPort) && (this.currentViewport.height < this.funnelSmallViewPortProperties.minHeightFunnelCategoryLabelsVisible)) {
+                    return false;
                 }
             }
             return true;

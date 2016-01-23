@@ -1046,7 +1046,8 @@ module powerbitests {
 
             this.xAxisProperties.willLabelsFit = !rotateX;
             this.xAxisProperties.willLabelsWordBreak = wordBreak;
-            this.xAxisProperties.scale = isScalar ? AxisHelper.createLinearScale(this.viewPort.width, [0,10]) : AxisHelper.createOrdinalScale(this.viewPort.width, [0,10]);
+            let dataDomain = [0, 10];
+            this.xAxisProperties.scale = isScalar ? AxisHelper.createLinearScale(this.viewPort.width, dataDomain) : AxisHelper.createOrdinalScale(this.viewPort.width, dataDomain);
 
             if (categoryThickness != null) {
                 this.xAxisProperties.categoryThickness = categoryThickness;
@@ -1164,7 +1165,7 @@ module powerbitests {
 
         it("xOverflowRight, line chart, small overhang, disable the secondary axis", () => {
             var localTickLabelBuilder = new AxisHelperTickLabelBuilder(undefined, ['Cars', 'Trucks', 'Boats']);
-            var margins = localTickLabelBuilder.buildTickLabelMargins(false, false, false, true, true, false, null, 0 /*scalar line chart*/);
+            var margins = localTickLabelBuilder.buildTickLabelMargins(false, false, false, true, true, false, null, 10, true);
 
             expect(margins.xMax).toBe(10);
             expect(margins.yLeft).toBe(12);
@@ -1190,8 +1191,8 @@ module powerbitests {
         });
 
         it('Check xMax margin for word breaking is based on number of text lines shown', () => {
-            var localTickLabelBuilder = new AxisHelperTickLabelBuilder({height: 250, width: 250}, ['IPO', '83742 (Jun-15) %', 'Q4']);
-            let margins = localTickLabelBuilder.buildTickLabelMargins(true, true, false, true, true, false);
+            var localTickLabelBuilder = new AxisHelperTickLabelBuilder({height: 300, width: 150}, ['Stardust-IPA', '83742123123123 (Jun-14-2011) Robotics', 'Q4-was-the-best-ever']);
+            let margins = localTickLabelBuilder.buildTickLabelMargins(false, true, false, true, true, false);
             expect(margins.xMax).toBeGreaterThan(3 * localTickLabelBuilder.getFontSize() - 1);
         });
 
@@ -1352,7 +1353,7 @@ module powerbitests {
             metaDataColumn: powerbi.DataViewMetadataColumn): powerbi.visuals.CreateAxisOptions {
             var axisOptions = createAxisOptions(
                 metaDataColumn,
-                domainOrdinal3,
+                metaDataColumn ? domainOrdinal3 : [],
                 getValueFnStrings);
 
             return axisOptions;

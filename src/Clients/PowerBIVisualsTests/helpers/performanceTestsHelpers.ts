@@ -557,7 +557,7 @@ module powerbitests.performanceTestsHelpers {
 	        case "bulletChart":
                 return 100;
             case "columnChart":
-                return 13;
+                return 15;
             default:
                 return 6;
         }

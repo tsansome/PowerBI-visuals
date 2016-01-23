@@ -87,6 +87,7 @@ module powerbi.visuals {
             }
         },
         suppressDefaultTitle: true,
+        suppressDefaultPadding: true,
         canRotate: false,
         supportsSelection: false,
     };

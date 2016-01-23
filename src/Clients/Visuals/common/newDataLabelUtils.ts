@@ -49,8 +49,8 @@ module powerbi.visuals {
         };
         export let defaultLabelColor = "#777777";
         export let defaultInsideLabelColor = "#ffffff"; //white
-        export const horizontalLabelBackgroundMargin = 4;
-        export const verticalLabelBackgroundMargin = 2;
+        export const horizontalLabelBackgroundPadding = 4;
+        export const verticalLabelBackgroundPadding = 2;
         
         let labelBackgroundRounding = 4;
         let defaultLabelPrecision: number = undefined;
@@ -59,7 +59,7 @@ module powerbi.visuals {
         export let labelGraphicsContextClass: ClassAndSelector = createClassAndSelector('labelGraphicsContext');
         export let labelBackgroundGraphicsContextClass: ClassAndSelector = createClassAndSelector('labelBackgroundGraphicsContext');
         let labelsClass: ClassAndSelector = createClassAndSelector('label');
-        let categorylabelsClass: ClassAndSelector = createClassAndSelector('catagorylabel');
+        let secondLineLabelClass: ClassAndSelector = createClassAndSelector('label-second-line');
 
         const linesGraphicsContextClass: ClassAndSelector = createClassAndSelector('leader-lines');
         const lineClass: ClassAndSelector = createClassAndSelector('line-label');
@@ -76,7 +76,10 @@ module powerbi.visuals {
                     return (d.boundingBox.left + (d.boundingBox.width / 2));
                 },
                 y: (d: Label) => {
-                    return d.boundingBox.top + d.boundingBox.height;
+                    if (d.hasBackground)
+                        return d.boundingBox.top + d.boundingBox.height - verticalLabelBackgroundPadding;
+                    else
+                        return d.boundingBox.top + d.boundingBox.height;
                 },
                 dy: "-0.15em",
             };
@@ -90,33 +93,35 @@ module powerbi.visuals {
                 .style({
                     'fill': (d: Label) => d.fill,
                     'font-size': (d: Label) => PixelConverter.fromPoint(d.fontSize || DefaultLabelFontSizeInPt),
-                    'text-anchor': (d: Label) => d.textAnchor,//For donut chart labels, left label get end and right labels get start
+                    'text-anchor': (d: Label) => d.textAnchor,
                 });
             labels.exit()
                 .remove();
 
             let filteredCategoryLabels = _.filter(twoRows ? dataLabels : [], (d: Label) => d.isVisible && !_.isEmpty(d.secondRowText));
-            let categoryLabels = context.selectAll(categorylabelsClass.selector)
+            let secondLineLabels = context.selectAll(secondLineLabelClass.selector)
                 .data(filteredCategoryLabels, (d: Label, index: number) => { return d.identity ? d.identity.getKeyWithoutHighlight() : index; });
-            categoryLabels.enter()
+            secondLineLabels.enter()
                 .append("text")
-                .classed(categorylabelsClass.class, true);
+                .classed(secondLineLabelClass.class, true);
 
             labelAttr = {
                 x: (d: Label) => {
                     return (d.boundingBox.left + (d.boundingBox.width / 2));
                 },
                 y: (d: Label) => {
-
                     let boundingBoxHeight = (d.text !== undefined) ? d.boundingBox.height / 2 : d.boundingBox.height;
-                    return d.boundingBox.top + boundingBoxHeight;
+                    if (d.hasBackground)
+                        return d.boundingBox.top + boundingBoxHeight - verticalLabelBackgroundPadding;
+                    else
+                        return d.boundingBox.top + boundingBoxHeight;
                 },
                 dy: "-0.15em",
             };
-            if (numeric) { // For numeric categoryLables, we use a tighter bounding box, so remove the dy because it doesn't need to be centered
+            if (numeric) { // For numeric labels, we use a tighter bounding box, so remove the dy because it doesn't need to be centered
                 labelAttr.dy = undefined;
             }
-            categoryLabels
+            secondLineLabels
                 .text((d: Label) => d.secondRowText)
                 .attr(labelAttr)
                 .style({
@@ -125,7 +130,7 @@ module powerbi.visuals {
                     'text-anchor': (d: Label) => d.textAnchor,
                 });
 
-            categoryLabels.exit()
+            secondLineLabels.exit()
                 .remove();
 
             return labels;
@@ -179,21 +184,21 @@ module powerbi.visuals {
             labelRects
                 .attr({
                     x: (d: Label) => {
-                        return d.boundingBox.left - horizontalLabelBackgroundMargin;
+                        return d.boundingBox.left - horizontalLabelBackgroundPadding;
                     },
                     y: (d: Label) => {
-                        return d.boundingBox.top - verticalLabelBackgroundMargin;
+                        return d.boundingBox.top - verticalLabelBackgroundPadding;
                     },
                     rx: labelBackgroundRounding,
                     ry: labelBackgroundRounding,
                     width: (d: Label) => {
-                        return d.boundingBox.width + 2 * horizontalLabelBackgroundMargin;
+                        return d.boundingBox.width + 2 * horizontalLabelBackgroundPadding;
                     },
                     height: (d: Label) => {
                         if (d.text === undefined && d.secondRowText === undefined) {
                                 return 0;
                         }
-                        return d.boundingBox.height + 2 * verticalLabelBackgroundMargin;
+                        return d.boundingBox.height + 2 * verticalLabelBackgroundPadding;
                     },
                 })
                 .style("fill", fill ? fill : "#000000")
@@ -222,7 +227,7 @@ module powerbi.visuals {
                 }).
                 style({
                     'stroke': (d: Label) => leaderLineColor ? leaderLineColor : d.fill,
-                'stroke-width': DonutLabelUtils.LineStrokeWidth,
+                    'stroke-width': DonutLabelUtils.LineStrokeWidth,
                 });
 
             lines
@@ -331,12 +336,14 @@ module powerbi.visuals {
                         maximumOffset: ScatterChart.dataLabelLayoutMaximumOffset,
                         startingOffset: ScatterChart.dataLabelLayoutStartingOffset,
                         offsetIterationDelta: ScatterChart.dataLabelLayoutOffsetIterationDelta,
-                        allowLeaderLines: true
+                        allowLeaderLines: true,
+                        attemptToMoveLabelsIntoViewport: true,
                     };
                 default:
                     return {
                         maximumOffset: NewDataLabelUtils.maxLabelOffset,
-                        startingOffset: NewDataLabelUtils.startingLabelOffset
+                        startingOffset: NewDataLabelUtils.startingLabelOffset,
+                        attemptToMoveLabelsIntoViewport: true,
                     };
             }
         }

@@ -92,7 +92,11 @@ module powerbi.data {
 
             for (let startIndex = 0, endIndex = valueCount, len = valueExprs.length; startIndex < len && endIndex <= len;) {
                 let values = valueExprs.slice(startIndex, endIndex);
-                scopeIds.push(FilterScopeIdsCollectorVisitor.getScopeIdentity(this.fieldExprs, values));
+                let scopeId = FilterScopeIdsCollectorVisitor.getScopeIdentity(this.fieldExprs, values);
+
+                if (!jsCommon.ArrayExtensions.isInArray(scopeIds, scopeId, DataViewScopeIdentity.equals))
+                    scopeIds.push(scopeId);
+
                 startIndex += valueCount;
                 endIndex += valueCount;
             }

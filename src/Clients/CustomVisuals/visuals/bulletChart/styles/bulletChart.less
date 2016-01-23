@@ -38,11 +38,6 @@
             shape-rendering: crispEdges;
         }
 
-        .title {
-            font-size: 14px;
-            font-weight: bold;
-        }
-
         .subtitle, .axis {
             font-size: 11px;
         }
@@ -51,16 +46,18 @@
             stroke-width: 2px;
             z-index: 999;
         }
+    }
+    .title {
+        font-weight: bold;
+    }
+    .axis {
+        path {
+            stroke-width: 0px;
+            fill: none;
+        }
 
-        .axis {
-            path {
-                stroke-width: 0px;
-                fill: none;
-            }
-
-            line {
-                stroke-width: 0.5px;
-            }
+        line {
+            stroke-width: 0.5px;
         }
     }
 }

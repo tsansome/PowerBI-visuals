@@ -239,7 +239,7 @@ module powerbitests.helpers {
             false, // boolean metaKeyArg,
             0,     // unsigned short buttonArg,
             null   // EventTarget relatedTargetArg
-            );
+        );
         let mouseEvt = <MouseWheelEvent>evt;
         mouseEvt.wheelDelta = delta;
 
@@ -294,6 +294,32 @@ module powerbitests.helpers {
             let numericValue = parseInt(element.attr(attr), 10);
             expect(isNaN(numericValue)).toBe(false);
         }
+    }
+
+    export function findElementText(element: JQuery): string {
+        let nodes = element[0].childNodes;
+
+        if (nodes) {
+            for (let i = 0; i < nodes.length; i++) {
+                if (nodes[i].nodeType === Node.TEXT_NODE) {
+                    return nodes[i].textContent;
+                }
+            }
+        }
+    }
+
+    export function findElementTitle(element: JQuery): string {
+        let nodes = element[0].childNodes;
+
+        if (nodes) {
+            for (let i = 0; i < nodes.length; i++) {
+                if (nodes[i].nodeType === Node.ELEMENT_NODE && nodes[i].localName === "title") {
+                    return nodes[i].textContent;
+                }
+            }
+        }
+
+        return null;
     }
 
     export class DataViewBuilder {
@@ -492,7 +518,7 @@ module powerbitests.helpers {
             pluginType: string,
             height: number = 500,
             width: number = 500
-            ) {
+        ) {
             this.visualPluginService = visualPluginService;
             this.pluginType = pluginType;
             this.height = height;
@@ -525,7 +551,7 @@ module powerbitests.helpers {
         private createVisual(): void {
             if (this.visualPluginService)
                 this.visualPlugin =
-                this.visualPluginService.getPlugin(this.pluginType).create();
+                    this.visualPluginService.getPlugin(this.pluginType).create();
         }
 
         private initVisual(): void {

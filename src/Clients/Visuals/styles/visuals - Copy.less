@@ -59,19 +59,34 @@
 }
 
 .slicerContainer, .horizontalSlicerContainer {
-    &.hasSelection, &:hover {
-        .clear {
-            visibility: visible;
-        }   
+    &.hasSelection {
+        &:hover {
+            .clear {
+                visibility: visible;
+            }
+        }
     }
 }
 
 .slicerContainer {
+    cursor: pointer;
+    font-size: 14px;
+
     .slicerItemContainer {
-        margin: 2px 0 0 8px;
+        margin: 2px 0 0 0;
         box-sizing: border-box;
         white-space: nowrap;
         cursor: pointer;
+        -ms-box-orient: horizontal;
+        display: -webkit-box !important; // IOS 6-, Safari
+        display: -ms-flexbox !important; // IE10
+        display: flex !important; // Opera, Firefox
+        justify-content: space-between;
+        overflow: hidden;
+        -ms-flex-align: center;
+        -webkit-align-items: center;
+        -ms-flex-wrap: nowrap;
+        width: 100%;
 
         * {
             display: table-cell;
@@ -84,7 +99,7 @@
         }
 
         &:hover {
-            .slicerText {
+            .slicerText, .slicerCountText {
                 color: @neutralDarkColor !important;
             }
 
@@ -107,6 +122,12 @@
     .slicerCheckbox {
         cursor: pointer;
         vertical-align: middle;
+        align-self: center;
+        margin-left: 8px;
+        flex: 0 0 auto;
+        -ms-flex: 0 0 auto;
+        -webkit-flex: 0 0 auto;
+        display: inline-block;
 
         input {
             display: none;
@@ -123,7 +144,7 @@
         &.selected {
             border: none !important;
 
-            & + .slicerText {
+            & + .slicerText, + .slicerCountText {
                 color: @neutralDarkColor !important;
             }
 
@@ -155,8 +176,22 @@
     }
 
     .slicerText {
-        cursor: pointer;
-        font-size: 14px;
+        align-self: center;
+        flex: 1 1 0px;
+        -ms-flex: 1 1 0px;
+        -webkit-flex: 1 1 0px;
+        display: inline-block;
+
+        .trimmedTextWithEllipsis
+    }
+
+    .slicerCountText {
+        padding-right: 16px;
+        align-self: center;
+        flex: 0 0 auto;
+        -ms-flex: 0 0 auto;
+        -webkit-flex: 0 0 auto;
+        display: inline-block;
     }
 
     &.isMultiSelectEnabled .slicerCheckbox.selected:not(.partiallySelected) {
@@ -178,15 +213,15 @@
 .horizontalSlicerContainer {
     &.canScrollRight {
         .navigationArrow.right {
-             visibility: visible;
-        }        
+            visibility: visible;
+        }
     }
 
     &.canScrollLeft {
         .navigationArrow.left {
-             visibility: visible;
-        }        
-    }     
+            visibility: visible;
+        }
+    }
 
     .navigationArrow {
         visibility: hidden;
@@ -672,8 +707,8 @@
 
     .play-axis-container {
         position: absolute;
-        left: 16px;
-        bottom: 35px;
+        overflow: hidden;
+        width: 100%;
     }
 
     .button-container {
@@ -682,7 +717,7 @@
         overflow: hidden;
         border-radius: 13px;
         border: 1px solid @neutralSecondaryColor;
-        margin: 10px;
+        margin: 6px 10px;
         display: inline-block;
         cursor: pointer;
     }
@@ -716,19 +751,7 @@
     .sliders {
         display: inline-block;
         vertical-align: top;
-        margin-top: 18px;
-    }
-
-    .callout {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        color: @neutralSecondaryAltColor2;
-        opacity: 0.5;
-        pointer-events: none;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
+        margin-top: 12px;
     }
 }
 
@@ -849,13 +872,13 @@
         }
 
         .bi-table-column-header {
-             div.future {
-              display: none;
-             }
+            div.future {
+                display: none;
+            }
 
-             div.sorted {
-              display: inline-block;
-             }
+            div.sorted {
+                display: inline-block;
+            }
 
             & > div:hover {
                 div.sorted {
@@ -1020,13 +1043,13 @@
         }
 
         .bi-table-column-header {
-             div.future {
-              display: none;
-             }
+            div.future {
+                display: none;
+            }
 
-             div.sorted {
-              display: inline-block;
-             }
+            div.sorted {
+                display: inline-block;
+            }
         }
 
         .bi-table-cell-numeric {
@@ -1261,9 +1284,9 @@
         opacity: 1;
     }
 
-    &.disable-events{
+    &.disable-events {
         pointer-events: none;
-}
+    }
 }
 
 .interactive-legend {
@@ -1383,7 +1406,7 @@
         font-size: 12px;
         text-anchor: middle;
         font-family: @regularSecondaryFontFamily;
-    } 
+    }
 
     .catagorylabel {
         font-size: 12px;
@@ -1392,7 +1415,7 @@
     }
 }
 
-    .leader-lines {
+.leader-lines {
     .line-label {
         opacity: 0.5;
     }
@@ -1431,7 +1454,6 @@ div.ql-toolbar {
     white-space: nowrap;
     overflow-x: hidden;
     font-size: 14px;
-
     // TODO: fix SELECT dropdown arrow in IE
     /*
     select::-ms-expand {
@@ -1527,14 +1549,14 @@ div.ql-toolbar {
     &.stackedToolbar {
         box-shadow: none;
         position: inherit;
-        
+
         .ql-link-tooltip {
             a {
                 margin: 0;
             }
 
             .url {
-                max-width: 135px;
+                max-width: 130px;
                 overflow: hidden;
                 display: inline-block;
             }
@@ -1544,7 +1566,7 @@ div.ql-toolbar {
             }
 
             .input {
-                width: 175px;
+                width: 165px;
                 margin: 0;
             }
         }
@@ -1560,7 +1582,7 @@ div.ql-toolbar {
         }
 
         select.ql-font {
-            width: 180px;
+            width: 166px;
         }
 
         select.ql-size {
@@ -1814,6 +1836,7 @@ div.ql-toolbar {
     stroke-width: 3px;
     stroke-opacity: 0.5;
 }
+
 .kpiVisual {
     .goalText {
         fill: #333333;

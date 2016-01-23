@@ -312,6 +312,9 @@ module powerbi.visuals {
             if (precision !== defaultLabelPrecision)
                 return precision;
 
+            if (format === 'g' || format === 'G')
+                return;
+
             if (format) {
                 // Calculate precision from positive format by default
                 let positiveFormat = format.split(";")[0];
@@ -320,6 +323,7 @@ module powerbi.visuals {
                     return formatMetadata.precision;
                 }
             }
+
             // For count fields we do not want a precision by default
             return defaultCountLabelPrecision;
         }

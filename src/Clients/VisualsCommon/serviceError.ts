@@ -66,7 +66,7 @@ module powerbi {
         EmbeddedString = 1,
     }
 
-    export enum ServiceErrorStatusCode {
+    export const enum ServiceErrorStatusCode {
         GeneralError = 0,
         CsdlFetching = 1,
         CsdlConvertXmlToConceptualSchema = 2,

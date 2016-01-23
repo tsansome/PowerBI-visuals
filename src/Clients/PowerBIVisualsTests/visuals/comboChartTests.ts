@@ -713,11 +713,14 @@ module powerbitests {
             });
 
             setTimeout(() => {
-                let labels = $(".x.axis").children(".tick");
+                let labels = $(".x.axis").children(".tick").find("text");
 
                 //Verify begin&end labels
-                expect(labels[0].textContent).toBe("0");
-                expect(labels[labels.length - 1].textContent).toBe("1,000");
+                expect(helpers.findElementText($(labels).first())).toBe("0");
+                expect(helpers.findElementTitle($(labels).last())).toBe("1,000");
+                //verify title
+                expect(helpers.findElementTitle($(labels).first())).toBe("0");
+                expect(helpers.findElementTitle($(labels).last())).toBe("1,000");
 
                 done();
             }, DefaultWaitForRender);
@@ -755,24 +758,32 @@ module powerbitests {
             });
 
             setTimeout(() => {
-                var ylabels = $(".axisGraphicsContext .y.axis").first().find(".tick");
+                var ylabels = $(".axisGraphicsContext .y.axis").first().find(".tick").find("text");
 
                 //Verify begin&end labels
-                expect(ylabels[0].textContent).toBe("0.00000K");
-                expect(ylabels[ylabels.length - 1].textContent).toBe("1,000.00000K");
+                expect(helpers.findElementText($(ylabels).first())).toBe("0.00000K");
+                expect(helpers.findElementText($(ylabels).last())).toBe("1,000.00000K");
+                //Verify begin&end tiles
+                expect(helpers.findElementTitle($(ylabels).first())).toBe("0.00000K");
+                expect(helpers.findElementTitle($(ylabels).last())).toBe("1,000.00000K");
 
-                var y1labels = $(".axisGraphicsContext .y.axis").last().find(".tick");
-
-                //Verify begin&end labels
-                expect(y1labels[0].textContent).toBe("0.00000K");
-                expect(y1labels[y1labels.length - 1].textContent).toBe("1,000.00000K");
-
-                var xlabels = $(".x.axis").children(".tick");
+                var y1labels = $(".axisGraphicsContext .y.axis").last().find(".tick").find("text");
 
                 //Verify begin&end labels
-                expect(xlabels[0].textContent).toBe("0.00000K");
-                expect(xlabels[xlabels.length - 1].textContent).toBe("100.00000K");
+                expect(helpers.findElementText($(y1labels).first())).toBe("0.00000K");
+                expect(helpers.findElementText($(y1labels).last())).toBe("1,000.00000K");
+                //Verify begin&end tiles
+                expect(helpers.findElementTitle($(y1labels).first())).toBe("0.00000K");
+                expect(helpers.findElementTitle($(y1labels).last())).toBe("1,000.00000K");
 
+                var xlabels = $(".x.axis").children(".tick").find("text");
+
+                //Verify begin&end labels
+                expect(helpers.findElementText($(xlabels).first())).toBe("0.00000K");
+                expect(helpers.findElementText($(xlabels).last())).toBe("100.00000K");
+                //Verify begin&end tiles
+                expect(helpers.findElementTitle($(xlabels).first())).toBe("0.00000K");
+                expect(helpers.findElementTitle($(xlabels).last())).toBe("100.00000K");
                 done();
             }, DefaultWaitForRender);
         });
@@ -791,10 +802,13 @@ module powerbitests {
 
             visualBuilder.onDataChanged({ dataViews: [dataViewAnotherDomain, dataView] });
             setTimeout(() => {
-                let axisLabels = $(".axisGraphicsContext .y.axis").first().find(".tick");
+                let axisLabels = $(".axisGraphicsContext .y.axis").first().find(".tick").find("text");
 
-                expect(axisLabels[0].textContent).toBe("0K");
-                expect(axisLabels[axisLabels.length - 1].textContent).toBe("10K");
+                expect(helpers.findElementText($(axisLabels).first())).toBe("0K");
+                expect(helpers.findElementText($(axisLabels).last())).toBe("10K");
+                //verify title
+                expect(helpers.findElementTitle($(axisLabels).first())).toBe("0K");
+                expect(helpers.findElementTitle($(axisLabels).last())).toBe("10K");
 
                 done();
             }, DefaultWaitForRender);
@@ -814,15 +828,22 @@ module powerbitests {
 
             visualBuilder.onDataChanged({ dataViews: [dataViewAnotherDomain, dataView] });
             setTimeout(() => {
-                let axisLabels = $(".axisGraphicsContext .y.axis").first().find(".tick");
+                let axisLabels = $(".axisGraphicsContext .y.axis").first().find(".tick").find("text");
 
-                expect(axisLabels[0].textContent).toBe("0");
-                expect(axisLabels[axisLabels.length - 1].textContent).toBe("30");
+                expect(helpers.findElementText($(axisLabels).first())).toBe("0");
+                expect(helpers.findElementTitle($(axisLabels).last())).toBe("30");
 
-                axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick");
+                //check titles
+                expect(helpers.findElementText($(axisLabels).first())).toBe("0");
+                expect(helpers.findElementTitle($(axisLabels).last())).toBe("30");
 
-                expect(axisLabels[0].textContent).toBe("5");
-                expect(axisLabels[axisLabels.length - 1].textContent).toBe("25");
+                axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick").find("text");
+
+                expect(helpers.findElementText($(axisLabels).first())).toBe("5");
+                expect(helpers.findElementText($(axisLabels).last())).toBe("25");
+                //check titles
+                expect(helpers.findElementTitle($(axisLabels).first())).toBe("5");
+                expect(helpers.findElementTitle($(axisLabels).last())).toBe("25");
 
                 done();
             }, DefaultWaitForRender);
@@ -836,11 +857,15 @@ module powerbitests {
             });
 
             setTimeout(() => {
-                let axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick");
+                let axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick").find("text");
                 
                 //Verify begin&end labels
-                expect(axisLabels[0].textContent).toBe("0K");
-                expect(axisLabels[axisLabels.length - 1].textContent).toBe("7K");
+                expect(helpers.findElementText($(axisLabels).first())).toBe("0K");
+                expect(helpers.findElementText($(axisLabels).last())).toBe("7K");
+
+                //Verify begin&end titles
+                expect(helpers.findElementTitle($(axisLabels).first())).toBe("0K");
+                expect(helpers.findElementTitle($(axisLabels).last())).toBe("7K");
 
                 done();
             }, DefaultWaitForRender);
@@ -854,11 +879,15 @@ module powerbitests {
             });
 
             setTimeout(() => {
-                let axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick");
+                let axisLabels = $(".axisGraphicsContext .y.axis").last().find(".tick").find("text");
                 
                 //Verify begin&end axis labels
-                expect(axisLabels[0].textContent).toBe("-7K");
-                expect(axisLabels[axisLabels.length - 1].textContent).toBe("-2K");
+                expect(helpers.findElementText($(axisLabels).first())).toBe("-7K");
+                expect(helpers.findElementText($(axisLabels).last())).toBe("-2K");
+
+                //Verify begin&end axis titles
+                expect(helpers.findElementTitle($(axisLabels).first())).toBe("-7K");
+                expect(helpers.findElementTitle($(axisLabels).last())).toBe("-2K");
 
                 done();
             }, DefaultWaitForRender);
@@ -881,10 +910,16 @@ module powerbitests {
             });
 
             setTimeout(() => {
-                let lineAxisLabel = $(".yAxisLabel").length;
+                let textSelector: string = ".yAxisLabel";
+                let lineAxisLabel:number = $(textSelector).length;
+
                 expect(lineAxisLabel).toBe(2);
-                expect($(".yAxisLabel").first().text()).toBe("col2, col3 and col4");
-                expect($(".yAxisLabel").last().text()).toBe("col2");
+                expect(helpers.findElementText($(textSelector).first())).toBe("col2, col3 and col4");
+                expect(helpers.findElementText($(textSelector).last())).toBe("col2");
+
+                //check titles
+                expect(helpers.findElementTitle($(textSelector).first())).toBe("col2, col3 and col4");
+                expect(helpers.findElementTitle($(textSelector).last())).toBe("col2");
 
                 done();
             }, DefaultWaitForRender);
@@ -941,9 +976,14 @@ module powerbitests {
             });
 
             setTimeout(() => {
-                let lineAxisLabel = $(".yAxisLabel").length;
+                let textSelector: string = ".yAxisLabel";
+                let lineAxisLabel = $(textSelector).length;
+
                 expect(lineAxisLabel).toBe(1);
-                expect($(".yAxisLabel").first().text()).toBe("col2");
+                expect(helpers.findElementText($(textSelector).first())).toBe("col2");
+
+                //check titles
+                expect(helpers.findElementTitle($(textSelector).first())).toBe("col2");
 
                 done();
             }, DefaultWaitForRender);

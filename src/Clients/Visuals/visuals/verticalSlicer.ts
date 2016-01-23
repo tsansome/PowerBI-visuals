@@ -181,6 +181,10 @@ module powerbi.visuals {
             listItemElement.append('span')
                 .classed(SlicerUtil.Selectors.LabelText.class, true)
                 .style('font-size', PixelConverter.fromPoint(settings.slicerText.textSize));
+
+            listItemElement.append('span')
+                .classed(SlicerUtil.Selectors.CountText.class, true)
+                .style('font-size', PixelConverter.fromPoint(settings.slicerText.textSize));
         }
 
         private onUpdateSelection(rowSelection: D3.Selection, interactivityService: IInteractivityService): void {
@@ -201,6 +205,10 @@ module powerbi.visuals {
                 });
                 labelText.attr('title', (d: SlicerDataPoint) => d.tooltip);
                 domHelper.setSlicerTextStyle(labelText, settings);
+
+                let countText = rowSelection.selectAll(SlicerUtil.Selectors.CountText.selector);
+                countText.text((d: SlicerDataPoint) =>  d.count);
+                domHelper.setSlicerTextStyle(countText, settings);
 
                 let slicerCheckbox = rowSelection.selectAll(Selectors.Input.selector).selectAll('span');
                 slicerCheckbox.style(Styles.buildCheckboxStyle(settings));

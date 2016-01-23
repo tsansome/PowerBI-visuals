@@ -316,6 +316,10 @@ module powerbi.data {
                 return QueryAggregateFunction[expr.func] + '(' + expr.arg.accept(this) + ')';
             }
 
+            public visitConstant(expr: SQConstantExpr): string {
+                return 'const';
+            }
+
             public visitDefault(expr: SQExpr, fallback: string): string {
                 return fallback || 'expr';
             }

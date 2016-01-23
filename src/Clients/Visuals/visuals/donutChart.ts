@@ -32,6 +32,10 @@ module powerbi.visuals {
     import PixelConverter = jsCommon.PixelConverter;
     import ISize = shapes.ISize;
 
+    export interface DonutSmallViewPortProperties {
+        maxHeightToScaleDonutLegend: number;
+    }
+
     export interface DonutConstructorOptions {
         sliceWidthRatio?: number;
         animator?: IDonutChartAnimator;
@@ -39,6 +43,7 @@ module powerbi.visuals {
         disableGeometricCulling?: boolean;
         behavior?: IInteractiveBehavior;
         tooltipsEnabled?: boolean;
+        smallViewPortProperties?: DonutSmallViewPortProperties;
     }
 
     /**
@@ -130,7 +135,6 @@ module powerbi.visuals {
         private static DrillDownAnimationDuration = 1000;
         private static OuterArcRadiusRatio = 0.9;
         private static InnerArcRadiusRatio = 0.8;
-        private static InteractiveLegendContainerHeight = 70;
         private static OpaqueOpacity = 1.0;
         private static SemiTransparentOpacity = 0.6;
         private static defaultSliceWidthRatio: number = 0.48;
@@ -139,6 +143,7 @@ module powerbi.visuals {
         private static sliceHighlightClass: ClassAndSelector = createClassAndSelector('slice-highlight');
         private static twoPi = 2 * Math.PI;
 
+        public static InteractiveLegendContainerHeight = 70;
         public static EffectiveZeroValue = 0.000000001; // Very small multiplier so that we have a properly shaped zero arc to animate to/from.
         public static PolylineOpacity = 0.5;
 
@@ -178,6 +183,7 @@ module powerbi.visuals {
         private settings: DonutChartSettings;
         private tooltipsEnabled: boolean;
         private donutProperties: DonutChartProperties;
+        private maxHeightToScaleDonutLegend: number;
 
         /**
          * Note: Public for testing.
@@ -192,6 +198,9 @@ module powerbi.visuals {
                 this.disableGeometricCulling = options.disableGeometricCulling ? options.disableGeometricCulling : false;
                 this.behavior = options.behavior;
                 this.tooltipsEnabled = options.tooltipsEnabled;
+                if (options.smallViewPortProperties) {
+                    this.maxHeightToScaleDonutLegend = options.smallViewPortProperties.maxHeightToScaleDonutLegend;
+                }
             }
             if (this.sliceWidthRatio == null) {
                 this.sliceWidthRatio = DonutChart.defaultSliceWidthRatio;
@@ -520,6 +529,14 @@ module powerbi.visuals {
             return Math.min(viewport.height, viewport.width) / 2;
         }
 
+        private getScaleForLegendArrow() {
+            let ratio = 1.0;
+            if (this.maxHeightToScaleDonutLegend && this.currentViewport.height < this.maxHeightToScaleDonutLegend) {
+                ratio = this.currentViewport.height / this.maxHeightToScaleDonutLegend;
+            }
+            return ratio;
+        }
+
         private initViewportDependantProperties(duration: number = 0) {
             this.currentViewport.height = this.parentViewport.height;
             this.currentViewport.width = this.parentViewport.width;
@@ -787,8 +804,8 @@ module powerbi.visuals {
         }
 
         private addInteractiveLegendArrow(): void {
-            let arrowHeightOffset = 11;
-            let arrowWidthOffset = 33 / 2;
+            const arrowHeightOffset = 11;
+            const arrowWidthOffset = 33 / 2;
             if (!this.interactiveLegendArrow) {
                 let interactiveLegendArrow = this.svg.append('g');
                 interactiveLegendArrow.append('path')
@@ -798,10 +815,12 @@ module powerbi.visuals {
             }
             let viewport = this.currentViewport;
             // Calculate the offsets from the legend container to the arrow.
-            let distanceBetweenLegendAndArrow = (viewport.height - 2 * this.radius) / 2 + arrowHeightOffset;
-            let middleOfChart = viewport.width / 2 - arrowWidthOffset;
+            let scaleRatio = this.getScaleForLegendArrow();
 
-            this.interactiveLegendArrow.attr('transform', SVGUtil.translate(middleOfChart, distanceBetweenLegendAndArrow));
+            let distanceBetweenLegendAndArrow = (viewport.height - 2 * this.radius) / 2 + (arrowHeightOffset * scaleRatio);
+            let middleOfChart = viewport.width / 2 - (arrowWidthOffset * scaleRatio);
+
+            this.interactiveLegendArrow.attr('transform', SVGUtil.translateAndScale(middleOfChart, distanceBetweenLegendAndArrow, scaleRatio));
         }
 
         private calculateSliceAngles(): void {

@@ -70,7 +70,7 @@ module powerbitests {
                 expect(powerbi.data.DataViewObjectDescriptors.findFormatString(powerbi.visuals.waterfallChartCapabilities.objects)).toEqual(WaterfallChart.formatStringProp);
             });
         });
-            
+
         describe("warnings", () => {
             let v: powerbi.IVisual;
             let warningSpy: jasmine.Spy;
@@ -152,20 +152,22 @@ module powerbitests {
 
             it("axis titles should be correct ", () => {
                 let dataView = new WaterfallDataBuilder().build();
-
                 dataView.metadata.objects = {
-                        categoryAxis: {
-                            showAxisTitle: true
-                        },
-                        valueAxis: {
-                            showAxisTitle: true
-                        }
+                    categoryAxis: {
+                        showAxisTitle: true
+                    },
+                    valueAxis: {
+                        showAxisTitle: true
+                    }
                 };
 
                 v.onDataChanged({ dataViews: [dataView] });
 
-                expect($(".xAxisLabel").first().text()).toBe("year");
-                expect($(".yAxisLabel").first().text()).toBe("sales");
+                expect(helpers.findElementText($(".xAxisLabel").first())).toBe("year");
+                expect(helpers.findElementText($(".yAxisLabel").first())).toBe("sales");
+                //check title
+                expect(helpers.findElementTitle($(".xAxisLabel").first())).toBe("year");
+                expect(helpers.findElementTitle($(".yAxisLabel").first())).toBe("sales");
             });
 
             it("axis titles should show/hide ", () => {
@@ -236,7 +238,7 @@ module powerbitests {
                 data = WaterfallChart.converter(dataView, colors, visualBuilder.host, dataBuilder.dataLabelSettings, dataBuilder.sentimentColors, /* interactivityService */ null);
                 dataPoints = data.series[0].data;
             });
-            
+
             it("legend should have 3 items", () => {
                 expect(data.legend.dataPoints.length).toBe(3);  // Gain, Loss, Total
             });
@@ -386,22 +388,22 @@ module powerbitests {
                         (<powerbi.visuals.CartesianChart>v).scrollTo(startIndex);
 
                         setTimeout(() => {
-                            let tickValues = _.map(getTicks('x').get(), (v) => $(v).text());
+                            let tickValues = _.map(getTicks('x').get(), (v) => helpers.findElementText($(v).find('text').first()));
 
                             expect(tickValues.slice(0, tickValues.length - 1)).toEqual(expectedValues);
                             expect(_.startsWith(_.last(tickValues), 'T')).toBeTruthy();  // "Total" may be truncated
 
                             done();
                         }, DefaultWaitForRender);
-            });
+                    });
                 }, DefaultWaitForRender);
-        });
+            });
 
             function getBrushExtent(): JQuery {
                 return $('.brush .extent');
             }
         });
-        
+
         describe("enumerateObjectInstances", () => {
             let v: powerbi.IVisual;
             let builder: WaterfallVisualBuilder;
@@ -502,7 +504,7 @@ module powerbitests {
                     }
                 });
             });
-            
+
             it("check font size for legend title and legend items waterfall chart", (done) => {
                 let labelFontSize = 13;
 
@@ -552,7 +554,7 @@ module powerbitests {
                     done();
                 }, DefaultWaitForRender);
             });
-            
+
             function verifyColors() {
                 let objects = <VisualObjectInstanceEnumerationObject>v.enumerateObjectInstances({ objectName: "sentimentColors" });
 
@@ -637,7 +639,7 @@ module powerbitests {
                     (<any>rects.first()).d3Click(0, 0);
 
                     let clearCatcher = $('.clearCatcher');
-                    (<any>$(clearCatcher[0])).d3Click(0, 0); 
+                    (<any>$(clearCatcher[0])).d3Click(0, 0);
 
                     expect(visualBuilder.host.onSelect).toHaveBeenCalledWith(
                         {
@@ -673,7 +675,7 @@ module powerbitests {
                 let dataView = dataBuilder.build();
 
                 v.onDataChanged({ dataViews: [dataView] });
-                
+
                 setTimeout(() => {
                     expect(getRects().length).toBe(dataBuilder.categoryValues.length + 1);
 
@@ -722,7 +724,7 @@ module powerbitests {
                     done();
                 }, DefaultWaitForRender);
             });
-            
+
             it("should draw data labels when enabled", (done) => {
                 let dataView = new WaterfallDataBuilder().withDataLabels().build();
 
@@ -800,7 +802,7 @@ module powerbitests {
                 helpers.assertColorsMatch(labelDataPoints[5].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
                 helpers.assertColorsMatch(labelDataPoints[6].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
             });
-            
+
             it("Label data points have correct display units", () => {
                 let dataView = new WaterfallDataBuilder().withDataLabels(undefined, 1000, 1).build();
                 v.onDataChanged({ dataViews: [dataView] });
@@ -914,20 +916,20 @@ module powerbitests {
         public get objects(): powerbi.DataViewObjects { return this._objects; }
 
         private _sentimentColors: powerbi.visuals.WaterfallChartSentimentColors = {
-            increaseFill: <powerbi.Fill> {
+            increaseFill: <powerbi.Fill>{
                 solid: { color: "#FF0000" }
             },
-            decreaseFill: <powerbi.Fill> {
+            decreaseFill: <powerbi.Fill>{
                 solid: { color: "#00FF00" }
             },
-            totalFill: <powerbi.Fill> {
+            totalFill: <powerbi.Fill>{
                 solid: { color: "#0000FF" }
             }
         };
         public get sentimentColors(): powerbi.visuals.WaterfallChartSentimentColors { return this._sentimentColors; }
 
         public build(): powerbi.DataView {
-            return <powerbi.DataView> {
+            return <powerbi.DataView>{
                 metadata: {
                     columns: [this._categoryColumn, this._measureColumn],
                     objects: this._objects,
@@ -966,7 +968,7 @@ module powerbitests {
             if (!this._objects) {
                 this._objects = {};
             }
-            this._objects["labels"] = <powerbi.visuals.DataLabelObject> {
+            this._objects["labels"] = <powerbi.visuals.DataLabelObject>{
                 show: true,
                 color: { solid: { color: color } },
                 labelDisplayUnits: labelDisplayUnits,
@@ -1027,7 +1029,7 @@ module powerbitests {
         }
 
         public buildInitOptions(): powerbi.visuals.CartesianVisualInitOptions {
-            return <powerbi.visuals.CartesianVisualInitOptions> {
+            return <powerbi.visuals.CartesianVisualInitOptions>{
                 element: this._element,
                 host: this._host,
                 style: this._style,

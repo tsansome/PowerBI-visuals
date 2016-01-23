@@ -106,6 +106,10 @@ module powerbi.visuals {
             '0.0 %;-0.0 %;0.0 %': 'Percentage1',
         };
 
+        export const DefaultIntegerFormat = 'g';
+        export const DefaultNumericFormat = '#,0.00';
+        export const DefaultDateFormat = 'd';
+
         const defaultLocalizedStrings = {
             'NullValue': '(Blank)',
             'BooleanTrue': 'True',
@@ -410,11 +414,11 @@ module powerbi.visuals {
                     let columnType = column.type;
                     if (columnType) {
                         if (columnType.dateTime)
-                            return 'd';
+                            return DefaultDateFormat;
                         if (columnType.integer)
-                            return 'g';
+                            return DefaultIntegerFormat;
                         if (columnType.numeric)
-                            return '#,0.00';
+                            return DefaultNumericFormat;
                     }
                 }
             }

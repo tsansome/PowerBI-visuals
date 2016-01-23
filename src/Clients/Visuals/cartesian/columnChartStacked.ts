@@ -56,6 +56,7 @@ module powerbi.visuals {
         private viewportHeight: number;
         private viewportWidth: number;
         private layout: IColumnLayout;
+        private isComboChart: boolean;
 
         public setupVisualProps(columnChartProps: ColumnChartContext): void {
             this.graphicsContext = columnChartProps;
@@ -67,6 +68,7 @@ module powerbi.visuals {
             this.interactivityService = columnChartProps.interactivityService;
             this.viewportHeight = columnChartProps.viewportHeight;
             this.viewportWidth = columnChartProps.viewportWidth;
+            this.isComboChart = columnChartProps.isComboChart;
         }
 
         public setData(data: ColumnChartData) {
@@ -324,8 +326,8 @@ module powerbi.visuals {
                             width: textWidth,
                             height: textHeight,
                         },
-                        outsideFill: labelSettings.labelColor ? labelSettings.labelColor : NewDataLabelUtils.defaultLabelColor,
-                        insideFill: labelSettings.labelColor ? labelSettings.labelColor : NewDataLabelUtils.defaultInsideLabelColor,
+                        outsideFill: ColumnChart.getLabelFill(labelSettings.labelColor, false, this.isComboChart),
+                        insideFill: ColumnChart.getLabelFill(labelSettings.labelColor, true, this.isComboChart),
                         parentType: LabelDataPointParentType.Rectangle,
                         parentShape: {
                             rect: parentRect,
@@ -368,6 +370,7 @@ module powerbi.visuals {
         private viewportHeight: number;
         private viewportWidth: number;
         private layout: IColumnLayout;
+        private isComboChart: boolean;
 
         public setupVisualProps(barChartProps: ColumnChartContext): void {
             this.graphicsContext = barChartProps;
@@ -379,6 +382,7 @@ module powerbi.visuals {
             this.interactivityService = barChartProps.interactivityService;
             this.viewportHeight = barChartProps.viewportHeight;
             this.viewportWidth = barChartProps.viewportWidth;
+            this.isComboChart = barChartProps.isComboChart;
         }
 
         public setData(data: ColumnChartData) {
@@ -640,8 +644,8 @@ module powerbi.visuals {
                             width: textWidth,
                             height: textHeight,
                         },
-                        outsideFill: labelSettings.labelColor ? labelSettings.labelColor : NewDataLabelUtils.defaultLabelColor,
-                        insideFill: labelSettings.labelColor ? labelSettings.labelColor : NewDataLabelUtils.defaultInsideLabelColor,
+                        outsideFill: ColumnChart.getLabelFill(labelSettings.labelColor, false, this.isComboChart),
+                        insideFill: ColumnChart.getLabelFill(labelSettings.labelColor, true, this.isComboChart),
                         parentType: LabelDataPointParentType.Rectangle,
                         parentShape: {
                             rect: parentRect,

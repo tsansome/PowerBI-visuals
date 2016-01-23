@@ -278,7 +278,7 @@ module powerbitests {
                 "c"
             ];
 
-            let categoryIdentities: DataViewScopeIdentity[] = categoryValues.map((value: any) =>{
+            let categoryIdentities: DataViewScopeIdentity[] = categoryValues.map((value: any) => {
                 return mocks.dataViewScopeIdentity(value);
             });
             
@@ -813,7 +813,7 @@ module powerbitests {
                     .buildNewValue()
                 .buildValueColumns();
             
-            return {dataViews: [dataViewBuilder.build()]};
+            return { dataViews: [dataViewBuilder.build()] };
         }
 
         it("Interactors are rendered with a minimum size", (done) => {
@@ -958,7 +958,7 @@ module powerbitests {
                         data2: [
                             {
                                 dataMap: {
-                                    "select0" : interactiveDataViewOptions.dataViews[0].categorical.categories[0].identity[0]
+                                    "select0": interactiveDataViewOptions.dataViews[0].categorical.categories[0].identity[0]
                                 }
                             }
                         ]
@@ -1236,11 +1236,11 @@ module powerbitests {
                 FunnelChartHelpers.validateDataLabels(dataView);
                 expect($(".funnelChart g").length).toBe(7);
                 expect($(".funnelBar").length).toBe(6);
-                expect($(".highlight").length).toBe(3);                expect(+$(".highlight")[0].attributes.getNamedItem("height").value)
+                expect($(".highlight").length).toBe(3); expect(+$(".highlight")[0].attributes.getNamedItem("height").value)
                     .toBeLessThan(+$(".funnelBar")[0].attributes.getNamedItem("height").value);
                 expect(+$(".highlight")[0].attributes.getNamedItem("y").value)
                     .toBeGreaterThan(+$(".funnelBar")[0].attributes.getNamedItem("y").value);
-                expect($(".funnelChart .axis").find("text").length).toBe(3);                done();
+                expect($(".funnelChart .axis").find("text").length).toBe(3); done();
             }, DefaultWaitForRender);
         });
 
@@ -1282,7 +1282,7 @@ module powerbitests {
                     .toBeGreaterThan(+$(".funnelBar")[0].attributes.getNamedItem("height").value);
                 expect(+$(".highlight")[0].attributes.getNamedItem("y").value)
                     .toBeLessThan(+$(".funnelBar")[0].attributes.getNamedItem("y").value);
-                expect($(".funnelChart .axis").find("text").length).toBe(3);                done();
+                expect($(".funnelChart .axis").find("text").length).toBe(3); done();
             }, DefaultWaitForRender);
         });
 
@@ -1777,7 +1777,7 @@ module powerbitests {
             ];
 
             let percentBarOnMetadata: DataViewMetadata = powerbi.Prototype.inherit(dataViewMetadata);
-            percentBarOnMetadata.objects = { percentBarLabel: { show: true, fontSize: fontSize  } };
+            percentBarOnMetadata.objects = { percentBarLabel: { show: true, fontSize: fontSize } };
 
             dataViewBuilder.setMetadata(percentBarOnMetadata);
 
@@ -2632,6 +2632,91 @@ module powerbitests {
             }, DefaultWaitForRender);
         }
             );
+
+        it("funnel axis tooltip", (done) => {
+            let tickValueClassSelector = '.tick title';
+            let categoryValues: any[] = [
+                "Donald Duck Donald Duck Donald Duck Donald Duck Donald Duck Donald Duck Donald Duck Donald Duck Donald Duck",
+                "Mickey Mouse",
+                "Pluto"
+            ];
+
+            let dataViewMetadataWithLabelsObject: DataViewMetadata = powerbi.Prototype.inherit(dataViewMetadata);
+            dataViewMetadataWithLabelsObject.objects = {
+                labels: { show: true, labelDisplayUnits: 1000, labelPrecision: 2 }
+            };
+
+            dataViewBuilder.setMetadata(dataViewMetadataWithLabelsObject);
+
+            dataViewBuilder.categoryBuilder()
+                .setSource(dataViewMetadataWithLabelsObject.columns[0])
+                .setValues(categoryValues)
+                .setIdentity(categoryValues.map((value: any) => {
+                    return mocks.dataViewScopeIdentity(value);
+                }))
+                .setIdentityFields([categoryColumnRef])
+                .buildCategory();
+
+            dataViewBuilder.valueColumnsBuilder()
+                .newValueBuilder()
+                .setSource(dataViewMetadataWithLabelsObject.columns[1])
+                .setValues([1555, 2000, 20])
+                .setSubtotal(3575)
+                .buildNewValue()
+                .buildValueColumns();
+
+            let dataView: DataView = dataViewBuilder.build();
+
+            visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
+            setTimeout(() => {
+                expect($(tickValueClassSelector)[0].textContent).toBe(categoryValues[0]);
+                expect($(tickValueClassSelector)[1].textContent).toBe(categoryValues[1]);
+                expect($(tickValueClassSelector)[2].textContent).toBe(categoryValues[2]);
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it("funnel percent bars tooltip", (done) => {
+            let categoryValues: any[] = [
+                "Donald Duck",
+                "Mickey Mouse",
+                "Pluto"
+            ];
+
+            let percentBarsSelector = '.value title';
+            let dataViewMetadataWithLabelsObject: DataViewMetadata = powerbi.Prototype.inherit(dataViewMetadata);
+            dataViewMetadataWithLabelsObject.objects = {
+                labels: { show: true, labelDisplayUnits: 1000, labelPrecision: 2 }
+            };
+
+            dataViewBuilder.setMetadata(dataViewMetadataWithLabelsObject);
+
+            dataViewBuilder.categoryBuilder()
+                .setSource(dataViewMetadataWithLabelsObject.columns[0])
+                .setValues(categoryValues)
+                .setIdentity(categoryValues.map((value: any) => {
+                    return mocks.dataViewScopeIdentity(value);
+                }))
+                .setIdentityFields([categoryColumnRef])
+                .buildCategory();
+
+            dataViewBuilder.valueColumnsBuilder()
+                .newValueBuilder()
+                .setSource(dataViewMetadataWithLabelsObject.columns[1])
+                .setValues([1555, 2000, 20])
+                .setSubtotal(3575)
+                .buildNewValue()
+                .buildValueColumns();
+
+            let dataView: DataView = dataViewBuilder.build();
+
+            visualBuilder.visual.onDataChanged({ dataViews: [dataView] });
+            setTimeout(() => {
+                expect($(percentBarsSelector)[0].textContent).toBe('100%');
+                expect($(percentBarsSelector)[1].textContent).toBe('1.3%');
+                done();
+            }, DefaultWaitForRender);
+        });
     });
 
     describe("funnel chart web animation", () => {
@@ -3392,8 +3477,11 @@ module powerbitests {
             let topElement = $(FunnelChart.Selectors.percentBar.text.selector).first();
             let bottomElement = $(FunnelChart.Selectors.percentBar.text.selector).last();
 
-            let topPercent: string = topElement.text();
-            let bottomPercent: string = bottomElement.text();
+            let topPercent: string = helpers.findElementText(topElement);
+            let bottomPercent: string = helpers.findElementText(bottomElement);
+
+            let topPercentTitle: string = helpers.findElementTitle(topElement) ? helpers.findElementTitle(topElement) : topPercent;
+            let bottomPercentTitle: string = helpers.findElementTitle(bottomElement) ? helpers.findElementTitle(bottomElement) : bottomPercent;
 
             [topPercent, bottomPercent].map((percent: string) => {
                 let validFormat = !!percent.match(PercentBarValueFormatRegex);
@@ -3409,6 +3497,9 @@ module powerbitests {
 
                 expect(topPercent).toBe("100%");
                 expect(bottomPercent).toBe(bottomPercentText);
+                //validate titles
+                expect(topPercentTitle).toBe("100%");
+                expect(bottomPercentTitle).toBe(bottomPercentText);
 
                 if (fontSize) {
                     expect(topElement.css('font-size')).toBe(PixelConverter.fromPoint(fontSize));
@@ -3502,7 +3593,7 @@ module powerbitests {
             });
         }
 
-        export function testLabelsFontSize(dataViewBuilder: DataViewBuilder, categoryColumnRef:SQExpr, visualBuilder: VisualBuilder, dataViewMetadata: DataViewMetadata, fontSizeInPt: number, assertCallback: () => void) {
+        export function testLabelsFontSize(dataViewBuilder: DataViewBuilder, categoryColumnRef: SQExpr, visualBuilder: VisualBuilder, dataViewMetadata: DataViewMetadata, fontSizeInPt: number, assertCallback: () => void) {
 
             let metadataWithDisplayUnits: DataViewMetadata = $.extend(true, {}, dataViewMetadata);
             metadataWithDisplayUnits.objects = { labels: { labelDisplayUnits: 1000, fontSize: fontSizeInPt } };

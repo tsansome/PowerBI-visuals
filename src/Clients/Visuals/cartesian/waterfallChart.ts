@@ -397,7 +397,8 @@ module powerbi.visuals {
                     categoryCount: categoryCount,
                     domain: null,
                     isScalar: false,
-                    isScrollable: this.isScrollable
+                    isScrollable: this.isScrollable,
+                    trimOrdinalDataOnOverflow: options.trimOrdinalDataOnOverflow
                 });
 
             // In the case that we have overflowed horizontally we want to clip the data and use that to calculate the axes on the dashboard.           

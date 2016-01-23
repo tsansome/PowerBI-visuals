@@ -69,6 +69,12 @@ module powerbi.data {
     export interface DataViewBuilderSeriesData {
         values: PrimitiveValue[];
         highlights?: PrimitiveValue[];
+
+        /** Client-computed maximum value for a column. */
+        maxLocal?: any;
+
+        /** Client-computed maximum value for a column. */
+        minLocal?: any;
     }
 
     export function createCategoricalDataViewBuilder(): IDataViewBuilderCategorical {
@@ -170,13 +176,10 @@ module powerbi.data {
             return this;
         }
 
-        private assertValues(values: any[]): void {
-            let categoryColumn = _.first(this.categories);
-            let length = (categoryColumn && categoryColumn.values) ? categoryColumn.values.length : 1;
-            debug.assert(values == null || (values.length === length), "should have one value per category");
-        }
-
         private fillData(dataViewValues: DataViewValueColumns, groups: DataViewMetadataColumn[]) {
+            let categoryColumn = _.first(this.categories);
+            let categoryLength = (categoryColumn && categoryColumn.values) ? categoryColumn.values.length : 1;
+
             if (this.hasDynamicSeries) {
                 // Dynamic series
                 let data = <DataViewBuilderSeriesData[][]>this.data;
@@ -185,17 +188,9 @@ module powerbi.data {
                     debug.assert(seriesMeasures.length === this.measureColumns.length, 'seriesMeasures.length === this.measureColumns.length');
 
                     for (let measureIndex = 0, measuresLen = this.measureColumns.length; measureIndex < measuresLen; measureIndex++) {
-                        let groupIndex = seriesIndex * this.measureColumns.length + measureIndex;
+                        let groupIndex = seriesIndex * measuresLen + measureIndex;
 
-                        let values = seriesMeasures[measureIndex].values;
-                        this.assertValues(values);
-                        dataViewValues[groupIndex].values = values;
-
-                        let highlights = seriesMeasures[measureIndex].highlights;
-                        if (highlights) {
-                            this.assertValues(highlights);
-                            dataViewValues[groupIndex].highlights = highlights;
-                        }
+                        applySeriesData(dataViewValues[groupIndex], seriesMeasures[measureIndex], categoryLength);
                     }
                 }
             }
@@ -203,15 +198,7 @@ module powerbi.data {
                 // Static series
                 let data = <DataViewBuilderValuesColumnOptions[]>this.data;
                 for (let measureIndex = 0, measuresLen = this.measureColumns.length; measureIndex < measuresLen; measureIndex++) {
-                    let values = data[measureIndex].values;
-                    this.assertValues(values);
-                    dataViewValues[measureIndex].values = values;
-
-                    let highlights = data[measureIndex].highlights;
-                    if (highlights) {
-                        this.assertValues(highlights);
-                        dataViewValues[measureIndex].highlights = highlights;
-                    }
+                    applySeriesData(dataViewValues[measureIndex], data[measureIndex], categoryLength);
                 }
             }
         }
@@ -313,5 +300,29 @@ module powerbi.data {
             return;
 
         items.push(itemToAdd);
+    }
+
+    function applySeriesData(target: DataViewValueColumn, source: DataViewBuilderSeriesData, categoryLength: number): void {
+        debug.assertValue(target, 'target');
+        debug.assertValue(source, 'source');
+        debug.assertValue(categoryLength, 'categoryLength');
+
+        let values = source.values;
+        debug.assert(categoryLength === values.length, 'categoryLength === values.length');
+
+        target.values = values;
+
+        let highlights = source.highlights;
+        if (highlights) {
+            debug.assert(categoryLength === highlights.length, 'categoryLength === highlights.length');
+
+            target.highlights = highlights;
+        }
+
+        if (source.minLocal !== undefined)
+            target.minLocal = source.minLocal;
+
+        if (source.maxLocal !== undefined)
+            target.maxLocal = source.maxLocal;
     }
 }

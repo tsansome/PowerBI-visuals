@@ -82,6 +82,10 @@ module powerbi.data {
             if (!isPivotableAxis(binding.Secondary) || binding.Secondary.Groupings[0].Projections.length !== 1)
                 return false;
 
+            // don't pivot if either axis has a data reduction
+            if (binding.DataReduction && (binding.DataReduction.Primary || binding.DataReduction.Secondary))
+                return false;
+
             return true;
         }
 

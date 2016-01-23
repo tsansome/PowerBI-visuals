@@ -32,6 +32,7 @@ module powerbitests {
     
     describe("List view tests", () => {
         let listViewBuilder: ListViewBuilder;
+        jasmine.clock().uninstall();
 
         let data = [
             { first: "Mickey", second: "Mouse" },
@@ -47,8 +48,12 @@ module powerbitests {
 
         beforeEach(() => {
             listViewBuilder = new ListViewBuilder();
-
             listViewBuilder.data = data;
+        });
+
+        afterEach(() => {
+            listViewBuilder.destroy();
+            listViewBuilder = null;
         });
 
         it("Create HTML List View Correctly", (done) => {
@@ -111,40 +116,28 @@ module powerbitests {
                 }, DefaultWaitForRender);
             }, 30);
         });
+
     });
 
     class ListViewBuilder {
-        private nestedData: any[];
+        public isSpy: boolean = false;
+        public element: JQuery;
+        public scrollElement: JQuery;
+        public data: any[];
 
         private width: number;
-
         private height: number;
-
-        public isSpy: boolean = false;
-
-        public element: JQuery;
-
-        public scrollElement: JQuery;
-
         private options: ListViewOptions;
-
-        private rowExit(rowSelection: D3.Selection) {
-            rowSelection.remove();
-        }
-
         private _spy: jasmine.Spy;
+        private _listView: powerbi.visuals.IListView;
 
         public get spy(): jasmine.Spy {
             return this._spy;
         }
 
-        private _listView: powerbi.visuals.IListView;
-
         public get listView(): powerbi.visuals.IListView {
             return this._listView;
         }
-
-        public data: any[];
 
         constructor(width: number = 200, height: number = 200) {
             this.setSize(width, height);
@@ -190,7 +183,7 @@ module powerbitests {
         private createOptions(rowEnter, rowUpdate) {
             this.options = {
                 enter: rowEnter,
-                exit: this.rowExit,
+                exit: (rowSelection: D3.Selection) => { rowSelection.remove(); },
                 update: rowUpdate,
                 loadMoreData: () => { },
                 baseContainer: d3.select(this.element.get(0)),
@@ -215,13 +208,9 @@ module powerbitests {
 
             return testData;
         }
-
-        private buildCreateNestedData() {
-            this.nestedData = this.generateNestedData(this.data);
-        }
-
+        
         private createListView() {
-            this._listView = this._listView = ListViewFactory.createListView(this.options);
+            this._listView = ListViewFactory.createListView(this.options);
         }
 
         private setSpy() {
@@ -231,7 +220,6 @@ module powerbitests {
         }
 
         public build() {
-            this.buildCreateNestedData();
             this.setSpy();
             this.createListView();
             this.render();
@@ -239,7 +227,7 @@ module powerbitests {
         }
 
         public render(sizeChanged: boolean = true, resetScrollPosition?: boolean) {
-            this._listView.data(this.nestedData, d => d.id, resetScrollPosition).render();
+            this._listView.data(this.generateNestedData(this.data), d => d.id, resetScrollPosition).render();
         }
 
         public setScrollElement(): void {
@@ -249,6 +237,14 @@ module powerbitests {
         public buildHtmlListView() {
             this.buildHtmlListViewOptions();
             this.build();
+        }
+
+        public destroy() {
+            this._listView.empty();
+            this.options = null;
+            this.scrollElement = null;
+            this.element.remove();
+            this._listView = null;
         }
     }
 }

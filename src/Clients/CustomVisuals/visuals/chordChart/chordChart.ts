@@ -33,6 +33,7 @@ module powerbi.visuals.samples {
         dataMatrix: number[][];
         labelDataPoints: ChordArcDescriptor[];
         legendData?: LegendData;
+        labelFontSize: number;
         tooltipData: ChordTooltipData[][];
         sliceTooltipData: ChordTooltipData[];
         tickUnit: number;
@@ -42,7 +43,6 @@ module powerbi.visuals.samples {
         showAllDataPoints?: boolean;
         showLabels: boolean;
         showAxis: boolean;
-        
     }
 
     export interface ChordArcDescriptor extends D3.Layout.ArcDescriptor {
@@ -130,6 +130,15 @@ module powerbi.visuals.samples {
                         show: {
                             type: { bool: true }
                         },
+                        color: {
+                            displayName: data.createDisplayNameGetter("Visual_Reference_Line_Data_Label_Color"),
+                            description: data.createDisplayNameGetter('Visual_Reference_Line_Data_Label_Color_Description'),
+                            type: { fill: { solid: { color: true } } }
+                        },
+                        fontSize: {
+                            displayName: data.createDisplayNameGetter('Visual_TextSize'),
+                            type: { formatting: { fontSize: true } },
+                        },
                     },
                 }
             }
@@ -149,6 +158,8 @@ module powerbi.visuals.samples {
             },
             labels: {
                 show: <DataViewObjectPropertyIdentifier>{ objectName: 'labels', propertyName: 'show' },
+                color: <DataViewObjectPropertyIdentifier>{ objectName: 'labels', propertyName: 'color' },
+                fontSize: <DataViewObjectPropertyIdentifier>{ objectName: 'labels', propertyName: 'fontSize' },
             },
         };
 
@@ -156,7 +167,8 @@ module powerbi.visuals.samples {
 
         private static OuterArcRadiusRatio = 0.9;
         private static InnerArcRadiusRatio = 0.8;
-        private static defaultLabelColor = "#777777";
+        private static DefaultLabelColor = "#777777";
+        private static DefaultLabelsFontSize = 12;
 
         private static VisualClassName = 'chordChart';
 
@@ -226,8 +238,10 @@ module powerbi.visuals.samples {
             let catDv: DataViewCategorical = dataView.categorical;
 
             let defaultDataPointColor: string = ChordChart.getDefaultDataPointColor(dataView).solid.color;
+            let labelColor = ChordChart.getLabelsColor(dataView);
+            let labelFontSize = ChordChart.getLabelsFontSize(dataView);
 
-            if (catDv.categories && catDv.categories.length > 0 && catDv.values && catDv.categories[0].values) {
+            if (catDv && catDv.categories && catDv.categories.length > 0 && catDv.values && catDv.categories[0].values && catDv.categories[0].values[0]) {
 
                 let cat: DataViewCategoryColumn = catDv.categories[0];
                 let catValues = cat.values;
@@ -236,7 +250,7 @@ module powerbi.visuals.samples {
 
                 let legendData: LegendData = {
                     dataPoints: [],
-                    title: values[0].source.displayName
+                    title: values[0] && values[0].source ? values[0].source.displayName : "",
                 };
 
                 let toolTipData: ChordTooltipData[][] = [];
@@ -298,7 +312,7 @@ module powerbi.visuals.samples {
                         let index = seriesIndex[totalFields[i]];
 
                         let seriesData = values[index];
-                        let seriesObjects = seriesData.objects && seriesData.objects[0];
+                        let seriesObjects = seriesData && seriesData.objects && seriesData.objects[0];
                         let seriesNameStr = converterHelper.getSeriesName(seriesData.source);
 
                         id = SelectionId.createWithId(seriesData.identity);
@@ -309,7 +323,7 @@ module powerbi.visuals.samples {
 
                     labelData.push({
                         label: totalFields[i],
-                        labelColor: ChordChart.defaultLabelColor,
+                        labelColor: labelColor,
                         barColor: color,
                         isCategory: isCategory,
                         identity: id,
@@ -389,6 +403,7 @@ module powerbi.visuals.samples {
                     showAllDataPoints: ChordChart.getShowAllDataPoints(dataView),
                     showLabels: ChordChart.getLabelsShow(dataView),
                     showAxis: ChordChart.getAxisShow(dataView),
+                    labelFontSize: labelFontSize,
                 };
             } else {
                 return {
@@ -404,6 +419,7 @@ module powerbi.visuals.samples {
                     showAllDataPoints: ChordChart.getShowAllDataPoints(dataView),
                     showLabels: ChordChart.getLabelsShow(dataView),
                     showAxis: ChordChart.getAxisShow(dataView),
+                    labelFontSize: labelFontSize,
                 };
             }
         }
@@ -458,8 +474,7 @@ module powerbi.visuals.samples {
                 .outerRadius(radius * ChordChart.OuterArcRadiusRatio);
 
             if (chordData.showLabels) {
-                let labelLayout = ChordChart.getChordChartLabelLayout(radius, outerArc, viewport);
-
+                let labelLayout = ChordChart.getChordChartLabelLayout(radius, outerArc, viewport, chordData.labelFontSize);
                 ChordChart.drawDefaultLabelsForChordChart(chordData.labelDataPoints,
                     graphicsContext,
                     labelLayout, viewport,
@@ -604,7 +619,7 @@ module powerbi.visuals.samples {
                     sliceShapes.style('opacity', 1);
                     chordShapes.style('opacity', 1);
                 }));
-            
+
             ChordChart.drawTicks(this.mainGraphicsContext, data, chordLayout, outerRadius, duration, viewport);
             ChordChart.drawDefaultCategoryLabels(this.mainGraphicsContext, data, radius, viewport);
 
@@ -634,7 +649,7 @@ module powerbi.visuals.samples {
 
         /*About to remove your visual, do clean up here */
         public destroy() {
-            
+
         }
 
         /* Clean ticks */
@@ -663,33 +678,33 @@ module powerbi.visuals.samples {
                     .classed(ChordChart.sliceTicksClass.class, true);
 
                 let tickPairs = tickShapes.selectAll('g' + ChordChart.tickPairClass.selector)
-                    .data(function (d) {
+                    .data(function(d) {
                         let k = (d.endAngle - d.startAngle) / d.value;
                         let range = d3.range(0, d.value, d.value - 1 < 0.15 ? 0.15 : d.value - 1);
-                        let retval = 
-                        range.map(function (v, i) {
-                            let divider: number = 1000;
-                            let unitStr: string = 'k';
-                            
-                            if( chordData.tickUnit >= 1000 * 1000) {
-                                divider = 1000 * 1000;
-                                unitStr = 'm'; 
-                            }
-                            else if( chordData.tickUnit >= 1000) {
-                                divider = 1000;
-                                unitStr = 'k';
-                            } else {
-                                divider = 1;
-                                unitStr = '';
-                            } 
-                            let retv =         
-                             {
-                                angle: v * k + d.startAngle,
-                                label: Math.floor(v / divider) + unitStr
-                            };
-                            return retv;
-                            
-                        });
+                        let retval =
+                            range.map(function(v, i) {
+                                let divider: number = 1000;
+                                let unitStr: string = 'k';
+
+                                if (chordData.tickUnit >= 1000 * 1000) {
+                                    divider = 1000 * 1000;
+                                    unitStr = 'm';
+                                }
+                                else if (chordData.tickUnit >= 1000) {
+                                    divider = 1000;
+                                    unitStr = 'k';
+                                } else {
+                                    divider = 1;
+                                    unitStr = '';
+                                }
+                                let retv =
+                                    {
+                                        angle: v * k + d.startAngle,
+                                        label: Math.floor(v / divider) + unitStr
+                                    };
+                                return retv;
+
+                            });
                         return retval;
                     });
 
@@ -737,7 +752,7 @@ module powerbi.visuals.samples {
 
         /* Get format parameter axis whether it determines show ticks or not. Default value is true */
         private static getAxisShow(dataView: DataView): boolean {
-            if (dataView) {
+            if (dataView && dataView.metadata) {
                 let objects = dataView.metadata.objects;
                 if (objects) {
                     let axis = objects['axis'];
@@ -751,7 +766,7 @@ module powerbi.visuals.samples {
         
         /* Get format parameter labels whether it determines show labels or not. Default value is true */
         private static getLabelsShow(dataView: DataView): boolean {
-            if (dataView) {
+            if (dataView && dataView.metadata) {
                 let objects = dataView.metadata.objects;
                 if (objects) {
                     let labels = objects['labels'];
@@ -761,6 +776,31 @@ module powerbi.visuals.samples {
                 }
             }
             return true;
+        }
+
+        /* Get format parameter labels whether it determines show labels or not. Default value is true */
+        private static getLabelsColor(dataView: DataView): string {
+            if (dataView && dataView.metadata) {
+                let objects = dataView.metadata.objects;
+                if (objects) {
+                    let labels = objects['labels'];
+                    if (labels && labels.hasOwnProperty('color'))
+                        return labels['color'].solid.color;
+                }
+            }
+            return ChordChart.DefaultLabelColor;
+        }
+
+        private static getLabelsFontSize(dataView: DataView): number {
+            if (dataView && dataView.metadata) {
+                let objects = dataView.metadata.objects;
+                if (objects) {
+                    let labels = objects['labels'];
+                    if (labels && labels.hasOwnProperty('fontSize'))
+                        return labels['fontSize'];
+                }
+            }
+            return ChordChart.DefaultLabelsFontSize;
         }
        
         /* Select labels */
@@ -830,7 +870,7 @@ module powerbi.visuals.samples {
                 .data(filteredData, (d: ChordArcDescriptor) => d.data.identity.getKey());
             let innerLinePointMultiplier = 2.05;
 
-            let midAngle = function(d: ChordArcDescriptor) { 
+            let midAngle = function(d: ChordArcDescriptor) {
                 return d.startAngle + (d.endAngle - d.startAngle) / 2;
             };
 
@@ -859,14 +899,14 @@ module powerbi.visuals.samples {
         }
         
         /* Get label layout */
-        public static getChordChartLabelLayout(radius: number, outerArc: D3.Svg.Arc, viewport: IViewport): ILabelLayout {
-
-            let midAngle = function(d: ChordArcDescriptor) { 
+        public static getChordChartLabelLayout(radius: number, outerArc: D3.Svg.Arc, viewport: IViewport, labelFontSize: number): ILabelLayout {
+            let midAngle = function(d: ChordArcDescriptor) {
                 return d.startAngle + (d.endAngle - d.startAngle) / 2;
             };
-            let spaceAvaliableForLabels: number = viewport.width / 2 - radius;
 
+            let spaceAvaliableForLabels: number = viewport.width / 2 - radius;
             let minAvailableSpace: number = Math.min(spaceAvaliableForLabels, dataLabelUtils.maxLabelWidth);
+            var PixelConverter = jsCommon.PixelConverter;
 
             return {
                 labelText: (d: DonutArcDescriptor) => {
@@ -874,6 +914,7 @@ module powerbi.visuals.samples {
                     return dataLabelUtils.getLabelFormattedText({
                         label: d.data.label,
                         maxWidth: minAvailableSpace,
+                        fontSize: labelFontSize,
                     });
                 },
                 labelLayout: {
@@ -889,13 +930,14 @@ module powerbi.visuals.samples {
                 style: {
                     'fill': (d: ChordArcDescriptor) => d.data.labelColor,
                     'text-anchor': (d: ChordArcDescriptor) => midAngle(d) < Math.PI ? 'start' : 'end',
+                    'font-size': (d: ChordArcDescriptor) => PixelConverter.fromPointToPixel(labelFontSize),
                 },
             };
         }
         
         /* Get Default Datapoint color */
         private static getDefaultDataPointColor(dataView: DataView, defaultValue?: string): Fill {
-            if (dataView) {
+            if (dataView && dataView.metadata) {
                 let objects = dataView.metadata.objects;
                 if (objects) {
                     let dataPoint = objects['dataPoint'];
@@ -913,17 +955,14 @@ module powerbi.visuals.samples {
 
         /* Get format paramter value (showAllDataPoints)  */
         private static getShowAllDataPoints(dataView: DataView): boolean {
-            if (!dataView) {
+            if (!dataView || !dataView.metadata || !dataView.metadata.objects)
                 return false;
-            }
 
             let objects: DataViewObjects = dataView.metadata.objects;
-            if (objects) {
-                let dataPoint = objects['dataPoint'];
-                if (dataPoint && dataPoint.hasOwnProperty('showAllDataPoints')) {
-                    return <boolean>dataPoint['showAllDataPoints'];
-                }
-            }            
+            let dataPoint = objects['dataPoint'];
+            if (dataPoint && dataPoint.hasOwnProperty('showAllDataPoints')) {
+                return <boolean>dataPoint['showAllDataPoints'];
+            }
             return false;
         }
 
@@ -951,10 +990,11 @@ module powerbi.visuals.samples {
                         displayName: 'Labels',
                         selector: null,
                         properties: {
-                            show: ChordChart.getLabelsShow(this.dataView)
+                            show: ChordChart.getLabelsShow(this.dataView),
+                            color: ChordChart.getLabelsColor(this.dataView),
+                            fontSize: ChordChart.getLabelsFontSize(this.dataView),
                         }
                     };
-
                     instances.push(axis);
                     break;
                 case 'dataPoint':
@@ -962,7 +1002,9 @@ module powerbi.visuals.samples {
                         objectName: 'dataPoint',
                         selector: null,
                         properties: {
-                            defaultColor: { solid: { color: this.data.defaultDataPointColor || this.colors.getColorByIndex(0).value } }
+                            defaultColor: {
+                                solid: { color: (this.data && this.data.defaultDataPointColor) ? this.data.defaultDataPointColor : this.colors.getColorByIndex(0).value }
+                            }
                         }
                     };
 
@@ -972,26 +1014,28 @@ module powerbi.visuals.samples {
                         objectName: 'dataPoint',
                         selector: null,
                         properties: {
-                            showAllDataPoints: !!this.data.showAllDataPoints
+                            showAllDataPoints: this.data ? !!this.data.showAllDataPoints : false,
                         }
                     };
 
                     instances.push(showAllDataPoints);
 
-                    for (let i: number = 0, iLen = this.data.labelDataPoints.length; i < iLen; i++) {
-                        let labelDataPoint: ChordArcLabelData = this.data.labelDataPoints[i].data;
+                    if (this.data && this.data.labelDataPoints) {
+                        for (let i: number = 0, iLen = this.data.labelDataPoints.length; i < iLen; i++) {
+                            let labelDataPoint: ChordArcLabelData = this.data.labelDataPoints[i].data;
 
-                        if (labelDataPoint.isCategory) {
-                            let colorInstance: VisualObjectInstance = {
-                                objectName: 'dataPoint',
-                                displayName: labelDataPoint.label,
-                                selector: ColorHelper.normalizeSelector(labelDataPoint.identity.getSelector()),
-                                properties: {
-                                    fill: { solid: { color: labelDataPoint.barColor } }
-                                }
-                            };
+                            if (labelDataPoint.isCategory) {
+                                let colorInstance: VisualObjectInstance = {
+                                    objectName: 'dataPoint',
+                                    displayName: labelDataPoint.label,
+                                    selector: ColorHelper.normalizeSelector(labelDataPoint.identity.getSelector()),
+                                    properties: {
+                                        fill: { solid: { color: labelDataPoint.barColor } }
+                                    }
+                                };
 
-                            instances.push(colorInstance);
+                                instances.push(colorInstance);
+                            }
                         }
                     }
                     break;

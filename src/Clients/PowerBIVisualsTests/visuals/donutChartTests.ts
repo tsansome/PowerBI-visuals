@@ -39,6 +39,7 @@ module powerbitests {
     import VisualObjectInstanceEnumerationObject = powerbi.VisualObjectInstanceEnumerationObject;
     import PixelConverter = jsCommon.PixelConverter;
     import LabelStyle = powerbi.visuals.labelStyle;
+    import visualPluginFactory = powerbi.visuals.visualPluginFactory;
 
     let donutColors = powerbi.visuals.visualStyles.create().colorPalette.dataColors;
 
@@ -90,7 +91,7 @@ module powerbitests {
         let categoryColumnRef = powerbi.data.SQExprBuilder.fieldDef({ schema: 's', entity: 'e', column: 'p' });
 
         it('DonutChart registered capabilities', () => {
-            expect(powerbi.visuals.visualPluginFactory.create().getPlugin('donutChart').capabilities).toBe(powerbi.visuals.donutChartCapabilities);
+            expect(visualPluginFactory.create().getPlugin('donutChart').capabilities).toBe(powerbi.visuals.donutChartCapabilities);
         });
 
         it('Capabilities should not suppressDefaultTitle', () => {
@@ -130,7 +131,7 @@ module powerbitests {
                 }
             };
 
-            let plugin = powerbi.visuals.visualPluginFactory.create().getPlugin('donutChart');
+            let plugin = visualPluginFactory.create().getPlugin('donutChart');
             expect(powerbi.DataViewAnalysis.supports(dataViewWithSingleRow, plugin.capabilities.dataViewMappings[0], true)).toBe(false);
             expect(powerbi.DataViewAnalysis.supports(dataViewWithTwoRows, plugin.capabilities.dataViewMappings[0])).toBe(true);
         });
@@ -156,7 +157,7 @@ module powerbitests {
 
             beforeEach(() => {
                 element = powerbitests.helpers.testDom('500', '650');
-                v = powerbi.visuals.visualPluginFactory.createMinerva({}).getPlugin('donutChart').create();
+                v = visualPluginFactory.createMinerva({}).getPlugin('donutChart').create();
                 v.init({
                     element: element,
                     host: hostServices,
@@ -1013,7 +1014,7 @@ module powerbitests {
             });
 
             it('Data labels split to two lines', () => {
-                let catagorylabelElement = '.donutChart .catagorylabel';
+                let secondLineSelector = '.donutChart .label-second-line';
                 let dataViewMetadataWithLabels = powerbi.Prototype.inherit(dataViewMetadata);
                 dataViewMetadataWithLabels.objects = {
                     labels: { show: true, labelStyle: LabelStyle.both },
@@ -1050,13 +1051,13 @@ module powerbitests {
                 expect($(labels[0]).text()).toBe("150");
                 expect($(labels[1]).text()).toBe("150");
 
-                labels = element.find(catagorylabelElement);
+                labels = element.find(secondLineSelector);
                 expect($(labels[0]).text()).toBe("Category Label 1");
                 expect($(labels[1]).text()).toBe("Category Label 2");
 
                 // Label should be split into two lines and be truncated
                 v.onResizing({ height: 500, width: 300 });
-                labels = element.find(catagorylabelElement);
+                labels = element.find(secondLineSelector);
                 expect($(labels[0]).text()).toContain("…");
                 expect($(labels[1]).text()).toContain("…");
 
@@ -2669,9 +2670,9 @@ module powerbitests {
             hostServices = mocks.createVisualHostServices();
             element = powerbitests.helpers.testDom('500', '500');
             if (interactiveChart)
-                v = powerbi.visuals.visualPluginFactory.createMobile().getPlugin('pieChart').create();
+                v = visualPluginFactory.createMobile().getPlugin('pieChart').create();
             else
-                v = powerbi.visuals.visualPluginFactory.createMinerva({}).getPlugin('pieChart').create();
+                v = visualPluginFactory.createMinerva({}).getPlugin('pieChart').create();
             v.init({
                 element: element,
                 host: hostServices,
@@ -3904,7 +3905,8 @@ module powerbitests {
                                 expect($('.donutChart')).toBeInDOM();
                                 if (hasLegendObject) {
                                     expect($('.legend').attr('orientation')).toBe(LegendPosition.Right.toString());
-                                    expect($('.legendTitle').text()).toBe(testTitle);
+                                    expect(helpers.findElementText($('.legendTitle'))).toBe(testTitle);
+                                    expect(helpers.findElementTitle($('.legendTitle'))).toBe(testTitle);
                                     expect($('#legendGroup').attr('transform')).not.toBeDefined();
                                 }
                                 
@@ -3923,6 +3925,75 @@ module powerbitests {
                             }, DefaultWaitForRender);
                         }, DefaultWaitForRender);
                     }, DefaultWaitForRender);
+                }, DefaultWaitForRender);
+            });
+        }
+
+        if (interactiveChart) {
+            it('pie chart arrow scale normal size', (done) => {
+                const regexScaleIsNormal = /scale\(\s*1(\.0+)?\s*\)/i;
+
+                let viewportHeight = visualPluginFactory.MobileVisualPluginService.MaxHeightToScaleDonutLegend
+                    + DonutChart.InteractiveLegendContainerHeight * 2;
+
+                v.onResizing({ height: viewportHeight, width: 400 });
+                v.onDataChanged({
+                    dataViews: [{
+                        metadata: dataViewMetadataTwoColumn,
+                        categorical: {
+                            categories: [{
+                                source: dataViewMetadataTwoColumn.columns[0],
+                                values: ['a', 'b', 'c'],
+                                identity: [mocks.dataViewScopeIdentity('a'), mocks.dataViewScopeIdentity('b'), mocks.dataViewScopeIdentity('c')],
+                                identityFields: [categoryColumnRef],
+                            }],
+                            values: DataViewTransform.createValueColumns([{
+                                source: dataViewMetadataTwoColumn.columns[1],
+                                values: [100, 200, 700],
+                            }])
+                        }
+                    }]
+                });
+                
+                setTimeout(() => {
+                    expect($('.donutChart')).toBeInDOM();
+                    let arrowG = $('.donutLegendArrow').parent();
+                    expect(arrowG).toBeInDOM();
+                    expect(arrowG.attr('transform')).toMatch(regexScaleIsNormal);
+                    done();
+                }, DefaultWaitForRender);
+            });
+
+            it('pie chart arrow scale small size', (done) => {
+                const regexScaleIsLessThanOne = /scale\(\s*0\.\d+\s*\)/i;
+
+                let viewportHeight = visualPluginFactory.MobileVisualPluginService.MaxHeightToScaleDonutLegend - 10
+                    + DonutChart.InteractiveLegendContainerHeight * 2;
+                v.onResizing({ height: viewportHeight, width: 400 });
+                v.onDataChanged({
+                    dataViews: [{
+                        metadata: dataViewMetadataTwoColumn,
+                        categorical: {
+                            categories: [{
+                                source: dataViewMetadataTwoColumn.columns[0],
+                                values: ['a', 'b', 'c'],
+                                identity: [mocks.dataViewScopeIdentity('a'), mocks.dataViewScopeIdentity('b'), mocks.dataViewScopeIdentity('c')],
+                                identityFields: [categoryColumnRef],
+                            }],
+                            values: DataViewTransform.createValueColumns([{
+                                source: dataViewMetadataTwoColumn.columns[1],
+                                values: [100, 200, 700],
+                            }])
+                        }
+                    }]
+                });
+
+                setTimeout(() => {
+                    expect($('.donutChart')).toBeInDOM();
+                    let arrowG = $('.donutLegendArrow').parent();
+                    expect(arrowG).toBeInDOM();
+                    expect(arrowG.attr('transform')).toMatch(regexScaleIsLessThanOne);
+                    done();
                 }, DefaultWaitForRender);
             });
         }
@@ -3955,7 +4026,7 @@ module powerbitests {
 
         beforeEach(() => {
             element = powerbitests.helpers.testDom('500', '500');
-            v = powerbi.visuals.visualPluginFactory.createDashboard({}).getPlugin('donutChart').create();
+            v = visualPluginFactory.createDashboard({}).getPlugin('donutChart').create();
             v.init({
                 element: element,
                 host: hostServices,
@@ -4016,7 +4087,7 @@ module powerbitests {
 
         beforeEach(() => {
             element = powerbitests.helpers.testDom('500', '500');
-            v = powerbi.visuals.visualPluginFactory.create().getPlugin('pieChart').create();
+            v = visualPluginFactory.create().getPlugin('pieChart').create();
             v.init({
                 element: element,
                 host: hostServices,
@@ -4203,7 +4274,7 @@ module powerbitests {
 
         beforeEach(() => {
             element = powerbitests.helpers.testDom('500', '500');
-            v = powerbi.visuals.visualPluginFactory.create().getPlugin('donutChart').create();
+            v = visualPluginFactory.create().getPlugin('donutChart').create();
 
             v.init({
                 element: element,
@@ -4345,7 +4416,7 @@ module powerbitests {
         beforeEach(() => {
 
             element = powerbitests.helpers.testDom('500', '500');
-            v = powerbi.visuals.visualPluginFactory.createMinerva({}).getPlugin('pieChart').create();
+            v = visualPluginFactory.createMinerva({}).getPlugin('pieChart').create();
             v.init({
                 element: element,
                 host: hostServices,

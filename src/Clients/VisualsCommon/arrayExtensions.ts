@@ -277,14 +277,14 @@ module jsCommon {
             return false;
         }
 
-        export function isArray(object: any): boolean {
-            return Object.prototype.toString.call(object) === '[object Array]';
-        }
-
         export function swap<T>(array: T[], firstIndex: number, secondIndex: number): void {
             let temp = array[firstIndex];
             array[firstIndex] = array[secondIndex];
             array[secondIndex] = temp;
+        }
+
+        export function isInArray<T>(array: T[], lookupItem: T, compareCallback: (item1: T, item2: T) => boolean): boolean {
+            return _.any(array, item => compareCallback(item, lookupItem));
         }
     }
 } 

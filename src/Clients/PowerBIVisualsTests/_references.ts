@@ -32,7 +32,10 @@
 /// <reference path="helpers/helpers.ts"/>
 /// <reference path="helpers/performanceTestsHelpers.ts"/>
 /// <reference path="helpers/slicerHelper.ts"/>
-/// <reference path="helpers/kpiHelper.ts"/>
 /// <reference path="helpers/tableDataViewHelper.ts"/>
 /// <reference path="helpers/tablixHelper.ts"/>
+/// <reference path="helpers/kpiHelper.ts"/>
 /// <reference path="sqFieldDef.ts"/>
+
+/// <reference path="customVisuals/VisualBuilderBase.ts"/>
+/// <reference path="customVisuals/helpers/dataViewHelper.ts"/>

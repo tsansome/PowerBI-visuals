@@ -237,6 +237,14 @@ module powerbi.visuals {
                 this.setCardDimensions();
                 this.listView.data(data.dataModel, (d: CardData) => data.dataModel.indexOf(d), resetScrollbarPosition);
             }
+            else {
+                this.data = {
+                    dataModel: [],
+                    cardTitleSettings: dataLabelUtils.getDefaultLabelSettings(true, DefaultTitleColor, DefaultTitleFontSizeInPt),
+                    categoryLabelsSettings: dataLabelUtils.getDefaultLabelSettings(true, DefaultTextColor, DefaultDetailFontSizeInPt),
+                    dataLabelsSettings: dataLabelUtils.getDefaultLabelSettings(true, DefaultTextColor, DefaultCaptionFontSizeInPt),
+                };
+            }
 
             this.waitingForData = false;
         }
@@ -433,7 +441,8 @@ module powerbi.visuals {
 
                     rowSelection.selectAll(MultiRowCard.Title.selector)
                         .filter((d: CardData) => !d.showTitleAsURL && !d.showTitleAsImage && !d.showTitleAsKPI)
-                        .text((d: CardData) => d.title);
+                        .text((d: CardData) => d.title)
+                        .attr('title', (d: CardData) => d.title);
 
                     rowSelection
                         .selectAll(MultiRowCard.TitleUrlSelector)
@@ -467,7 +476,8 @@ module powerbi.visuals {
                         'color': style.caption.color,
                     })
                     .filter((d: CardItemData) => !d.showURL)
-                    .text((d: CardItemData) => d.caption);
+                    .text((d: CardItemData) => d.caption)
+                    .attr('title', (d: CardItemData) => d.caption);
 
                 cardSelection
                     .selectAll(MultiRowCard.CaptionImageSelector)
@@ -497,7 +507,7 @@ module powerbi.visuals {
                         'target': '_blank',
                     })
                     .text((d: CardItemData) => d.caption);
-
+                    
                 if (style.details.isVisible) {
                     cardSelection
                         .selectAll(MultiRowCard.Details.selector)
@@ -506,7 +516,8 @@ module powerbi.visuals {
                             'font-size': PixelConverter.fromPoint(style.details.fontSize),
                             'line-height': PixelConverter.toString(categoryLabelHeight),
                             'color': style.details.color
-                        });
+                        })
+                        .attr('title', (d: CardItemData) => d.details);
                 }
 
                 cardSelection

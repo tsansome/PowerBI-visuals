@@ -28,6 +28,8 @@
 
 module powerbi.visuals {
     import createClassAndSelector = jsCommon.CssConstants.createClassAndSelector;
+    import StringExtensions = jsCommon.StringExtensions;
+    import Utility = jsCommon.Utility;
 
     export interface TextboxDataViewObjects extends DataViewObjects {
         general: TextboxDataViewObject;
@@ -261,7 +263,7 @@ module powerbi.visuals {
                     if (styleDef) {
                         let css = {};
                         if (styleDef.fontFamily) {
-                            css['font-family'] = RichText.getFontFamily(styleDef.fontFamily);
+                            css['font-family'] = RichText.getFontFamily(removeQuotes(styleDef.fontFamily));
                         }
 
                         if (styleDef.fontSize) {
@@ -334,7 +336,7 @@ module powerbi.visuals {
                     let styleDef = textRunDef.textStyle;
                     if (styleDef) {
                         if (styleDef.fontFamily) {
-                            formats.font = RichText.getFontFamily(styleDef.fontFamily);
+                            formats.font = RichText.getFontFamily(removeQuotes(styleDef.fontFamily));
                         }
 
                         if (styleDef.fontSize) {
@@ -348,7 +350,7 @@ module powerbi.visuals {
 
                     let text = textRunDef.value;
 
-                    if (textRunDef.url && jsCommon.Utility.isValidUrl(textRunDef.url))
+                    if (textRunDef.url && Utility.isValidUrl(textRunDef.url))
                         formats.link = textRunDef.url;
 
                     let op: quill.InsertOp = {
@@ -359,7 +361,7 @@ module powerbi.visuals {
                     ops.push(op);
 
                     // The last text run of the paragraph needs to end with '\n' to get Quill to handle the text alignment correctly.
-                    if (textRunIndex === (jlen - 1) && !jsCommon.StringExtensions.endsWith(text, '\n')) {
+                    if (textRunIndex === (jlen - 1) && !StringExtensions.endsWith(text, '\n')) {
                         ops.push({
                             insert: '\n',
                             attributes: formats,
@@ -380,7 +382,8 @@ module powerbi.visuals {
             }
             if (attributes.font) {
                 // TODO: "Heading"?
-                style.fontFamily = attributes.font;
+                // NOTE: We should always save font names without any quotes.
+                style.fontFamily = removeQuotes(attributes.font);
             }
             if (attributes.italic) {
                 style.fontStyle = 'italic';
@@ -400,6 +403,15 @@ module powerbi.visuals {
             */
 
             return style;
+        }
+
+        function removeQuotes(text: string): string {
+            if (!StringExtensions.startsWith(text, "'"))
+                return text;
+
+            debug.assert(StringExtensions.endsWith(text, "'"), "mismatched quotes");
+
+            return text.slice(1, text.length - 1);
         }
     }
 
@@ -461,8 +473,16 @@ module powerbi.visuals {
         ].map((alignment) => <ListValueOption> { label: alignment, value: alignment.toLowerCase() });
 
         export function getFontFamily(font: string): string {
-            let family = fontMap[font];
-            return (family !== undefined) ? family : font;
+            let family: string = fontMap[font];
+            if (family == null)
+                family = font;
+
+            // Quote the font in case it has spaces (which will confuse the JQuery css() call).
+            if (!StringExtensions.startsWith(family, "'")) {
+                family = "'" + family + "'";
+            }
+
+            return family;
         }
 
         export class QuillWrapper {

@@ -34,6 +34,7 @@ module powerbitests.slicerHelper {
     export const SelectAllTextKey = 'Select All';
     export const SlicerVisual = 'slicer';
     export const slicerTextClassSelector = ".slicerText";
+    export const slicerCountTextClassSelector = ".slicerCountText";
     export const slicerHeaderClassSelector = ".slicerHeader";
     const SelectedClass = 'selected';
 
@@ -80,6 +81,17 @@ module powerbitests.slicerHelper {
     export function buildDefaultDataView(field: SQExpr): powerbi.DataView {
         let dataViewMetadata: powerbi.DataViewMetadata = buildDefaultDataViewMetadata();
         let dataViewCategorical: powerbi.DataViewCategorical = buildDefaultDataViewCategorical(field);
+        let dataView: powerbi.DataView = {
+            metadata: dataViewMetadata,
+            categorical: dataViewCategorical
+        };
+
+        return dataView;
+    }
+
+    export function buildBooleanValuesDataView(field: SQExpr): powerbi.DataView {
+        let dataViewMetadata: powerbi.DataViewMetadata = buildBooleanValueDataViewMetadata();
+        let dataViewCategorical: powerbi.DataViewCategorical = buildBooleanValuesDataViewCategorical(field);
         let dataView: powerbi.DataView = {
             metadata: dataViewMetadata,
             categorical: dataViewCategorical
@@ -147,6 +159,13 @@ module powerbitests.slicerHelper {
         };
     }
 
+    export function buildBooleanValueDataViewMetadata(): powerbi.DataViewMetadata {
+        return {
+            columns: [
+                { displayName: "Fruit", roles: { "Values": true }, type: ValueType.fromDescriptor({ bool: true }) }]
+        };
+    }
+
     export function buildDataViewMetadataWithLongName(): powerbi.DataViewMetadata {
         return {
             columns: [
@@ -166,8 +185,45 @@ module powerbitests.slicerHelper {
                 mocks.dataViewScopeIdentityWithEquality(field, "Banana")],
             identityFields: [field]
         };
+
         let dataViewCategorical = {
-            categories: [category]
+            categories: [category],
+            values: powerbi.data.DataViewTransform.createValueColumns([{
+                source: dataViewMetadata.columns[0],
+                values: [
+                    undefined,
+                    3,
+                    4,
+                    5,
+                    6,
+                ]
+            }])
+        };
+
+        return dataViewCategorical;
+    }
+
+    export function buildBooleanValuesDataViewCategorical(field: SQExpr): powerbi.DataViewCategorical {
+        let dataViewMetadata = buildDefaultDataViewMetadata();
+        let category: powerbi.DataViewCategoryColumn = {
+            source: dataViewMetadata.columns[0],
+            values: [true, false, false],
+            identity: [mocks.dataViewScopeIdentityWithEquality(field, true),
+                mocks.dataViewScopeIdentityWithEquality(field, false),
+                mocks.dataViewScopeIdentityWithEquality(field, false)],
+            identityFields: [field]
+        };
+
+        let dataViewCategorical = {
+            categories: [category],
+            values: powerbi.data.DataViewTransform.createValueColumns([{
+                source: dataViewMetadata.columns[0],
+                values: [
+                    undefined,
+                    3,
+                    4,
+                ]
+            }])
         };
 
         return dataViewCategorical;

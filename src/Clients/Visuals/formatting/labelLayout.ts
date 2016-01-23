@@ -34,6 +34,7 @@ module powerbi {
     import IPoint = shapes.IPoint;
     import SelectableDataPoint = powerbi.visuals.SelectableDataPoint;
     import Rect = powerbi.visuals.shapes.Rect;
+    import NewDataLabelUtils = powerbi.visuals.NewDataLabelUtils;
 
     /**
      * Defines possible data label positions relative to rectangles
@@ -98,14 +99,14 @@ module powerbi {
 
         Center = 1 << 8,
 
-        All = 
+        All =
         Above |
         Below |
         Left |
         Right |
-        BelowRight |        
-        BelowLeft |       
-        AboveRight |        
+        BelowRight |
+        BelowLeft |
+        AboveRight |
         AboveLeft |
         Center,
     }
@@ -130,7 +131,7 @@ module powerbi {
         /** Horizontal rectangle with base at the right. */
         HorizontalRightBased,
     }
-    
+
     export const enum LabelDataPointParentType {
         /* parent shape of data label is a point*/
         Point,
@@ -165,8 +166,7 @@ module powerbi {
     }
 
     export interface LabelDataPoint {
-        /** Text to be displayed in the label */
-        text: string;
+        // Layout members; used by the layout system to position labels
 
         /** The measured size of the text */
         textSize: ISize;
@@ -174,20 +174,25 @@ module powerbi {
         /** Is data label preferred? Preferred labels will be rendered first */
         isPreferred: boolean;
 
-        /** Color to use for the data label if drawn inside */
-        insideFill: string;
-
-        /** Color to use for the data label if drawn outside */
-        outsideFill: string;
-
-        /** Whether or not the data label has been rendered */
-        hasBeenRendered?: boolean;
-
         /** Whether the parent type is a rectangle, point or polygon */
         parentType: LabelDataPointParentType;
 
         /** The parent geometry for the data label */
         parentShape: LabelParentRect | LabelParentPoint | LabelParentPolygon;
+
+        /** Whether or not the label has a background */
+        hasBackground?: boolean;
+
+        // Rendering members that are simply passed through to the label for rendering purposes
+
+        /** Text to be displayed in the label */
+        text: string;
+
+        /** Color to use for the data label if drawn inside */
+        insideFill: string;
+
+        /** Color to use for the data label if drawn outside */
+        outsideFill: string;
 
         /** The identity of the data point associated with the data label */
         identity: powerbi.visuals.SelectionId;
@@ -203,6 +208,14 @@ module powerbi {
 
         /** The calculated weight of the data point associated with the data label */
         weight?: number;
+        
+        // Temporary state used internally by the Label Layout system
+
+        /** Whether or not the data label has been rendered */
+        hasBeenRendered?: boolean;
+
+        /** Size of the label adjusted for the background, if necessary */
+        labelSize?: ISize;
     }
 
     export interface LabelDataPointsGroup {
@@ -237,8 +250,11 @@ module powerbi {
 
         /** points for reference line rendering */
         leaderLinePoints?: number[][];
+
+        /** Whether or not the label has a background (and text position needs to be adjusted to take that into account) */
+        hasBackground: boolean;
     }
-    
+
     export interface GridSubsection {
         xMin: number;
         xMax: number;
@@ -252,8 +268,6 @@ module powerbi {
         private cellSize: ISize;
         private columnCount: number;
         private rowCount: number;
-        private horizontalMargin: number;
-        private verticalMargin: number;
 
         /** 
          * A multiplier applied to the largest width height to attempt to balance # of
@@ -261,26 +275,24 @@ module powerbi {
          */
         private static cellSizeMultiplier = 2;
 
-        constructor(labelDataPointsGroups: LabelDataPointsGroup[], viewport: IViewport, horizontalMargin?: number, verticalMargin?: number) {
+        constructor(labelDataPointsGroups: LabelDataPointsGroup[], viewport: IViewport) {
             this.viewport = viewport;
-            this.horizontalMargin = horizontalMargin;
-            this.verticalMargin = verticalMargin;
 
             let maxLabelWidth = 0;
             let maxLabelHeight = 0;
 
             for (let labelDataPointsGroup of labelDataPointsGroups) {
                 for (let labelDataPoint of labelDataPointsGroup.labelDataPoints) {
-                if (labelDataPoint.isPreferred) {
-                    let dataLabelSize: ISize = labelDataPoint.textSize;
-                    if (dataLabelSize.width > maxLabelWidth) {
-                        maxLabelWidth = dataLabelSize.width;
-                    }
-                    if (dataLabelSize.height > maxLabelHeight) {
-                        maxLabelHeight = dataLabelSize.height;
+                    if (labelDataPoint.isPreferred) {
+                        let dataLabelSize: ISize = labelDataPoint.labelSize;
+                        if (dataLabelSize.width > maxLabelWidth) {
+                            maxLabelWidth = dataLabelSize.width;
+                        }
+                        if (dataLabelSize.height > maxLabelHeight) {
+                            maxLabelHeight = dataLabelSize.height;
+                        }
                     }
                 }
-            }
             }
 
             if (maxLabelWidth === 0) {
@@ -302,26 +314,10 @@ module powerbi {
             this.grid = grid;
         }
 
-        private padRectangle(rectParam: IRect): IRect {
-            let rect: IRect = rectParam;
-            if (this.horizontalMargin || this.verticalMargin) {
-                rect = Rect.clone(rectParam);
-                if (this.horizontalMargin) {
-                    rect.left -= this.horizontalMargin;
-                    rect.width += 2 * this.horizontalMargin;
-                }
-
-                if (this.verticalMargin) {
-                    rect.top -= this.verticalMargin;
-                    rect.height += 2 * this.verticalMargin;
-                }
-            }
-
-            return rect;
-        }
-
-        public add(rectParam: IRect): void {
-            let rect: IRect = this.padRectangle(rectParam);
+        /**
+         * Add a rectangle to check collision against
+         */
+        public add(rect: IRect): void {
             let containingIndexRect = this.getContainingGridSubsection(rect);
 
             for (let x = containingIndexRect.xMin; x < containingIndexRect.xMax; x++) {
@@ -331,13 +327,43 @@ module powerbi {
             }
         }
 
-        public hasConflict(rectParam: IRect): boolean {
-            let rect: IRect = this.padRectangle(rectParam);
-
+        /**
+         * Check whether the rect conflicts with the grid, either bleeding outside the
+         * viewport or colliding with another rect added to the grid.
+         */
+        public hasConflict(rect: IRect): boolean {
             if (!this.isWithinGridViewport(rect)) {
                 return true;
             }
 
+            return this.hasCollision(rect);
+        }
+
+        /**
+         * Attempt to position the given rect within the viewport.  Returns
+         * the adjusted rectangle or null if the rectangle couldn't fit, 
+         * conflicts with the viewport, or is too far outside the viewport
+         */
+        public tryPositionInViewport(rect: IRect): IRect {
+            // If it's too far outside the viewport, return null
+            if (!this.isCloseToGridViewport(rect)) {
+                return;
+            }
+
+            if (!this.isWithinGridViewport(rect)) {
+                rect = this.tryMoveInsideViewport(rect);
+            }
+
+            if (rect && !this.hasCollision(rect)) {
+                return rect;
+            }
+        }
+        
+        /**
+         * Checks for a collision between the given rect and others in the grid.
+         * Returns true if there is a collision.
+         */
+        private hasCollision(rect: IRect): boolean {
             let containingIndexRect = this.getContainingGridSubsection(rect);
             let grid = this.grid;
             let isIntersecting = shapes.Rect.isIntersecting;
@@ -352,12 +378,63 @@ module powerbi {
             }
             return false;
         }
-
+        
+        /**
+         * Check to see if the given rect is inside the grid's viewport
+         */
         private isWithinGridViewport(rect: IRect): boolean {
             return rect.left >= 0 &&
                 rect.top >= 0 &&
                 rect.left + rect.width <= this.viewport.width &&
                 rect.top + rect.height <= this.viewport.height;
+        }
+
+        /**
+         * Checks to see if the rect is close enough to the viewport to be moved inside.
+         * "Close" here is determined by the distance between the edge of the viewport
+         * and the closest edge of the rect; if that distance is less than the appropriate
+         * dimension of the rect, we will reposition the rect.
+         */
+        private isCloseToGridViewport(rect: IRect): boolean {
+            return rect.left + rect.width >= 0 - rect.width &&
+                rect.top + rect.height >= -rect.height &&
+                rect.left <= this.viewport.width + rect.width &&
+                rect.top <= this.viewport.height + rect.height;
+        }
+
+        /**
+         * Attempt to move the rect inside the grid's viewport.  Returns the resulting
+         * rectangle with the same width/height adjusted to be inside the viewport or
+         * null if it couldn't fit regardless.
+         */
+        private tryMoveInsideViewport(rect: IRect): IRect {
+            let result: IRect = Rect.clone(rect);
+            let viewport = this.viewport;
+
+            // Return null if it's too big to fit regardless of positioning
+            if (rect.width > viewport.width || rect.height > viewport.height) {
+                return;
+            }
+            
+            // Only one movement should be made in each direction, because we are only moving it inside enough for it to fit; there should be no overshooting.
+            // Outside to the left
+            if (rect.left < 0) {
+                result.left = 0;
+            }
+            // Outside to the right
+            else if (rect.left + rect.width > viewport.width) {
+                result.left -= (rect.left + rect.width) - viewport.width;
+            }
+            // Outside above
+            if (rect.top < 0) {
+                result.top = 0;
+            }
+            // Outside below
+            else if (rect.top + rect.height > viewport.height) {
+                result.top -= (rect.top + rect.height) - viewport.height;
+            }
+
+            return result;
         }
 
         private getContainingGridSubsection(rect: IRect): GridSubsection {
@@ -391,6 +468,8 @@ module powerbi {
         verticalPadding?: number;
         /** Should we draw reference lines in case the label offset is greater then the default */
         allowLeaderLines?: boolean;
+        /** Should the layout system attempt to move the label inside the viewport when it outside, but close */
+        attemptToMoveLabelsIntoViewport?: boolean;
     }
 
     export class LabelLayout {
@@ -406,6 +485,8 @@ module powerbi {
         private verticalPadding: number;
         /** Should we draw leader lines in case the label offset is greater then the default */
         private allowLeaderLines: boolean;
+        /** Should the layout system attempt to move the label inside the viewport when it outside, but close */
+        private attemptToMoveLabelsIntoViewport: boolean;
 
         // Default values
         private static defaultOffsetIterationDelta = 2;
@@ -435,7 +516,9 @@ module powerbi {
                 this.verticalPadding = LabelLayout.defaultVerticalPadding;
             }
             this.allowLeaderLines = !!options.allowLeaderLines;
+            this.attemptToMoveLabelsIntoViewport = !!options.attemptToMoveLabelsIntoViewport;
         }
+
         /**
          * Arrange takes a set of data labels and lays them out in order, assuming that
          * the given array has already been sorted with the most preferred labels at the
@@ -461,6 +544,15 @@ module powerbi {
             for (let labelDataPointsGroup of labelDataPointsGroups) {
                 for (let labelPoint of labelDataPointsGroup.labelDataPoints) {
                     labelPoint.hasBeenRendered = false;
+                    if (labelPoint.hasBackground) {
+                        labelPoint.labelSize = {
+                            width: labelPoint.textSize.width + 2 * NewDataLabelUtils.horizontalLabelBackgroundPadding,
+                            height: labelPoint.textSize.height + 2 * NewDataLabelUtils.verticalLabelBackgroundPadding,
+                        };
+                    }
+                    else {
+                        labelPoint.labelSize = labelPoint.textSize;
+                    }
                 }
             }
 
@@ -472,16 +564,16 @@ module powerbi {
                 let maxLabelsToRender = labelDataPointsGroup.maxNumberOfLabels;
                 // NOTE: we create a copy and modify the copy to keep track of preferred vs. non-preferred labels.
                 let labelDataPoints = _.clone(labelDataPointsGroup.labelDataPoints);
-            let preferredLabels: LabelDataPoint[] = [];
+                let preferredLabels: LabelDataPoint[] = [];
                 
                 // Exclude preferred labels
                 for (let j = labelDataPoints.length - 1, localMax = maxLabelsToRender; j >= 0 && localMax > 0; j--) {
                     let labelPoint = labelDataPoints[j];
-                if (labelPoint.isPreferred) {
+                    if (labelPoint.isPreferred) {
                         preferredLabels.unshift(labelDataPoints.splice(j, 1)[0]);
                         localMax--;
+                    }
                 }
-            }
 
                 // First iterate all the preferred labels
                 if (preferredLabels.length > 0) {
@@ -490,13 +582,13 @@ module powerbi {
                     resultingDataLabels = resultingDataLabels.concat(positionedLabels);
                 }
             
-            // While there are invisible not preferred labels and label distance is less than the max
-            // allowed distance
-            if (labelDataPoints.length > 0) {
+                // While there are invisible not preferred labels and label distance is less than the max
+                // allowed distance
+                if (labelDataPoints.length > 0) {
                     let labels = this.positionDataLabels(labelDataPoints, viewport, grid, maxLabelsToRender);
-                resultingDataLabels = resultingDataLabels.concat(labels);
-            }
-            // TODO: Add reference lines if we want them
+                    resultingDataLabels = resultingDataLabels.concat(labels);
+                }
+                // TODO: Add reference lines if we want them
             }
             return resultingDataLabels;
         }
@@ -539,17 +631,17 @@ module powerbi {
         }
 
         private tryPositionForRectPositions(labelPoint: LabelDataPoint, grid: LabelArrangeGrid, currentLabelOffset: number, currentCenteredLabelOffset: number): Label {
-            // Iterate over all positions that are valid for the data point
-            for (let position of (<LabelParentRect>labelPoint.parentShape).validPositions) {
+            // Function declared and reused to reduce code duplication
+            let tryPosition = (position: RectLabelPosition, adjustForViewport: boolean) => {
                 let isPositionInside = position & RectLabelPosition.InsideAll;
                 if (isPositionInside && !DataLabelRectPositioner.canFitWithinParent(labelPoint, this.horizontalPadding, this.verticalPadding)) {
-                    continue;
+                    return;
                 }
 
-                let resultingBoundingBox = LabelLayout.tryPositionRect(grid, position, labelPoint, currentLabelOffset, currentCenteredLabelOffset);
+                let resultingBoundingBox = LabelLayout.tryPositionRect(grid, position, labelPoint, currentLabelOffset, currentCenteredLabelOffset, adjustForViewport);
                 if (resultingBoundingBox) {
                     if (isPositionInside && !DataLabelRectPositioner.isLabelWithinParent(resultingBoundingBox, labelPoint, this.horizontalPadding, this.verticalPadding)) {
-                        continue;
+                        return;
                     }
                     grid.add(resultingBoundingBox);
                     labelPoint.hasBeenRendered = true;
@@ -562,9 +654,26 @@ module powerbi {
                         key: labelPoint.key,
                         fontSize: labelPoint.fontSize,
                         selected: false,
+                        hasBackground: !!labelPoint.hasBackground,
                     };
                 }
+            };
+
+            // Iterate over all positions that are valid for the data point
+            for (let position of (<LabelParentRect>labelPoint.parentShape).validPositions) {
+                let label = tryPosition(position, false /* adjustForViewport */);
+                if (label)
+                    return label;
             }
+            // If no position has been found and the option is enabled, try any outside positions while moving the label inside the viewport
+            if (this.attemptToMoveLabelsIntoViewport) {
+                for (let position of (<LabelParentRect>labelPoint.parentShape).validPositions) {
+                    let label = tryPosition(position, true /* adjustForViewport */);
+                    if (label)
+                        return label;
+                }
+            }
+
             return null;
         }
 
@@ -573,7 +682,7 @@ module powerbi {
          * If the label can be placed, returns the resulting bounding box for the data
          * label.  If not, returns null.
          */
-        private static tryPositionRect(grid: LabelArrangeGrid, position: RectLabelPosition, labelDataPoint: LabelDataPoint, offset: number, centerOffset: number): IRect {
+        private static tryPositionRect(grid: LabelArrangeGrid, position: RectLabelPosition, labelDataPoint: LabelDataPoint, offset: number, centerOffset: number, adjustForViewport: boolean): IRect {
             let offsetForPosition = offset;
             if (position & RectLabelPosition.InsideCenter) {
                 offsetForPosition = centerOffset;
@@ -583,6 +692,9 @@ module powerbi {
             if (position !== RectLabelPosition.InsideCenter || (<LabelParentRect>labelDataPoint.parentShape).orientation === NewRectOrientation.None) {
                 if (!grid.hasConflict(labelRect)) {
                     return labelRect;
+                }
+                if (adjustForViewport) {
+                    return grid.tryPositionInViewport(labelRect);
                 }
             }
             else {
@@ -600,10 +712,9 @@ module powerbi {
         }
 
         private tryPositionForPointPositions(labelPoint: LabelDataPoint, grid: LabelArrangeGrid, currentLabelOffset: number, drawLeaderLines: boolean): Label {
-            // Iterate over all positions that are valid for the data point
-            let parentShape = (<LabelParentPoint>labelPoint.parentShape);
-            for (let position of parentShape.validPositions) {
-                let resultingBoundingBox = LabelLayout.tryPositionPoint(grid, position, labelPoint, currentLabelOffset);
+            // Function declared and reused to reduce code duplication
+            let tryPosition = (position: NewPointLabelPosition, parentShape: LabelParentPoint, adjustForViewport: boolean) => {
+                let resultingBoundingBox = LabelLayout.tryPositionPoint(grid, position, labelPoint, currentLabelOffset, adjustForViewport);
                 if (resultingBoundingBox) {
                     grid.add(resultingBoundingBox);
                     labelPoint.hasBeenRendered = true;
@@ -612,22 +723,42 @@ module powerbi {
                         text: labelPoint.text,
                         isVisible: true,
                         fill: position === NewPointLabelPosition.Center ? labelPoint.insideFill : labelPoint.outsideFill, // If we ever support "inside" for point-based labels, this needs to be updated
+                        isInsideParent: position === NewPointLabelPosition.Center,
                         identity: labelPoint.identity,
                         key: labelPoint.key,
                         fontSize: labelPoint.fontSize,
                         selected: false,
                         leaderLinePoints: drawLeaderLines ? DataLabelPointPositioner.getLabelLeaderLineEndingPoint(resultingBoundingBox, position, parentShape) : null,
+                        hasBackground: !!labelPoint.hasBackground,
                     };
                 }
+            };
+
+            // Iterate over all positions that are valid for the data point
+            let parentShape = (<LabelParentPoint>labelPoint.parentShape);
+            let validPositions = parentShape.validPositions;
+            for (let position of validPositions) {
+                let label = tryPosition(position, parentShape, false /* adjustForViewport */);
+                if (label)
+                    return label;
+            }
+            // Attempt to position at the most preferred position by simply moving it inside the viewport
+            if (this.attemptToMoveLabelsIntoViewport && !_.isEmpty(validPositions)) {
+                let label = tryPosition(validPositions[0], parentShape, true /* adjustForViewport */);
+                if (label)
+                    return label;
             }
             return null;
         }
 
-        private static tryPositionPoint(grid: LabelArrangeGrid, position: NewPointLabelPosition, labelDataPoint: LabelDataPoint, offset: number): IRect {
-            let labelRect = DataLabelPointPositioner.getLabelRect(labelDataPoint.textSize, <LabelParentPoint>labelDataPoint.parentShape, position, offset);
-            
+        private static tryPositionPoint(grid: LabelArrangeGrid, position: NewPointLabelPosition, labelDataPoint: LabelDataPoint, offset: number, adjustForViewport: boolean): IRect {
+            let labelRect = DataLabelPointPositioner.getLabelRect(labelDataPoint.labelSize, <LabelParentPoint>labelDataPoint.parentShape, position, offset);
+
             if (!grid.hasConflict(labelRect)) {
                 return labelRect;
+            }
+            if (adjustForViewport) {
+                return grid.tryPositionInViewport(labelRect);
             }
 
             return null;
@@ -638,7 +769,7 @@ module powerbi {
      * (Private) Contains methods for calculating the bounding box of a data label
      */
     export module DataLabelRectPositioner {
-        
+
         export function getLabelRect(labelDataPoint: LabelDataPoint, position: RectLabelPosition, offset: number): IRect {
             let parentRect: LabelParentRect = <LabelParentRect>labelDataPoint.parentShape;
             if (parentRect != null) {
@@ -648,62 +779,62 @@ module powerbi {
                         switch (parentRect.orientation) {
                             case NewRectOrientation.VerticalBottomBased:
                             case NewRectOrientation.VerticalTopBased:
-                                return DataLabelRectPositioner.middleVertical(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.middleVertical(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalLeftBased:
                             case NewRectOrientation.HorizontalRightBased:
-                                return DataLabelRectPositioner.middleHorizontal(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.middleHorizontal(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.None:
                             // TODO: which of the above cases should we default to for rects with no orientation?
                         }
                     case RectLabelPosition.InsideBase:
                         switch (parentRect.orientation) {
                             case NewRectOrientation.VerticalBottomBased:
-                                return DataLabelRectPositioner.bottomInside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.bottomInside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.VerticalTopBased:
-                                return DataLabelRectPositioner.topInside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.topInside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalLeftBased:
-                                return DataLabelRectPositioner.leftInside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.leftInside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalRightBased:
-                                return DataLabelRectPositioner.rightInside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.rightInside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.None:
                             // TODO: which of the above cases should we default to for rects with no orientation?
                         }
                     case RectLabelPosition.InsideEnd:
                         switch (parentRect.orientation) {
                             case NewRectOrientation.VerticalBottomBased:
-                                return DataLabelRectPositioner.topInside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.topInside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.VerticalTopBased:
-                                return DataLabelRectPositioner.bottomInside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.bottomInside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalLeftBased:
-                                return DataLabelRectPositioner.rightInside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.rightInside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalRightBased:
-                                return DataLabelRectPositioner.leftInside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.leftInside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.None:
                             // TODO: which of the above cases should we default to for rects with no orientation?
                         }
                     case RectLabelPosition.OutsideBase:
                         switch (parentRect.orientation) {
                             case NewRectOrientation.VerticalBottomBased:
-                                return DataLabelRectPositioner.bottomOutside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.bottomOutside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.VerticalTopBased:
-                                return DataLabelRectPositioner.topOutside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.topOutside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalLeftBased:
-                                return DataLabelRectPositioner.leftOutside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.leftOutside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalRightBased:
-                                return DataLabelRectPositioner.rightOutside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.rightOutside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.None:
                             // TODO: which of the above cases should we default to for rects with no orientation?
                         }
                     case RectLabelPosition.OutsideEnd:
                         switch (parentRect.orientation) {
                             case NewRectOrientation.VerticalBottomBased:
-                                return DataLabelRectPositioner.topOutside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.topOutside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.VerticalTopBased:
-                                return DataLabelRectPositioner.bottomOutside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.bottomOutside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalLeftBased:
-                                return DataLabelRectPositioner.rightOutside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.rightOutside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.HorizontalRightBased:
-                                return DataLabelRectPositioner.leftOutside(labelDataPoint.textSize, parentRect.rect, offset);
+                                return DataLabelRectPositioner.leftOutside(labelDataPoint.labelSize, parentRect.rect, offset);
                             case NewRectOrientation.None:
                             // TODO: which of the above cases should we default to for rects with no orientation?
                         }
@@ -718,8 +849,8 @@ module powerbi {
         }
 
         export function canFitWithinParent(labelDataPoint: LabelDataPoint, horizontalPadding: number, verticalPadding: number): boolean {
-            return (labelDataPoint.textSize.width + 2 * horizontalPadding < (<LabelParentRect>labelDataPoint.parentShape).rect.width) ||
-                (labelDataPoint.textSize.height + 2 * verticalPadding < (<LabelParentRect>labelDataPoint.parentShape).rect.height);
+            return (labelDataPoint.labelSize.width + 2 * horizontalPadding < (<LabelParentRect>labelDataPoint.parentShape).rect.width) ||
+                (labelDataPoint.labelSize.height + 2 * verticalPadding < (<LabelParentRect>labelDataPoint.parentShape).rect.height);
         }
 
         export function isLabelWithinParent(labelRect: IRect, labelPoint: LabelDataPoint, horizontalPadding: number, verticalPadding: number): boolean {
@@ -829,34 +960,34 @@ module powerbi {
         export const cos45 = Math.cos(45);
         export const sin45 = Math.sin(45);
 
-        export function getLabelRect(textSize: ISize, parentPoint: LabelParentPoint, position: NewPointLabelPosition, offset: number): IRect {
+        export function getLabelRect(labelSize: ISize, parentPoint: LabelParentPoint, position: NewPointLabelPosition, offset: number): IRect {
             switch (position) {
                 case NewPointLabelPosition.Above: {
-                    return DataLabelPointPositioner.above(textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.above(labelSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.Below: {
-                    return DataLabelPointPositioner.below(textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.below(labelSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.Left: {
-                    return DataLabelPointPositioner.left(textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.left(labelSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.Right: {
-                    return DataLabelPointPositioner.right(textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.right(labelSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.BelowLeft: {
-                    return DataLabelPointPositioner.belowLeft(textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.belowLeft(labelSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.BelowRight: {
-                    return DataLabelPointPositioner.belowRight(textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.belowRight(labelSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.AboveLeft: {
-                    return DataLabelPointPositioner.aboveLeft(textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.aboveLeft(labelSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.AboveRight: {
-                    return DataLabelPointPositioner.aboveRight(textSize, parentPoint.point, parentPoint.radius + offset);
+                    return DataLabelPointPositioner.aboveRight(labelSize, parentPoint.point, parentPoint.radius + offset);
                 }
                 case NewPointLabelPosition.Center: {
-                    return DataLabelPointPositioner.center(textSize, parentPoint.point);
+                    return DataLabelPointPositioner.center(labelSize, parentPoint.point);
                 }
                 default: {
                     debug.assertFail("Unsupported label position");
@@ -979,7 +1110,7 @@ module powerbi {
                     break;
             }
 
-            return [[parentShape.point.x, parentShape.point.y],[x, y]];
+            return [[parentShape.point.x, parentShape.point.y], [x, y]];
         }
     }
 }

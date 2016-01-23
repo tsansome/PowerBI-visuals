@@ -4035,7 +4035,7 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        xit("autoSizeColumnwidth on to off then resize", (done) => {
+        it("autoSizeColumnwidth on to off then resize", (done) => {
             let selector = ".bi-tablix tr";
             let matrix = matrixTwoRowGroupsTwoColumnGroupsTwoMeasuresAndTotals;
             let objects = {

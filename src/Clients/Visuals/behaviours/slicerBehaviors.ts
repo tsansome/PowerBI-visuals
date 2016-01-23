@@ -129,7 +129,8 @@ module powerbi.visuals {
         }
 
         private static styleSlicerContainer(slicerContainer: D3.Selection, interactivityService: IInteractivityService) {
-            let hasSelection = interactivityService.hasSelection();
+            let hasSelection = (interactivityService.hasSelection() && interactivityService.isDefaultValueEnabled() === undefined)
+                || interactivityService.isDefaultValueEnabled() === false;
             slicerContainer.classed('hasSelection', hasSelection);
         }
 

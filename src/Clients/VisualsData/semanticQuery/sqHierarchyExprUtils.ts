@@ -56,6 +56,20 @@ module powerbi.data {
                 expr;
         }
 
+        export function isHierarchyOrVariation(schema: FederatedConceptualSchema, expr: SQExpr): boolean {
+            if (expr instanceof SQHierarchyExpr || expr instanceof SQHierarchyLevelExpr)
+                return true;
+
+            let conceptualProperty = expr.getConceptualProperty(schema);
+            if (conceptualProperty) {
+                let column = conceptualProperty.column;
+                if (column && column.variations && column.variations.length > 0)
+                    return true;
+            }
+
+            return false;
+        }
+
         // Return column reference expression for hierarchy level expression.
         export function getSourceVariationExpr(hierarchyLevelExpr: data.SQHierarchyLevelExpr): SQColumnRefExpr {
             let fieldExprPattern: data.FieldExprPattern = data.SQExprConverter.asFieldPattern(hierarchyLevelExpr);
@@ -109,6 +123,23 @@ module powerbi.data {
             let secondIndex = SQExprUtils.indexOfExpr(allLevels, secondLevel);
 
             return firstIndex !== -1 && secondIndex !== -1 && firstIndex < secondIndex;
+        }
+
+        /**
+         * Given an ordered set of levels and an ordered subset of those levels, returns the index where
+         * expr should be inserted into the subset to maintain the correct order.
+         */
+        export function getInsertionIndex(allLevels: SQHierarchyLevelExpr[], orderedSubsetOfLevels: SQHierarchyLevelExpr[], expr: SQHierarchyLevelExpr): number {
+
+            let insertIndex = 0;
+
+            // Loop through the supplied levels until the insertion would no longer be in the correct order
+            while (insertIndex < orderedSubsetOfLevels.length &&
+                areHierarchyLevelsOrdered(allLevels, orderedSubsetOfLevels[insertIndex], expr)) {
+                insertIndex++;
+            }
+
+            return insertIndex;
         }
     }
 

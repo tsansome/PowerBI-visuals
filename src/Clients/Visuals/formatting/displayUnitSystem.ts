@@ -148,6 +148,10 @@ module powerbi {
         }
 
         private formatHelper(value: number, nonScientificFormat: string, format: string, decimals?: number, trailingZeros?: boolean) {
+            // If the format is "general" and we want to override the number of decimal places then use the default numeric format string.
+            if ((format === 'g' || format === 'G') && decimals != null)
+                format = visuals.valueFormatter.DefaultNumericFormat;
+
             format = NumberFormat.addDecimalsToFormat(format, decimals, trailingZeros);
 
             if (format && !formattingService.isStandardNumberFormat(format))

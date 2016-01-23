@@ -29,6 +29,7 @@
 
 /// <reference path="iVisual.ts"/>
 
+/// <reference path="common/tooltipUtils.ts" />
 /// <reference path="common/point.ts"/>
 /// <reference path="common/rect.ts"/>
 /// <reference path="legend.ts"/>
@@ -116,6 +117,7 @@
 /// <reference path="common/selectionManager.ts"/>
 /// <reference path="common/shapes.ts"/>
 /// <reference path="common/slicerUtil.ts"/>
+/// <reference path="common/tooltipUtils.ts"/>
 /// <reference path="common/svgUtil.ts"/>
 /// <reference path="common/textUtil.ts"/>
 /// <reference path="common/urlHelper.ts"/>
@@ -154,6 +156,7 @@
 /// <reference path="controls/tablix/tablixDimension.ts"/>
 /// <reference path="controls/tablix/tablixTouchDelegate.ts"/>
 /// <reference path="controls/tablix/touchRegionAbstraction.ts"/>
+/// <reference path="controls/tablix/ITablixFormatting.ts"/>
 
 /// <reference path="visuals/animatedText.ts"/>
 /// <reference path="visuals/animatedNumber.ts"/>

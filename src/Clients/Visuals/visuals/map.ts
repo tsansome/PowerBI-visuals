@@ -166,6 +166,7 @@ module powerbi.visuals {
         private tooltipsEnabled: boolean;
         private static validLabelPositions: NewPointLabelPosition[] = [NewPointLabelPosition.Above, NewPointLabelPosition.Below, NewPointLabelPosition.Left, NewPointLabelPosition.Right];
         private mapData: MapData;
+        private root: JQuery;
 
         public constructor(tooltipsEnabled: boolean) {
             this.values = [];
@@ -195,9 +196,10 @@ module powerbi.visuals {
             */
 
             this.mapControl = mapControl;
-            let root = mapDiv[0];
-            root.setAttribute("drag-resize-disabled", "true"); // Enable panning within the maps in IE
-            let svg = this.svg = d3.select(root)
+            this.root = mapDiv;
+            let root = d3.select(mapDiv[0]);
+            root.attr("drag-resize-disabled", "true"); // Enable panning within the maps in IE
+            let svg = this.svg = root
                 .append('svg')
                 .style("position", "absolute") // Absolute position so that the svg will overlap with the canvas.
                 .style("pointer-events", "none");
@@ -397,6 +399,8 @@ module powerbi.visuals {
 
         public updateInternal(data: MapData, viewport: IViewport, dataChanged: boolean, interactivityService: IInteractivityService): MapBehaviorOptions {
             debug.assertValue(viewport, "viewport");
+            Map.removeTransform3d(this.root);
+
             this.mapData = data;
             if (this.svg) {
                 this.svg
@@ -544,6 +548,7 @@ module powerbi.visuals {
                     },
                     fontSize: labelSettings.fontSize,
                     identity: undefined,
+                    hasBackground: true,
                 });
             }
 
@@ -575,6 +580,7 @@ module powerbi.visuals {
         private filledMapDataLabelsEnabled: boolean;
         private tooltipsEnabled: boolean;
         private static validLabelPolygonPositions: NewPointLabelPosition[] = [NewPointLabelPosition.Center, NewPointLabelPosition.Below, NewPointLabelPosition.Above, NewPointLabelPosition.Right, NewPointLabelPosition.Left, NewPointLabelPosition.BelowRight, NewPointLabelPosition.BelowLeft, NewPointLabelPosition.AboveRight, NewPointLabelPosition.AboveLeft];
+        private root: JQuery;
 
         public static getFilledMapParams(category: string, dataCount: number): FilledMapParams {
             switch (category) {
@@ -640,9 +646,10 @@ module powerbi.visuals {
             this.mapControl = mapControl;
             this.polygonInfo = new MapPolygonInfo();
 
-            let root = mapDiv[0];
-            root.setAttribute('drag-resize-disabled', 'true'); // Enable panning within the maps in IE
-            let svg = this.svg = d3.select(root)
+            this.root = mapDiv;
+            let root = d3.select(mapDiv[0]);
+            root.attr('drag-resize-disabled', 'true'); // Enable panning within the maps in IE
+            let svg = this.svg = root
                 .append('svg')
                 .style('position', 'absolute') // Absolute position so that the svg will overlap with the canvas.
                 .style("pointer-events", "none");
@@ -767,8 +774,9 @@ module powerbi.visuals {
 
         public updateInternal(data: MapData, viewport: IViewport, dataChanged: boolean, interactivityService: IInteractivityService): MapBehaviorOptions {
             debug.assertValue(viewport, "viewport");
-            this.mapData = data;
+            Map.removeTransform3d(this.root);
 
+            this.mapData = data;
             if (this.svg) {
                 this.svg
                     .style("width", viewport.width.toString() + "px")
@@ -819,7 +827,7 @@ module powerbi.visuals {
                 let labelLayout = new FilledMapLabelLayout();
                 labels = labelLayout.layout(labelDataPoints, { width: viewport.width, height: viewport.height }, this.polygonInfo.transform);
             }
-
+            
             this.drawLabelStems(this.labelGraphicsContext, labels, labelSettings.show, labelSettings.showCategory);
             NewDataLabelUtils.drawLabelBackground(this.labelGraphicsContext, labels, powerbi.visuals.DefaultBackgroundColor, powerbi.visuals.DefaultFillOpacity);
             NewDataLabelUtils.drawDefaultLabels(this.labelGraphicsContext, labels, false, labelSettings.show && labelSettings.showCategory);
@@ -942,6 +950,7 @@ module powerbi.visuals {
                         outsideFill: labelSettings.labelColor ? labelSettings.labelColor : NewDataLabelUtils.defaultInsideLabelColor, // Use inside for outside colors because we draw backgrounds for map labels                   
                         isPreferred: false,
                         identity: undefined,
+                        hasBackground: true,
                     };
                     labelDataPoints.push(labelDataPoint);
                 }
@@ -1007,6 +1016,7 @@ module powerbi.visuals {
         private locale: string;
         private isLegendScrollable: boolean;
         private viewChangeThrottleInterval: number;
+        private root: JQuery;
 
         constructor(options: MapConstructionOptions) {
             if (options.filledMap) {
@@ -1816,7 +1826,7 @@ module powerbi.visuals {
                 disableZooming: this.disableZooming,
                 disablePanning: this.disablePanning,
             };
-            let divQuery = InJs.DomFactory.div().addClass(Map.MapContainer.cssClass).appendTo(container);
+            let divQuery = this.root = InJs.DomFactory.div().addClass(Map.MapContainer.cssClass).appendTo(container);
             this.mapControl = this.mapControlFactory.createMapControl(divQuery[0], mapOptions);
 
             if (this.viewChangeThrottleInterval !== undefined) {
@@ -1834,6 +1844,7 @@ module powerbi.visuals {
         }
 
         private onViewChanged() {
+            Map.removeTransform3d(this.root);
             if (!this.executingInternalViewChange)
                 this.receivedExternalViewChange = true;
             else
@@ -1855,6 +1866,15 @@ module powerbi.visuals {
             };
 
             return mapViewport;
+        }
+
+        public static removeTransform3d(mapRoot: JQuery): void {
+            // don't remove transform3d from bing maps images in safari (using applewebkit engine)
+            let userAgent = window.navigator.userAgent.toLowerCase();
+            if (mapRoot && userAgent.indexOf('applewebkit') === -1) {
+                let imageTiles = mapRoot.find('img');
+                imageTiles.css('transform', '');
+            }
         }
 
         private updateInternal(dataChanged: boolean) {

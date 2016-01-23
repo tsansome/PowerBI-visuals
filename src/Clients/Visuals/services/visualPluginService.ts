@@ -89,6 +89,7 @@ module powerbi.visuals {
         cartesianSmallViewPortProperties: CartesianSmallViewPortProperties;
         gaugeSmallViewPortProperties: GaugeSmallViewPortProperties;
         funnelSmallViewPortProperties: FunnelSmallViewPortProperties;
+        DonutSmallViewPortProperties: DonutSmallViewPortProperties;
     }
 
     export module visualPluginFactory {
@@ -885,6 +886,7 @@ module powerbi.visuals {
             public static MinHeightGaugeSideNumbersVisible = 80;
             public static GaugeMarginsOnSmallViewPort = 10;
             public static MinHeightFunnelCategoryLabelsVisible = 80;
+            public static MaxHeightToScaleDonutLegend = 300;
 
             public constructor(smallViewPortProperties?: SmallViewPortProperties) {
                 super(undefined);
@@ -906,26 +908,146 @@ module powerbi.visuals {
                         hideFunnelCategoryLabelsOnSmallViewPort: true,
                         minHeightFunnelCategoryLabelsVisible: MobileVisualPluginService.MinHeightFunnelCategoryLabelsVisible,
                     },
+                    DonutSmallViewPortProperties: {
+                        maxHeightToScaleDonutLegend: MobileVisualPluginService.MaxHeightToScaleDonutLegend,
+                    },
                 };
 
                 // Disable tooltips for mobile
                 TooltipManager.ShowTooltips = false;
+                
+                // Don't trim overflow data on mobile
+                let trimOrdinalDataOnOverflow = false;
 
                 let mapThrottleInterval: number = this.getMapThrottleInterval();
 
                 this.visualPlugins = {};
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineChart, () => new CartesianChart({ chartType: CartesianChartType.Line, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineClusteredColumnComboChart, () => new CartesianChart({ chartType: CartesianChartType.LineClusteredColumnCombo, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineStackedColumnComboChart, () => new CartesianChart({ chartType: CartesianChartType.LineStackedColumnCombo, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.scatterChart, () => new CartesianChart({ chartType: CartesianChartType.Scatter, cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties, behavior: new CartesianChartBehavior([new ScatterChartMobileBehavior()]) }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.gauge, () => new Gauge({ gaugeSmallViewPortProperties: this.smallViewPortProperties.GaugeSmallViewPortProperties }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.funnel, () => new FunnelChart({ animator: null, funnelSmallViewPortProperties: this.smallViewPortProperties.FunnelSmallViewPortProperties }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.donutChart, () => new DonutChart({ disableGeometricCulling: true }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.pieChart, () => new DonutChart({ sliceWidthRatio: 0, disableGeometricCulling: true }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.matrix, () => new Matrix({ isTouchEnabled: true }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.table, () => new Table({ isTouchEnabled: true }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.map, () => new Map({ viewChangeThrottleInterval: mapThrottleInterval }));
-                createPlugin(this.visualPlugins, powerbi.visuals.plugins.filledMap, () => new Map({ filledMap: true, viewChangeThrottleInterval: mapThrottleInterval }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.areaChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.Area,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.barChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.StackedBar,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.clusteredBarChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.ClusteredBar,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.clusteredColumnChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.ClusteredColumn,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.columnChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.StackedColumn,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.comboChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.ComboChart,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.dataDotChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.DataDot,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.dataDotClusteredColumnComboChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.DataDotClusteredColumnCombo,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.dataDotStackedColumnComboChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.DataDotStackedColumnCombo,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.hundredPercentStackedBarChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.HundredPercentStackedBar,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.hundredPercentStackedColumnChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.HundredPercentStackedColumn,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.stackedAreaChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.StackedArea,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.waterfallChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.Waterfall,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.Line,
+                        cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineClusteredColumnComboChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.LineClusteredColumnCombo,
+                        cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.lineStackedColumnComboChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.LineStackedColumnCombo,
+                        cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties,
+                        trimOrdinalDataOnOverflow: trimOrdinalDataOnOverflow
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.scatterChart,
+                    () => new CartesianChart({
+                        chartType: CartesianChartType.Scatter,
+                        cartesianSmallViewPortProperties: this.smallViewPortProperties.CartesianSmallViewPortProperties,
+                        behavior: new CartesianChartBehavior([new ScatterChartMobileBehavior()])
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.gauge,
+                    () => new Gauge({
+                        gaugeSmallViewPortProperties: this.smallViewPortProperties.GaugeSmallViewPortProperties
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.funnel,
+                    () => new FunnelChart({
+                        animator: null,
+                        funnelSmallViewPortProperties: this.smallViewPortProperties.FunnelSmallViewPortProperties
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.donutChart,
+                    () => new DonutChart({
+                        disableGeometricCulling: true,
+                        smallViewPortProperties: this.smallViewPortProperties.DonutSmallViewPortProperties
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.pieChart,
+                    () => new DonutChart({
+                        sliceWidthRatio: 0,
+                        disableGeometricCulling: true,
+                        smallViewPortProperties: this.smallViewPortProperties.DonutSmallViewPortProperties
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.matrix,
+                    () => new Matrix({
+                        isTouchEnabled: true
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.table,
+                    () => new Table({
+                        isTouchEnabled: true
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.map,
+                    () => new Map({
+                        viewChangeThrottleInterval: mapThrottleInterval
+                    }));
+                createPlugin(this.visualPlugins, powerbi.visuals.plugins.filledMap,
+                    () => new Map({
+                        filledMap: true,
+                        viewChangeThrottleInterval: mapThrottleInterval
+                    }));
             }
 
             public getPlugin(type: string): IVisualPlugin {

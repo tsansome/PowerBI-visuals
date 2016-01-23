@@ -205,7 +205,8 @@ module powerbi.visuals {
                     categoryCount: categoryCount,
                     domain: null,
                     isScalar: false,
-                    isScrollable: this.isScrollable
+                    isScrollable: this.isScrollable,
+                    trimOrdinalDataOnOverflow: options.trimOrdinalDataOnOverflow
                 });
             let outerPadding = layout.categoryThickness * CartesianChart.OuterPaddingRatio;
 
@@ -477,6 +478,10 @@ module powerbi.visuals {
                         SelectionId.createWithMeasure(measure.source.queryName);
 
                     let categoryValue = categoryValues[categoryIndex];
+
+                    // ignore variant measures
+                    if (isDateTime && categoryValue != null && !(categoryValue instanceof Date))
+                        continue;
 
                     dataPoints.push({
                         categoryValue: isDateTime && categoryValue ? categoryValue.getTime() : categoryValue,

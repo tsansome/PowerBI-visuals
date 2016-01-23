@@ -40,6 +40,7 @@ module powerbi.visuals {
             export const HeaderText = createClassAndSelector('headerText');
             export const Body = createClassAndSelector('slicerBody');
             export const LabelText = createClassAndSelector('slicerText');
+            export const CountText = createClassAndSelector('slicerCountText');
             export const Clear = createClassAndSelector('clear');
             export const MultiSelectEnabled = createClassAndSelector('isMultiSelectEnabled');
         }

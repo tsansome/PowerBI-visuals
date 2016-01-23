@@ -150,6 +150,7 @@ module powerbi.visuals {
         viewportHeight: number;
         viewportWidth: number;
         is100Pct: boolean;
+        isComboChart: boolean;
     }
 
     export interface IColumnChartStrategy {
@@ -222,6 +223,7 @@ module powerbi.visuals {
         private tooltipsEnabled: boolean;
         private element: JQuery;
         private seriesLabelFormattingEnabled: boolean;
+        private isComboChart: boolean;
 
         constructor(options: ColumnChartConstructorOptions) {
             debug.assertValue(options, 'options');
@@ -301,6 +303,7 @@ module powerbi.visuals {
             this.colors = this.style.colorPalette.dataColors;
             this.cartesianVisualHost = options.cartesianHost;
             this.options = options;
+            this.isComboChart = ComboChart.isComboChart(options.chartType);
             let element = this.element = options.element;
             element.addClass(ColumnChart.ColumnChartClassName);
         }
@@ -325,7 +328,8 @@ module powerbi.visuals {
                     categoryCount: numCategoryValues,
                     domain: domain,
                     isScalar: isScalar,
-                    isScrollable: this.isScrollable
+                    isScrollable: this.isScrollable,
+                    trimOrdinalDataOnOverflow: options.trimOrdinalDataOnOverflow
                 });
         }
 
@@ -549,6 +553,11 @@ module powerbi.visuals {
 
                     let originalValue: number = value;
                     let categoryValue = categories[categoryIndex];
+
+                    // ignore variant measures
+                    if (isDateTime && categoryValue != null && !(categoryValue instanceof Date))
+                        continue;
+
                     if (isDateTime && categoryValue)
                         categoryValue = categoryValue.getTime();
                     if (isScalar && (categoryValue == null || isNaN(categoryValue)))
@@ -964,7 +973,7 @@ module powerbi.visuals {
             };
             this.categoryAxisType = chartLayout.isScalar ? axisType.scalar : null;
 
-            if (data && !chartLayout.isScalar && !this.isScrollable) {
+            if (data && !chartLayout.isScalar && !this.isScrollable && options.trimOrdinalDataOnOverflow) {
                 // trim data that doesn't fit on dashboard
                 let catgSize = Math.min(origCatgSize, chartLayout.categoryCount);
                 if (catgSize !== origCatgSize) {
@@ -1002,6 +1011,7 @@ module powerbi.visuals {
                 viewportHeight: this.currentViewport.height - (margin.top + margin.bottom),
                 viewportWidth: this.currentViewport.width - (margin.left + margin.right),
                 is100Pct: is100Pct,
+                isComboChart: this.isComboChart,
             };
             this.ApplyInteractivity(chartContext);
             this.columnChart.setupVisualProps(chartContext);
@@ -1217,6 +1227,16 @@ module powerbi.visuals {
             data.categories = data.categories.slice(startIndex, endIndex);
             this.columnChart.setData(data);
             return data;
+        }
+
+        public static getLabelFill(labelColor: string, isInside: boolean, isCombo: boolean): string {
+            if (labelColor) {
+                return labelColor;
+            }
+            if (isInside && !isCombo) {
+                return NewDataLabelUtils.defaultInsideLabelColor;
+            }
+            return NewDataLabelUtils.defaultLabelColor;
         }
     }
 

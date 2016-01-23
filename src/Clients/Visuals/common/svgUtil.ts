@@ -89,6 +89,19 @@ module powerbi.visuals {
         }
 
         /**
+         * Creates a translate + scale string for use with the SVG transform call.
+         */
+        export function translateAndScale(x: number, y: number, ratio: number): string {
+            debug.assertValue(x, 'x');
+            debug.assertValue(y, 'y');
+            debug.assertValue(ratio, 'ratio');
+
+            return 'transform', "translate("
+                + x + "," + y + ")"
+                + " scale(" + ratio + ")";
+        }
+
+        /**
          * Creates a transform origin string for use in a CSS transform-origin property.
          */
         export function transformOrigin(xOffset: string, yOffset: string): string {

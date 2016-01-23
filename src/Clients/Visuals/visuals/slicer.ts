@@ -67,6 +67,7 @@ module powerbi.visuals {
         value: string;
         tooltip: string;
         isSelectAllDataPoint?: boolean;
+        count: number;
     }
 
     export interface SlicerSettings {

@@ -36,7 +36,7 @@ module powerbi.visuals.samples {
             satisfactoryPercent: <DataViewObjectPropertyIdentifier>{ objectName: 'values', propertyName: 'satisfactoryPercent' },
             goodPercent: <DataViewObjectPropertyIdentifier>{ objectName: 'values', propertyName: 'goodPercent' },
             maximumPercent: <DataViewObjectPropertyIdentifier>{ objectName: 'values', propertyName: 'maximumPercent' },
-            targetValue2: <DataViewObjectPropertyIdentifier>{ objectName: 'values', propertyName: 'targetValue2'},
+            targetValue2: <DataViewObjectPropertyIdentifier>{ objectName: 'values', propertyName: 'targetValue2' },
         },
         orientation: {
             orientation: <DataViewObjectPropertyIdentifier>{ objectName: 'orientation', propertyName: 'orientation' },
@@ -111,7 +111,6 @@ module powerbi.visuals.samples {
             goodColor: string;
             bulletColor: string;
         };
-
         axis: {
             axis: boolean;
             axisColor: string;
@@ -167,6 +166,7 @@ module powerbi.visuals.samples {
         private static MaxLabelWidth = 80;
         private static MaxLabelHeight = 60;
         private static SubtitleMargin = 10;
+        private static AxisFontSizeInPt = 8;
 
         private static BiggestLabelWidth = 0;
         private static BiggestLabelHeight = 0;
@@ -174,6 +174,7 @@ module powerbi.visuals.samples {
         private static MarkerMarginVertical = BulletChart.BulletSize / 4;
 
         private static FontFamily: string = "Segoe UI";
+        private baselineDelta: number = 0;
 
         public static capabilities: VisualCapabilities = {
             dataRoles: [
@@ -206,7 +207,7 @@ module powerbi.visuals.samples {
                     name: 'Maximum',
                     kind: VisualDataRoleKind.Measure,
                     displayName: 'Maximum',
-                },{
+                }, {
                     name: 'TargetValue2',
                     kind: VisualDataRoleKind.Measure,
                     displayName: 'Target Value 2'
@@ -230,7 +231,7 @@ module powerbi.visuals.samples {
                         },
                         targetValue2: {
                             displayName: 'Target Value 2',
-                            type: { numeric: true},
+                            type: { numeric: true },
                         },
                         minimumPercent: {
                             displayName: 'Minimum %',
@@ -336,7 +337,7 @@ module powerbi.visuals.samples {
                         select: [
                             { bind: { to: 'Value' } },
                             { bind: { to: 'TargetValue' } },
-                            { bind: { to: 'TargetValue2'} },
+                            { bind: { to: 'TargetValue2' } },
                             { bind: { to: 'Minimum' } },
                             { bind: { to: 'Satisfactory' } },
                             { bind: { to: 'Good' } },
@@ -374,7 +375,7 @@ module powerbi.visuals.samples {
         }
 
         public static DefaultStyleProperties(): BulletChartSettings {
-            return {
+            return <BulletChartSettings>{
                 values: {
                     targetValue: 0,
                     targetValue2: 0,
@@ -435,69 +436,68 @@ module powerbi.visuals.samples {
         
         // Convert a DataView into a view model
         public static converter(dataView: DataView, options: VisualUpdateOptions): BulletChartModel {
-            let bulletModel: BulletChartModel;
-            if (!dataView) {
-                return;
-            }
-
-            let dataViewCategorical = dataView.categorical;
-
-            if (!dataViewCategorical || !dataViewCategorical.categories || !dataViewCategorical.values || dataViewCategorical.values.length === 0
-                || !dataView.metadata || !dataView.metadata.columns || dataView.metadata.columns.length === 0) {
-                return;
-            }
-
             let defaultSettings = BulletChart.DefaultStyleProperties();
+            let bulletModel: BulletChartModel = <BulletChartModel>{
+                bulletValueFormatString: null,
+                bulletChartSettings: defaultSettings,
+                bars: [],
+                barRects: [],
+                valueRects: [],
+                targetValues: [],
+            };
+
+            if (!dataView || !dataView.categorical || !dataView.categorical.categories || !dataView.categorical.values || dataView.categorical.values.length === 0
+                || !dataView.metadata || !dataView.metadata.columns || dataView.metadata.columns.length === 0) {
+                return bulletModel;
+            }
+
             let objects = dataView.metadata.objects;
+            let settings = bulletModel.bulletChartSettings;
+
             if (objects) {
-                defaultSettings.values.targetValue = DataViewObjects.getValue<number>(objects, bulletChartProps.values.targetValue, defaultSettings.values.targetValue);
-                defaultSettings.values.targetValue2 = DataViewObjects.getValue<number>(objects, bulletChartProps.values.targetValue2, defaultSettings.values.targetValue2);
-                defaultSettings.values.minimumPercent = DataViewObjects.getValue<number>(objects, bulletChartProps.values.minimumPercent, defaultSettings.values.minimumPercent);
-                defaultSettings.values.satisfactoryPercent = DataViewObjects.getValue<number>(objects, bulletChartProps.values.satisfactoryPercent, defaultSettings.values.satisfactoryPercent);
-                defaultSettings.values.goodPercent = DataViewObjects.getValue<number>(objects, bulletChartProps.values.goodPercent, defaultSettings.values.goodPercent);
-                defaultSettings.values.maximumPercent = DataViewObjects.getValue<number>(objects, bulletChartProps.values.maximumPercent, defaultSettings.values.maximumPercent);
+                settings.values.targetValue = DataViewObjects.getValue<number>(objects, bulletChartProps.values.targetValue, defaultSettings.values.targetValue);
+                settings.values.targetValue2 = DataViewObjects.getValue<number>(objects, bulletChartProps.values.targetValue2, defaultSettings.values.targetValue2);
+                settings.values.minimumPercent = DataViewObjects.getValue<number>(objects, bulletChartProps.values.minimumPercent, defaultSettings.values.minimumPercent);
+                settings.values.satisfactoryPercent = DataViewObjects.getValue<number>(objects, bulletChartProps.values.satisfactoryPercent, defaultSettings.values.satisfactoryPercent);
+                settings.values.goodPercent = DataViewObjects.getValue<number>(objects, bulletChartProps.values.goodPercent, defaultSettings.values.goodPercent);
+                settings.values.maximumPercent = DataViewObjects.getValue<number>(objects, bulletChartProps.values.maximumPercent, defaultSettings.values.maximumPercent);
 
-                defaultSettings.orientation.orientation = DataViewObjects.getValue<string>(objects, bulletChartProps.orientation.orientation, defaultSettings.orientation.orientation);
+                settings.orientation.orientation = DataViewObjects.getValue<string>(objects, bulletChartProps.orientation.orientation, defaultSettings.orientation.orientation);
 
-                defaultSettings.colors.badColor = DataViewObjects.getFillColor(objects, bulletChartProps.colors.badColor, defaultSettings.colors.badColor);
-                defaultSettings.colors.satisfactoryColor = DataViewObjects.getFillColor(objects, bulletChartProps.colors.satisfactoryColor, defaultSettings.colors.satisfactoryColor);
-                defaultSettings.colors.goodColor = DataViewObjects.getFillColor(objects, bulletChartProps.colors.goodColor, defaultSettings.colors.goodColor);
-                defaultSettings.colors.bulletColor = DataViewObjects.getFillColor(objects, bulletChartProps.colors.bulletColor, defaultSettings.colors.bulletColor);
+                settings.colors.badColor = DataViewObjects.getFillColor(objects, bulletChartProps.colors.badColor, defaultSettings.colors.badColor);
+                settings.colors.satisfactoryColor = DataViewObjects.getFillColor(objects, bulletChartProps.colors.satisfactoryColor, defaultSettings.colors.satisfactoryColor);
+                settings.colors.goodColor = DataViewObjects.getFillColor(objects, bulletChartProps.colors.goodColor, defaultSettings.colors.goodColor);
+                settings.colors.bulletColor = DataViewObjects.getFillColor(objects, bulletChartProps.colors.bulletColor, defaultSettings.colors.bulletColor);
 
-                defaultSettings.axis.axis = DataViewObjects.getValue<boolean>(objects, bulletChartProps.axis.axis, defaultSettings.axis.axis);
-                defaultSettings.axis.axisColor = DataViewObjects.getFillColor(objects, bulletChartProps.axis.axisColor, defaultSettings.axis.axisColor);
-                defaultSettings.axis.measureUnits = TextMeasurementService.getTailoredTextOrDefault(BulletChart.getTextProperties(
+                settings.axis.axis = DataViewObjects.getValue<boolean>(objects, bulletChartProps.axis.axis, defaultSettings.axis.axis);
+                settings.axis.axisColor = DataViewObjects.getFillColor(objects, bulletChartProps.axis.axisColor, defaultSettings.axis.axisColor);
+                settings.axis.measureUnits = TextMeasurementService.getTailoredTextOrDefault(BulletChart.getTextProperties(
                     DataViewObjects.getValue<string>(objects, bulletChartProps.axis.measureUnits, defaultSettings.axis.measureUnits), BulletChart.DefaultSubtitleFontSizeInPt), BulletChart.MaxLabelWidth);
-                defaultSettings.axis.unitsColor = DataViewObjects.getFillColor(objects, bulletChartProps.axis.unitsColor, defaultSettings.axis.unitsColor);
+                settings.axis.unitsColor = DataViewObjects.getFillColor(objects, bulletChartProps.axis.unitsColor, defaultSettings.axis.unitsColor);
 
-                defaultSettings.labelSettings.fontSize = DataViewObjects.getValue<number>(objects, bulletChartProps.labels.fontSize, defaultSettings.labelSettings.fontSize);
-                defaultSettings.labelSettings.show = DataViewObjects.getValue<boolean>(objects, bulletChartProps.labels.show, defaultSettings.labelSettings.show);
-                defaultSettings.labelSettings.labelColor = DataViewObjects.getFillColor(objects, bulletChartProps.labels.labelColor, defaultSettings.labelSettings.labelColor);
+                settings.labelSettings.fontSize = DataViewObjects.getValue<number>(objects, bulletChartProps.labels.fontSize, defaultSettings.labelSettings.fontSize);
+                settings.labelSettings.show = DataViewObjects.getValue<boolean>(objects, bulletChartProps.labels.show, defaultSettings.labelSettings.show);
+                settings.labelSettings.labelColor = DataViewObjects.getFillColor(objects, bulletChartProps.labels.labelColor, defaultSettings.labelSettings.labelColor);
             }
-            if (defaultSettings.orientation.orientation === Orientation.HORIZONTALRIGHT || defaultSettings.orientation.orientation === Orientation.VERTICALBOTTOM) {
-                defaultSettings.orientation.reverse = true;
-            }
-            if (defaultSettings.orientation.orientation === Orientation.VERTICALTOP || defaultSettings.orientation.orientation === Orientation.VERTICALBOTTOM) {
-                defaultSettings.orientation.vertical = true;
-            }
+            if (settings.orientation.orientation === Orientation.HORIZONTALRIGHT || settings.orientation.orientation === Orientation.VERTICALBOTTOM)
+                settings.orientation.reverse = true;
+
+            if (settings.orientation.orientation === Orientation.VERTICALTOP || settings.orientation.orientation === Orientation.VERTICALBOTTOM)
+                settings.orientation.vertical = true;
 
             let categories: DataViewCategoryColumn,
                 categoryValues: any[],
                 categoryValuesLen: number = 1,
                 categoryFormatString: string;
 
-            if (dataViewCategorical.categories) {
-                categories = dataViewCategorical.categories[0];
+            if (dataView.categorical.categories) {
+                categories = dataView.categorical.categories[0];
                 categoryValues = categories.values;
                 categoryValuesLen = categoryValues.length;
                 categoryFormatString = valueFormatter.getFormatString(categories.source, bulletChartProps.formatString);
             }
 
-            let targetValues: TargetValue[] = [];
-            let rects: BarRect[] = [];
-            let valueRects: BarValueRect[] = [];
-            let barData: BarData[] = [];
-            let bulletValueFormatString = valueFormatter.getFormatString(dataView.categorical.values[0].source, bulletChartProps.formatString);
+            bulletModel.bulletValueFormatString = valueFormatter.getFormatString(dataView.categorical.values[0].source, bulletChartProps.formatString);
 
             for (let idx = 0; idx < categoryValuesLen; idx++) {
                 let toolTipItems = [];
@@ -512,7 +512,7 @@ module powerbi.visuals.samples {
                     category = valueFormatter.format(categoryValue, categoryFormatString);
                     categoryIdentity = categories.identity ? categories.identity[idx] : null;
 
-                    let textProperties = BulletChart.getTextProperties(category, defaultSettings.labelSettings.fontSize);
+                    let textProperties = BulletChart.getTextProperties(category, settings.labelSettings.fontSize);
                     category = TextMeasurementService.getTailoredTextOrDefault(textProperties, BulletChart.MaxLabelWidth - BulletChart.StartMarginHorizontal);
 
                     let labelWidth = TextMeasurementService.measureSvgTextWidth(textProperties);
@@ -522,9 +522,9 @@ module powerbi.visuals.samples {
                     BulletChart.BiggestLabelHeight = Math.max(BulletChart.BiggestLabelHeight, labelHeight);
                 }
 
-                let values = dataViewCategorical.values;
-                targetValue = defaultSettings.values.targetValue;
-                targetValue2 = defaultSettings.values.targetValue2;
+                let values = dataView.categorical.values;
+                targetValue = settings.values.targetValue;
+                targetValue2 = settings.values.targetValue2;
 
                 for (let i = 0; i < values.length; i++) {
                     let col = values[i].source;
@@ -554,21 +554,21 @@ module powerbi.visuals.samples {
                 }
 
                 if (minimum === undefined)
-                    minimum = defaultSettings.values.minimumPercent * targetValue / 100;
+                    minimum = settings.values.minimumPercent * targetValue / 100;
                 if (satisfactory === undefined)
-                    satisfactory = defaultSettings.values.satisfactoryPercent * targetValue / 100;
+                    satisfactory = settings.values.satisfactoryPercent * targetValue / 100;
                 if (good === undefined)
-                    good = defaultSettings.values.goodPercent * targetValue / 100;
+                    good = settings.values.goodPercent * targetValue / 100;
                 if (maximum === undefined)
-                    maximum = defaultSettings.values.maximumPercent * targetValue / 100;
+                    maximum = settings.values.maximumPercent * targetValue / 100;
 
-                let viewportLength = (defaultSettings.orientation.vertical ? (options.viewport.height - BulletChart.MaxLabelHeight) : (options.viewport.width - BulletChart.MaxLabelWidth)) -
+                let viewportLength = (settings.orientation.vertical ? (options.viewport.height - BulletChart.MaxLabelHeight) : (options.viewport.width - BulletChart.MaxLabelWidth)) -
                     BulletChart.StartMarginHorizontal - BulletChart.ScrollBarSize;
                 let sortedRanges = [minimum, satisfactory, good, maximum].sort(d3.descending);
                 let scale = (d3.scale.linear()
                     .clamp(true)
                     .domain([minimum, Math.max(sortedRanges[0], targetValue, value)])
-                    .range(defaultSettings.orientation.vertical ? [viewportLength, 0] : [0, viewportLength]));
+                    .range(settings.orientation.vertical ? [viewportLength, 0] : [0, viewportLength]));
 
                 let scaleMin = scale(minimum);
                 let scaleMax = scale(maximum);
@@ -582,29 +582,29 @@ module powerbi.visuals.samples {
                     scaleRight = scale(satisfactory);
                 }
 
-                BulletChart.addItemToBarArray(rects, idx, scaleMin, scaleLeft, (good >= satisfactory) ? defaultSettings.colors.badColor : defaultSettings.colors.goodColor, toolTipItems, categoryIdentity);
-                BulletChart.addItemToBarArray(rects, idx, scaleLeft, scaleRight, defaultSettings.colors.satisfactoryColor, toolTipItems, categoryIdentity);
-                BulletChart.addItemToBarArray(rects, idx, scaleRight, scaleMax, (good >= satisfactory) ? defaultSettings.colors.goodColor : defaultSettings.colors.badColor, toolTipItems, categoryIdentity);
-                BulletChart.addItemToBarArray(valueRects, idx, scaleMin, scaleValue, defaultSettings.colors.bulletColor, toolTipItems, categoryIdentity);
+                BulletChart.addItemToBarArray(bulletModel.barRects, idx, scaleMin, scaleLeft, (good >= satisfactory) ? settings.colors.badColor : settings.colors.goodColor, toolTipItems, categoryIdentity);
+                BulletChart.addItemToBarArray(bulletModel.barRects, idx, scaleLeft, scaleRight, settings.colors.satisfactoryColor, toolTipItems, categoryIdentity);
+                BulletChart.addItemToBarArray(bulletModel.barRects, idx, scaleRight, scaleMax, (good >= satisfactory) ? settings.colors.goodColor : settings.colors.badColor, toolTipItems, categoryIdentity);
+                BulletChart.addItemToBarArray(bulletModel.valueRects, idx, scaleMin, scaleValue, settings.colors.bulletColor, toolTipItems, categoryIdentity);
 
                 // markerValue
-                targetValues.push({
+                bulletModel.targetValues.push({
                     barIndex: idx,
                     value: scale(targetValue),
-                    fill: defaultSettings.colors.bulletColor,
+                    fill: settings.colors.bulletColor,
                     key: SelectionId.createWithIdAndMeasure(categoryIdentity, scale(targetValue).toString()).getKey(),
                     value2: scale(targetValue2),
                 });
 
                 let xAxis = null;
-                if (defaultSettings.axis.axis) {
+                if (settings.axis.axis) {
                     xAxis = d3.svg.axis();
-                    xAxis.orient(defaultSettings.orientation.vertical ? "left" : "bottom");
+                    xAxis.orient(settings.orientation.vertical ? "left" : "bottom");
                     let minTickSize = Math.round(Math.max(3, viewportLength / 100));
                     let axisValues = [value, targetValue, good, satisfactory, maximum, minimum]
                         .filter(x => !isNaN(x));
                     xAxis.tickFormat(valueFormatter.create({
-                        format: bulletValueFormatString,
+                        format: bulletModel.bulletValueFormatString,
                         value: axisValues.length ? Math.max.apply(null, axisValues) : 0
                     }).format);
                     xAxis.ticks(minTickSize);
@@ -615,23 +615,15 @@ module powerbi.visuals.samples {
                     scale: scale,
                     barIndex: idx,
                     categoryLabel: category,
-                    x: (defaultSettings.orientation.vertical) ? BulletChart.StartMarginVertical + BulletChart.SpaceRequiredForBarVertically * idx : BulletChart.StartMarginHorizontal,
-                    y: (defaultSettings.orientation.vertical) ? BulletChart.StartMarginVertical : BulletChart.StartMarginHorizontal + BulletChart.SpaceRequiredForBar * idx,
+                    x: (settings.orientation.vertical) ? BulletChart.StartMarginVertical + BulletChart.SpaceRequiredForBarVertically * idx : BulletChart.StartMarginHorizontal,
+                    y: (settings.orientation.vertical) ? BulletChart.StartMarginVertical : BulletChart.StartMarginHorizontal + BulletChart.SpaceRequiredForBar * idx,
                     axis: xAxis,
                     key: SelectionId.createWithIdAndMeasure(categoryIdentity, idx.toString()).getKey(),
                 };
 
-                barData.push(bar);
+                bulletModel.bars.push(bar);
             }
 
-            bulletModel = {
-                bulletValueFormatString: bulletValueFormatString,
-                bulletChartSettings: defaultSettings,
-                bars: barData,
-                barRects: rects,
-                valueRects: valueRects,
-                targetValues: targetValues,
-            };
             return bulletModel;
         }
 
@@ -655,7 +647,7 @@ module powerbi.visuals.samples {
 
             this.bulletBody = body
                 .append('div')
-                .classed('bullet-body', true);
+                .classed('bulletChart', true);
 
             this.scrollContainer = this.bulletBody.append('svg')
                 .classed('bullet-scroll-region', true);
@@ -676,6 +668,10 @@ module powerbi.visuals.samples {
             let dataView = options.dataViews[0];
             this.viewport = options.viewport;
             this.model = BulletChart.converter(dataView, options);
+
+            //TODO: Calculating the baseline delta of the text. needs to be removed once the TExtMeasurementService.estimateSVGTextBaselineDelta is available.
+            this.baselineDelta = TextMeasurementHelper.estimateSvgTextBaselineDelta(BulletChart.getTextProperties("1", this.model.bulletChartSettings.labelSettings.fontSize));
+
             this.ClearViewport();
             if (!this.model) {
                 return;
@@ -823,29 +819,24 @@ module powerbi.visuals.samples {
                         },
                     }).classed("axis", true).call(bar.axis.scale(bar.scale)).style({
                         'fill': model.bulletChartSettings.axis.axisColor,
-                        'font-size': PixelConverter.fromPoint(9)
-                    }).selectAll("path").style({
-                        'stroke-width': '0px',
-                        'fill': 'none',
-                    }).selectAll("line").style({
-                        "stroke-width": "0.5px",
-                        "fill": model.bulletChartSettings.axis.axisColor,
+                        'font-size': PixelConverter.fromPoint(BulletChart.AxisFontSizeInPt)
+                    }).selectAll('line').style({
+                        'stroke': model.bulletChartSettings.axis.axisColor,
                     });
                 }
             }
 
             // Draw Labels
             if (model.bulletChartSettings.labelSettings.show) {
-                barSelection.enter().append('text').attr({
+                barSelection.enter().append('text').classed("title", true).attr({
                     'x': ((d: BarData) => {
                         if (reveresed)
                             return this.bulletGraphicsContext.node<SVGElement>().getBoundingClientRect().width + BulletChart.StartMarginHorizontal;
                         return d.x;
                     }),
-                    'y': ((d: BarData) => d.y + BulletChart.BulletSize / 2),
+                    'y': ((d: BarData) => d.y + this.baselineDelta),
                     'fill': model.bulletChartSettings.labelSettings.labelColor,
                     'font-size': PixelConverter.fromPoint(model.bulletChartSettings.labelSettings.fontSize),
-                    'font-weight': 'bold',
                 }).text((d: BarData) => d.categoryLabel);
             }
 
@@ -969,20 +960,16 @@ module powerbi.visuals.samples {
                         },
                     }).classed("axis", true).call(bar.axis.scale(bar.scale)).style({
                         'fill': model.bulletChartSettings.axis.axisColor,
-                        'font-size': PixelConverter.fromPoint(9),
-                    }).selectAll("path").style({
-                        'stroke-width': '0px',
-                        'fill': 'none',
-                    }).selectAll("line").style({
-                        "stroke-width": "0.5px",
-                        "fill": model.bulletChartSettings.axis.axisColor,
+                        'font-size': PixelConverter.fromPoint(BulletChart.AxisFontSizeInPt),
+                    }).selectAll('line').style({
+                        'stroke': model.bulletChartSettings.axis.axisColor,
                     });
                 }
             }
 
             // Draw Labels
             if (model.bulletChartSettings.labelSettings.show) {
-                barSelection.enter().append('text').attr({
+                barSelection.enter().append('text').classed("title", true).attr({
                     'x': ((d: BarData) => d.x),
                     'y': ((d: BarData) => {
                         if (reveresed)
@@ -992,7 +979,6 @@ module powerbi.visuals.samples {
                     }),
                     'fill': model.bulletChartSettings.labelSettings.labelColor,
                     'font-size': PixelConverter.fromPoint(model.bulletChartSettings.labelSettings.fontSize),
-                    'font-weight': 'bold',
                 }).text((d: BarData) => d.categoryLabel);
             }
 
@@ -1114,6 +1100,82 @@ module powerbi.visuals.samples {
                     bulletColor: this.model.bulletChartSettings.colors.bulletColor,
                 }
             }];
+        }
+    }
+
+    //TODO: This module should be removed once TextMeasruementService exports the "estimateSvgTextBaselineDelta" function.
+    export module TextMeasurementHelper {
+
+        interface CanvasContext {
+            font: string;
+            measureText(text: string): { width: number };
+        }
+
+        interface CanvasElement extends HTMLElement {
+            getContext(name: string);
+        }
+
+        let spanElement: JQuery;
+        let svgTextElement: D3.Selection;
+        let canvasCtx: CanvasContext;
+
+        export function estimateSvgTextBaselineDelta(textProperties: TextProperties): number {
+            let rect = estimateSvgTextRect(textProperties);
+            return rect.y + rect.height;
+        }
+
+        function ensureDOM(): void {
+            if (spanElement)
+                return;
+
+            spanElement = $('<span/>');
+            $('body').append(spanElement);
+            //The style hides the svg element from the canvas, preventing canvas from scrolling down to show svg black square.
+            svgTextElement = d3.select($('body').get(0))
+                .append('svg')
+                .style({
+                    'height': '0px',
+                    'width': '0px',
+                    'position': 'absolute'
+                })
+                .append('text');
+            canvasCtx = (<CanvasElement>$('<canvas/>').get(0)).getContext("2d");
+        }
+
+        function measureSvgTextRect(textProperties: TextProperties): SVGRect {
+            debug.assertValue(textProperties, 'textProperties');
+
+            ensureDOM();
+
+            svgTextElement.style(null);
+            svgTextElement
+                .text(textProperties.text)
+                .attr({
+                    'visibility': 'hidden',
+                    'font-family': textProperties.fontFamily,
+                    'font-size': textProperties.fontSize,
+                    'font-weight': textProperties.fontWeight,
+                    'font-style': textProperties.fontStyle,
+                    'white-space': textProperties.whiteSpace || 'nowrap'
+                });
+
+            // We're expecting the browser to give a synchronous measurement here
+            // We're using SVGTextElement because it works across all browsers 
+            return svgTextElement.node<SVGTextElement>().getBBox();
+        }
+
+        function estimateSvgTextRect(textProperties: TextProperties): SVGRect {
+            debug.assertValue(textProperties, 'textProperties');
+
+            let estimatedTextProperties: TextProperties = {
+                fontFamily: textProperties.fontFamily,
+                fontSize: textProperties.fontSize,
+                text: "M",
+            };
+
+            let rect = measureSvgTextRect(estimatedTextProperties);
+
+            return rect;
         }
     }
 

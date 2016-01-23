@@ -189,11 +189,17 @@ module powerbi {
         /** Indicates whether a default title should be displayed.  Visuals with self-describing layout can omit this. */
         suppressDefaultTitle?: boolean;
 
+        /** Indicates whether a default padding should be applied. */
+        suppressDefaultPadding?: boolean;
+
         /** Indicates whether drilling is supported by the visual. */
         drilldown?: VisualDrillCapabilities;
 
         /** Indicates whether rotating is supported by the visual. */
         canRotate?: boolean;
+
+        /** Indicates whether showing the data underlying this visual would be helpful.  Visuals that already show raw data can specify this. */
+        disableSeeData?: boolean;
     }
 
     /** Defines the visual sorting capability. */

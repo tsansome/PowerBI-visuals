@@ -182,7 +182,6 @@ module powerbi {
     export interface DataViewMappingScriptDefinition {
         source: DataViewObjectPropertyIdentifier;
         provider: DataViewObjectPropertyIdentifier;
-        imageFormat: string;
     }
 
     export interface DataViewScriptResultMapping {

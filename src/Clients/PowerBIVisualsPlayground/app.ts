@@ -41,6 +41,17 @@ module powerbi.visuals {
      * Demonstrates Power BI visualization elements and the way to embed them in standalone web page.
      */
     export class Playground {
+        private static disabledVisuals: string[] = [
+            "basicShape",
+            "matrix",
+            "playChart",
+            "kpi",
+            "scriptVisual",
+            "slicer",
+            "bulletChart",
+            "forceGraph",
+            "mekkoChart"
+        ];
 
         /** Represents sample data view used by visualization elements. */
         private static pluginService: IVisualPluginService = new visualPluginFactory.PlaygroundVisualPluginService();
@@ -139,17 +150,11 @@ module powerbi.visuals {
                 return 0;
             });
 
-            for (let i = 0, len = visuals.length; i < len; i++) {
-                let visual = visuals[i];
-                if (visual.name === 'basicShape' ||
-                    visual.name === "matrix" ||
-                    visual.name === "playChart" ||
-                    visual.name === "kpi" ||
-                    visual.name === "scriptVisual" ||
-                    visual.name === "slicer" ||
-                    visual.name === "bulletChart") continue;
-                typeSelect.append('<option value="' + visual.name + '">' + visual.name + '</option>');
-            }
+            visuals.forEach((visual: IVisualPlugin) => {
+                if (!Playground.disabledVisuals.some((visualName: string) => visualName === visual.name)) {
+                    typeSelect.append('<option value="' + visual.name + '">' + visual.name + '</option>');
+                }
+            });
 
             typeSelect.change(() => this.onVisualTypeSelection(typeSelect.val()));
         }

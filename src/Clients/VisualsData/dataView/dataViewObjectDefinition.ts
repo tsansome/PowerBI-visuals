@@ -157,6 +157,9 @@ module powerbi.data {
         }
 
         export function encodePropertyValue(value: DataViewPropertyValue, valueTypeDescriptor: ValueTypeDescriptor): DataViewObjectPropertyDefinition {
+            debug.assertAnyValue(value, 'value');
+            debug.assertValue(valueTypeDescriptor, 'valueTypeDescriptor');
+
             if (valueTypeDescriptor.bool) {
                 if (typeof (value) !== 'boolean')
                     value = false; // This is fallback, which doesn't really belong here.
@@ -214,6 +217,36 @@ module powerbi.data {
             }
 
             return value;
+        }
+
+        export function clone(original: DataViewObjectDefinitions): DataViewObjectDefinitions {
+            debug.assertValue(original, 'original');
+
+            let cloned: DataViewObjectDefinitions = {};
+
+            for (let objectName in original) {
+                let originalDefns = original[objectName];
+                if (_.isEmpty(originalDefns))
+                    continue;
+
+                let clonedDefns: DataViewObjectDefinition[] = [];
+                for (let originalDefn of originalDefns) {
+                    clonedDefns.push({
+                        properties: cloneProperties(originalDefn.properties),
+                        selector: originalDefn.selector,
+                    });
+                }
+                cloned[objectName] = clonedDefns;
+            }
+
+            return cloned;
+        }
+
+        function cloneProperties(original: DataViewObjectPropertyDefinitions): DataViewObjectPropertyDefinitions {
+            debug.assertValue(original, 'original');
+
+            // NOTE: properties are considered atomic, so a shallow clone is appropriate here.
+            return _.clone(original);
         }
     }
 

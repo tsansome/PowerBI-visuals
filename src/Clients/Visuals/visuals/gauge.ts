@@ -210,7 +210,7 @@ module powerbi.visuals {
         private gaugeSmallViewPortProperties: GaugeSmallViewPortProperties;
         private showTargetLabel: boolean;
 
-        private tooltipsEnabled: boolean; 
+        private tooltipsEnabled: boolean;
 
         private hostService: IVisualHostServices;
 
@@ -273,7 +273,7 @@ module powerbi.visuals {
                 });
             }
         }
-        
+
         private static getGaugeObjectsProperties(dataView: DataView): GaugeTargetSettings {
             let properties: any = {};
             let objects: GaugeDataViewObjects = <GaugeDataViewObjects>dataView.metadata.objects;
@@ -290,7 +290,6 @@ module powerbi.visuals {
 
             return properties;
         }
-        
 
         public init(options: VisualInitOptions) {
             this.element = options.element;
@@ -371,9 +370,9 @@ module powerbi.visuals {
             //   3. We're showing label text for side numbers
             //   4. Data label settings specify to show
             this.showTargetLabel = this.targetSettings.target != null
-                && (this.currentViewport.width > Gauge.MinWidthForTargetLabel || !this.showMinMaxLabelsOnBottom())
-                && this.showSideNumbersLabelText()
-                && this.data.dataLabelsSettings.show;
+            && (this.currentViewport.width > Gauge.MinWidthForTargetLabel || !this.showMinMaxLabelsOnBottom())
+            && this.showSideNumbersLabelText()
+            && this.data.dataLabelsSettings.show;
 
             this.setMargins();
 
@@ -410,9 +409,13 @@ module powerbi.visuals {
                     dataViews: this.dataViews,
                     suppressAnimations: suppressAnimations,
                 });
+
+                this.animatedNumberGrapicsContext.selectAll('title').remove();
+                this.animatedNumberGrapicsContext.append('title').text([formatter.format(calloutValue)]);
             }
             else {
                 this.animatedNumber.clear();
+                this.animatedNumberGrapicsContext.selectAll('title').remove();
             }
         }
 
@@ -498,7 +501,7 @@ module powerbi.visuals {
 
             return settings;
         }
-        
+
         private static overrideGaugeSettings(settings: GaugeTargetData, gaugeObjectsSettings: GaugeTargetSettings) {
             if ($.isNumeric(gaugeObjectsSettings.min))
                 settings.min = gaugeObjectsSettings.min;
@@ -835,8 +838,10 @@ module powerbi.visuals {
             this.appendTextAlongArc(ticks, radius, height, width, margin);
             this.updateVisualConfigurations();
             this.updateVisualStyles();
-            if (this.tooltipsEnabled)
+            if (this.tooltipsEnabled) {
                 TooltipManager.addTooltip(this.foregroundArcPath, (tooltipEvent: TooltipEvent) => data.tooltipInfo);
+                TooltipManager.addTooltip(this.backgroundArcPath, (tooltipEvent: TooltipEvent) => data.tooltipInfo);
+            }
         }
 
         private updateVisualStyles() {
@@ -911,7 +916,8 @@ module powerbi.visuals {
                             'text-anchor': anchor,
                             'font-size': fontSize
                         })
-                        .text(ticks[count]);
+                        .text(ticks[count])
+                        .append('title').text(ticks[count]);
 
                     if (!onBottom)
                         this.truncateTextIfNeeded(text, x, onRight);
@@ -975,6 +981,7 @@ module powerbi.visuals {
                 .text(formatter.format(target));
 
             this.truncateTextIfNeeded(this.targetText, targetX, flag);
+            this.targetText.call(tooltipUtils.tooltipUpdate, [formatter.format(target)]);
 
             if (!this.targetConnector) {
                 this.targetConnector = this.mainGraphicsContext
@@ -1035,7 +1042,7 @@ module powerbi.visuals {
                         return true;
                 }
             }
-            
+
             return false;
         }
 

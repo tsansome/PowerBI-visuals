@@ -53,5 +53,13 @@ module powerbi.visuals {
                     columnValuesMapping.group.by.items = undefined;
             }
         }
+
+        export function isComboChart(chartType: CartesianChartType): boolean {
+            return chartType === CartesianChartType.ComboChart
+                || chartType === CartesianChartType.LineClusteredColumnCombo
+                || chartType === CartesianChartType.LineStackedColumnCombo
+                || chartType === CartesianChartType.DataDotClusteredColumnCombo
+                || chartType === CartesianChartType.DataDotStackedColumnCombo;
+        }
     }
 }

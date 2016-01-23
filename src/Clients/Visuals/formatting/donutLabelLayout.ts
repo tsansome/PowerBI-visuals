@@ -57,7 +57,7 @@ module powerbi {
         linesSize: ISize[];
         leaderLinePoints: number[][];
     }
-    
+
     interface LabelCandidate {
         angle: number;
         point: LabelParentPoint;
@@ -71,7 +71,7 @@ module powerbi {
         diagonalLineRect: IRect;
         horizontalLineRect: IRect;
     }
-    
+
     export class DonutLabelLayout {
 
         /** Maximum distance labels will be offset by */
@@ -111,28 +111,28 @@ module powerbi {
         }
 
         /**
-        * Arrange takes a set of data labels and lays them out them in order, assuming that
-        * the given array has already been sorted with the most preferred labels at the
-        * front.
-        * 
-        * Details:
-        * - We iterate over offsets from the target position, increasing from 0
-        * - For each offset, we iterate over each data label
-        * - For each data label, we iterate over each position that is valid for
-        *     both the specific label and this layout
-        * - When a valid position is found, we position the label there and no longer
-        *     reposition it.
-        * - This prioritizes the earlier labels to be positioned closer to their
-        *     target points in the position they prefer.
-        * - This prioritizes putting data labels close to a valid position over
-        *     placing them at their preferred position (it will place it at a less
-        *     preferred position if it will be a smaller offset)
-        */
-
+         * Arrange takes a set of data labels and lays them out them in order, assuming that
+         * the given array has already been sorted with the most preferred labels at the
+         * front.
+         * 
+         * Details:
+         * - We iterate over offsets from the target position, increasing from 0
+         * - For each offset, we iterate over each data label
+         * - For each data label, we iterate over each position that is valid for
+         *     both the specific label and this layout
+         * - When a valid position is found, we position the label there and no longer
+         *     reposition it.
+         * - This prioritizes the earlier labels to be positioned closer to their
+         *     target points in the position they prefer.
+         * - This prioritizes putting data labels close to a valid position over
+         *     placing them at their preferred position (it will place it at a less
+         *     preferred position if it will be a smaller offset)
+         */
         public layout(labelDataPoints: DonutLabelDataPoint[]): Label[] {
             // Clear data labels for a new layout
             for (let donutLabel of labelDataPoints) {
                 donutLabel.hasBeenRendered = false;
+                donutLabel.labelSize = donutLabel.textSize;
             }
 
             let resultingLabels: Label[] = [];
@@ -178,7 +178,7 @@ module powerbi {
                     let label = this.tryPositionForDonut(labelPoint, grid, currentOffset);
                     if (label)
                         resultingLabels.push(label);
-                    }
+                }
 
                 currentOffset += offsetDelta;
                 currentCenteredOffset += offsetDelta;
@@ -188,9 +188,9 @@ module powerbi {
         }
 
         /**
-        * We try to move the label 25% up/down if the label is truncated or it collides with other labels.
-        * after we moved it once we check that the new position doesn't failed (collides with other labels).
-        */
+         * We try to move the label 25% up/down if the label is truncated or it collides with other labels.
+         * after we moved it once we check that the new position doesn't failed (collides with other labels).
+         */
         private tryPositionForDonut(labelPoint: DonutLabelDataPoint, grid: LabelArrangeGrid, currentLabelOffset: number): Label {
             let parentShape: LabelParentPoint = <LabelParentPoint>labelPoint.parentShape;
             if (_.isEmpty(parentShape.validPositions) || parentShape.validPositions[0] === NewPointLabelPosition.None)
@@ -372,6 +372,7 @@ module powerbi {
                 selected: false,
                 textAnchor: textAnchor,
                 leaderLinePoints: labelPoint.leaderLinePoints,
+                hasBackground: false,
                 secondRowText: labelPoint.secondRowText,
             };
         }
@@ -424,10 +425,10 @@ module powerbi {
         }
 
         /**
-        * Returns an array of valid positions for hidden and truncated labels.
-        * For truncated labels will return positions with more available space. 
-        * For hidden labels will return all possible positions by the order we draw labels (clockwise) 
-        */
+         * Returns an array of valid positions for hidden and truncated labels.
+         * For truncated labels will return positions with more available space. 
+         * For hidden labels will return all possible positions by the order we draw labels (clockwise) 
+         */
         private getLabelPointPositions(labelPoint: DonutLabelDataPoint, isTruncated: boolean): NewPointLabelPosition[] {
             let parentShape: LabelParentPoint = <LabelParentPoint>labelPoint.parentShape;
             let position = parentShape.validPositions[0];
@@ -452,7 +453,7 @@ module powerbi {
 
         /**
          * Returns a new DonutLabelDataPoint after splitting it into two lines
-        */
+         */
         private splitDonutDataPoint(labelPoint: DonutLabelDataPoint): DonutLabelDataPoint {
             let textSize: ISize = {
                 width: Math.max(labelPoint.categoryLabelSize.width, labelPoint.dataLabelSize.width),

@@ -103,52 +103,26 @@ module powerbi.visuals {
         reset(): void;
     }
 
-    export function getIconClass(iconType: LegendIcon): string {
-        switch (iconType) {
-            case LegendIcon.Circle:
-                return 'icon circle';
-            case LegendIcon.Box:
-                return 'icon tall';
-            case LegendIcon.Line:
-                return 'icon short';
-            default:
-                debug.assertFail('Invalid Chart type: ' + iconType);
-        }
-    }
-
-    export function getLabelMaxSize(currentViewport: IViewport, numItems: number, hasTitle: boolean): string {
-        let viewportWidth = currentViewport.width;
-        let smallTileWidth = 250;
-        let mediumTileWidth = 490;
-        let largeTileWidth = 750;
-        let tileMargins = 20;
-        let legendMarkerWidth = 28;
-        let legendItems;
-
-        if (numItems < 1)
-            return '48px';
-
-        if (viewportWidth <= smallTileWidth) {
-            legendItems = hasTitle ? 4 : 3;
-            //Max width based on minimum number of items design of 3 i.e. '48px' or 4 (with title) - '29px' max-width at least   
-            return Math.floor((smallTileWidth - tileMargins - (legendMarkerWidth * legendItems)) / Math.min(numItems, legendItems)) + 'px';
+    export module Legend {
+        export function isLeft(orientation: LegendPosition): boolean {
+            switch (orientation) {
+                case LegendPosition.Left:
+                case LegendPosition.LeftCenter:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
-        if (viewportWidth <= mediumTileWidth) {
-            legendItems = hasTitle ? 6 : 5;
-            //Max width based on minimum number of items design of 5 i.e. '66px' or 6 (with title) - '50px' max-width at least  
-            return Math.floor((mediumTileWidth - tileMargins - (legendMarkerWidth * legendItems)) / Math.min(numItems, legendItems)) + 'px';
+        export function isTop(orientation: LegendPosition): boolean {
+            switch (orientation) {
+                case LegendPosition.Top:
+                case LegendPosition.TopCenter:
+                    return true;
+                default:
+                    return false;
+            }
         }
-
-        if (viewportWidth <= largeTileWidth) {
-            legendItems = hasTitle ? 8 : 7;
-            //Max width based on minimum number of items design of 7 i.e. '76px' or 8 (with title) - '63px' max-width at least
-            return Math.floor((largeTileWidth - tileMargins - (legendMarkerWidth * legendItems)) / Math.min(numItems, legendItems)) + 'px';
-        }
-
-        //Wide viewport
-        legendItems = hasTitle ? 10 : 9;
-        return Math.floor((viewportWidth - tileMargins - (legendMarkerWidth * legendItems)) / Math.min(numItems, legendItems)) + 'px';
     }
 
     interface TitleLayout {
@@ -230,7 +204,7 @@ module powerbi.visuals {
             interactivityService: IInteractivityService,
             isScrollable: boolean) {
 
-            this.svg = d3.select(element.get(0)).insert('svg', ':first-child');
+            this.svg = d3.select(element.get(0)).append('svg').style('position', 'absolute');
             this.svg.style('display', 'inherit');
             this.svg.classed('legend', true);
             if (interactivityService)
@@ -246,24 +220,18 @@ module powerbi.visuals {
         }
 
         private updateLayout() {
-            let viewport = this.viewport;
+            let legendViewport = this.viewport;
             let orientation = this.orientation;
-            this.svg
-                .attr({
-                    'height': viewport.height || (orientation === LegendPosition.None ? 0 : this.parentViewport.height),
-                    'width': viewport.width || (orientation === LegendPosition.None ? 0 : this.parentViewport.width)
-                })
-            /*
-             * Workaround for web-kit browsers, since isn't doesn't invalidate dom with correct attr size.
-             * This happens intermittently in dashboard, and corrects itself on dom manupilation.
-             */
-                .style('max-width', '100%');
+            this.svg.attr({
+                'height': legendViewport.height || (orientation === LegendPosition.None ? 0 : this.parentViewport.height),
+                'width': legendViewport.width || (orientation === LegendPosition.None ? 0 : this.parentViewport.width)
+            });
 
+            let isRight = orientation === LegendPosition.Right || orientation === LegendPosition.RightCenter;
             let isBottom = orientation === LegendPosition.Bottom || orientation === LegendPosition.BottomCenter;
             this.svg.style({
-                'float': this.getFloat(),
-                'position': isBottom ? 'absolute' : '',
-                'bottom': isBottom ? '0px' : '',
+                'left': isRight ? (this.parentViewport.width - legendViewport.width) + 'px' : null,
+                'top': isBottom ? (this.parentViewport.height - legendViewport.height) + 'px' : null,
             });
         }
 
@@ -290,18 +258,6 @@ module powerbi.visuals {
             }
         }
 
-        private getFloat(): string {
-            switch (this.orientation) {
-                case LegendPosition.Right:
-                case LegendPosition.RightCenter:
-                    return 'right';
-                case LegendPosition.Left:
-                case LegendPosition.LeftCenter:
-                    return 'left';
-                default: return '';
-            }
-        }
-
         public getMargins(): IViewport {
             return this.viewport;
         }
@@ -324,6 +280,8 @@ module powerbi.visuals {
         }
 
         public drawLegend(data: LegendData, viewport: IViewport): void {
+            this.setTooltipToLegendItems(data);
+            // TODO: Legend should use a view model to render rather than modifying the passed in data points.
             this.drawLegendInternal(data, viewport, true /* perform auto width */);
         }
 
@@ -391,7 +349,8 @@ module powerbi.visuals {
                 .attr({
                     'x': (d: TitleLayout) => d.x,
                     'y': (d: TitleLayout) => d.y
-                });
+                })
+                .append('title').text(data.title);
 
             legendTitle.exit().remove();
 
@@ -409,11 +368,13 @@ module powerbi.visuals {
                 .append('circle')
                 .classed(SVGLegend.LegendIcon.class, true);
 
-            itemsEnter.append('title');
-
             itemsEnter
                 .append('text')
                 .classed(SVGLegend.LegendText.class, true);
+
+            itemsEnter
+                .append('title')
+                .text((d: LegendDataPoint) => d.tooltip);
 
             itemsEnter
                 .style({
@@ -674,7 +635,6 @@ module powerbi.visuals {
                 };
 
                 let textProperties = SVGLegend.getTextProperties(false, dp.label, this.data.fontSize);
-                dp.tooltip = dp.label;
 
                 let width = TextMeasurementService.measureSvgTextWidth(textProperties);
                 let spaceTakenByItem = 0;
@@ -751,7 +711,6 @@ module powerbi.visuals {
                 };
 
                 let textProperties = SVGLegend.getTextProperties(false, dp.label, this.data.fontSize);
-                dp.tooltip = dp.label;
 
                 // TODO: [PERF] Get rid of this extra measurement, and modify
                 // getTailoredTextToReturnWidth + Text
@@ -856,6 +815,13 @@ module powerbi.visuals {
                 fontSize: PixelConverter.fromPoint(fontSize || SVGLegend.DefaultFontSizeInPt)
             };
         }
+
+        private setTooltipToLegendItems(data: LegendData) {
+            //we save the values to tooltip before cut
+            for (let dataPoint of data.dataPoints) {
+                dataPoint.tooltip = dataPoint.label;
+            }
+        }
     }
 
     class CartesianChartInteractiveLegend implements ILegend {
@@ -875,18 +841,7 @@ module powerbi.visuals {
         constructor(element: JQuery) {
             this.legendContainerParent = d3.select(element.get(0));
         }
-
-        public static getIconClass(chartType: LegendIcon): string {
-            switch (chartType) {
-                case LegendIcon.Circle:
-                case LegendIcon.Box:
-                case LegendIcon.Line:
-                    return 'icon';
-                default:
-                    debug.assertFail('Invalid Chart type: ' + chartType);
-            }
-        }
-
+        
         public getMargins(): IViewport {
             return {
                 height: CartesianChartInteractiveLegend.LegendHeight,

@@ -293,6 +293,15 @@ module jsCommon {
             debug.assertValue(fileName, 'fileName');         
             return fileName.replace(/[\<\>\:"\/\\\|\?*]/g, '');
         }
+
+        /**
+         * Similar to JSON.stringify, but strips away escape sequences so that the resulting
+         * string is human-readable (and parsable by JSON formatting/validating tools).
+         */
+        export function stringifyAsPrettyJSON(object: any): string {
+            //let specialCharacterRemover = (key: string, value: string) => value.replace(/[^\w\s]/gi, '');
+            return JSON.stringify(object /*, specialCharacterRemover*/);
+        }
     }
 
     /**

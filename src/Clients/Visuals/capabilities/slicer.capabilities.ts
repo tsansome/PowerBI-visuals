@@ -70,6 +70,9 @@ module powerbi.visuals {
                         displayName: data.createDisplayNameGetter('Slicer_Orientation'),
                         type: { enumeration: slicerOrientation.type }
                     },
+                    count: {
+                        type: { integer: true }
+                    },
                 },
             },
             selection: {
@@ -133,7 +136,7 @@ module powerbi.visuals {
             }
         },
         dataViewMappings: [{
-            conditions: [{ 'Values': { max: 1 } }],
+            conditions: [{ 'Values': { max: 1 }, 'ValuesCount': { min: 0, max: 1 }, }],
             categorical: {
                 categories: {
                     for: { in: 'Values' },
@@ -147,6 +150,7 @@ module powerbi.visuals {
             default: {},
         },
         suppressDefaultTitle: true,
+        disableSeeData: true,
     };
 
     // TODO: Generate these from above, defining twice just introduces potential for error
@@ -155,6 +159,7 @@ module powerbi.visuals {
             outlineColor: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'outlineColor' },
             outlineWeight: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'outlineWeight' },
             orientation: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'orientation' },
+            count: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'count' },
         },
         selection: {
             selectAllCheckboxEnabled: <DataViewObjectPropertyIdentifier>{ objectName: 'selection', propertyName: 'selectAllCheckboxEnabled' },

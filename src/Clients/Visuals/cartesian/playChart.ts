@@ -27,6 +27,11 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
+    import createClassAndSelector = jsCommon.CssConstants.createClassAndSelector;
+
+    export interface PlayConstructorOptions extends CartesianVisualConstructorOptions {
+    }
+
     export interface PlayInitOptions extends CartesianVisualInitOptions {
     }
     
@@ -66,6 +71,7 @@ module powerbi.visuals {
     export interface PlayAxisTickLabelData {
         labelInfo: PlayAxisTickLabelInfo[];
         anyWordBreaks: boolean;
+        labelFieldName?: string;
     }
 
     export interface PlayChartRenderResult<TData extends PlayableChartData, TViewModel> {
@@ -77,8 +83,13 @@ module powerbi.visuals {
         (data: T): void;
     }
 
+    export interface PlayFrameInfo {
+        label: string;
+        column: DataViewMetadataColumn;
+    }
+
     export interface VisualDataConverterDelegate<T> {
-        (dataView: DataView): T;
+        (dataView: DataView, playFrameInfo?: PlayFrameInfo): T;
     }
 
     export interface ITraceLineRenderer {
@@ -88,7 +99,7 @@ module powerbi.visuals {
 
     export class PlayAxis<T extends PlayableChartData> {
         private element: JQuery;
-        private svg: JQuery;
+        private svg: D3.Selection;
 
         private playData: PlayChartData<T>;
         private renderDelegate: PlayChartRenderFrameDelegate<T>;
@@ -101,13 +112,15 @@ module powerbi.visuals {
         private ridiculousFlagForPersistProperties: boolean;
 
         private playControl: PlayControl;
-        private callout: JQuery;
 
         private host: IVisualHostServices;
         private interactivityService: IInteractivityService;
         private isMobileChart: boolean;
 
-        constructor(options: CartesianVisualConstructorOptions) {
+        private static PlayCallout = createClassAndSelector('play-callout');
+        private static calloutOffsetMultiplier = 0.3;
+
+        constructor(options: PlayConstructorOptions) {
             if (options) {
                 this.interactivityService = options.interactivityService;
             }
@@ -117,7 +130,7 @@ module powerbi.visuals {
             debug.assertValue(options, 'options');
 
             this.element = options.element;
-            this.svg = options.svg ? $(options.svg.node()) : null;
+            this.svg = options.svg;
             this.host = options.host;
 
             this.isMobileChart = options.interactivity && options.interactivity.isInteractiveLegend;
@@ -162,7 +175,7 @@ module powerbi.visuals {
             return this.playData;
         }
 
-        public render<TViewModel>(suppressAnimations: boolean, viewModel: TViewModel, viewport: IViewport): PlayChartRenderResult<T, TViewModel> {
+        public render<TViewModel>(suppressAnimations: boolean, viewModel: TViewModel, viewport: IViewport, margin: IMargin): PlayChartRenderResult<T, TViewModel> {
             let playData = this.playData;
 
             let resized = !this.lastViewport || (this.lastViewport.height !== viewport.height || this.lastViewport.width !== viewport.width);
@@ -190,16 +203,9 @@ module powerbi.visuals {
             let frameKeys = playData.frameKeys;
             let currentFrameIndex = playData.currentFrameIndex;
             let height = viewport.height;
+            let plotAreaHeight = height - margin.top - margin.bottom;
             let width = viewport.width;
-
-            // callout / currentFrameIndex label - keep separate from other Play DOM creation as we need this even without interactivity.
-            if (!this.callout) {
-                this.callout = $('<span class="callout"></span>').appendTo(this.element);
-            }
-
-            // update callout position due to legend
-            // TODO: Shouldn't all of this placement be done from the viewport?
-            this.adjustForLegend();
+            let plotAreaWidth = width - margin.left - margin.right;
 
             if (this.playControl && resized) {
                 this.playControl.rebuild(playData, viewport);
@@ -209,24 +215,35 @@ module powerbi.visuals {
             let calloutDimension = Math.min(height, width * 1.3); //1.3 to compensate for tall, narrow-width viewport
             let fontSize = Math.max(12, Math.round(calloutDimension / 7));
             fontSize = Math.min(fontSize, 70);
-            if (currentFrameIndex < frameKeys.length && currentFrameIndex >= 0) {
-                // clear these for auto-measurement
-                this.callout.width('auto');
-                this.callout.height('auto');
+            let textProperties = {
+                fontSize: "" + fontSize,
+                text: frameKeys[currentFrameIndex] || "",
+                fontFamily: "Segoe UI",
+            };
+            let textHeight = TextMeasurementService.estimateSvgTextHeight(textProperties) - TextMeasurementService.estimateSvgTextBaselineDelta(textProperties);
 
-                this.callout
-                    .text(frameKeys[currentFrameIndex])
-                    .css('font-size', fontSize + 'px');
+            let calloutData: string[] = [];;
+            if (currentFrameIndex < frameKeys.length && currentFrameIndex >= 0 && textHeight < plotAreaHeight)
+                calloutData = [TextMeasurementService.getTailoredTextOrDefault(textProperties, plotAreaWidth - (2 * PlayAxis.calloutOffsetMultiplier * textHeight))];
 
-                let compStyle = getComputedStyle(this.callout[0]);
-                let actualWidth = Math.ceil(parseFloat(compStyle.width));
-                let actualHeight = Math.ceil(parseFloat(compStyle.height));
-                this.callout.width(Math.min(actualWidth, viewport.width));
-                this.callout.height(actualHeight);
-            }
-            else {
-                this.callout.text('');
-            }
+            let callout = this.svg.selectAll(PlayAxis.PlayCallout.selector).data(calloutData);
+
+            callout.enter()
+                .append('text')
+                .classed(PlayAxis.PlayCallout.class, true);
+
+            callout
+                .text((d: string) => d)
+                .attr({
+                    x: plotAreaWidth - PlayAxis.calloutOffsetMultiplier * textHeight,
+                    y: () => textHeight,
+                })
+                .style({
+                    'font-size': fontSize + 'px',
+                    'text-anchor': 'end',
+                });
+
+            callout.exit().remove();
 
             let allDataPoints = playData.allViewModels.map((vm) => vm.dataPoints);
             let flatAllDataPoints = _.flatten<SelectableDataPoint>(allDataPoints);
@@ -297,14 +314,31 @@ module powerbi.visuals {
         public remove(): void {
             if (this.playControl)
                 this.playControl.remove();
-            if (this.callout)
-                this.callout.remove();
+            d3.selectAll(PlayAxis.PlayCallout.selector).remove();
 
             // TODO: remove any tracelines
         }
 
         public setRenderFunction(fn: PlayChartRenderFrameDelegate<T>): void {
             this.renderDelegate = fn;
+        }
+
+        public getCartesianExtents(existingExtents: CartesianExtents, getExtents: (T) => CartesianExtents): CartesianExtents {
+            if (this.playData && this.playData.allViewModels && this.playData.allViewModels.length > 0) {
+                return PlayChart.getMinMaxForAllFrames(this.playData, getExtents);
+            }
+
+            return existingExtents;
+        }
+
+        public setPlayControlPosition(playControlLayout: IRect): void {
+            if (this.playControl) {
+                let container = this.playControl.getContainer();
+                container.css('left', playControlLayout.left ? playControlLayout.left + 'px' : '');
+                container.css('top', playControlLayout.top ? playControlLayout.top + 'px' : '');
+                // width is set elsewhere (calculateSliderWidth), where we check for playaxis tick label overflow.
+                // height is constant
+            }
         }
 
         private moveToFrameAndRender(frameIndex: number): void {
@@ -320,59 +354,6 @@ module powerbi.visuals {
             playData.currentViewModel = data;
             this.renderDelegate(data);
         }
-
-        private adjustForLegend(): void {
-            let legend = $(".legend", this.element);
-            let sliderLeftOffset = 0, sliderBottomOffset = 0;
-
-            if (this.playControl) {
-                // Reset
-                let container = this.playControl.getContainer();
-                container.css("left", "");
-                container.css("bottom", "");
-            }
-
-            if (legend.length > 0) {
-                // TODO: we should NOT be interrogating legend CSS properties for this, move the Callout to be SVGText and position inside the svg container
-                const padding = 16; //callout padding
-                
-                // Reset to inherit css class top/right
-                this.callout.css("right", "");
-                this.callout.css("top", "");
-
-                let floatVal = legend.css("float");
-                let bottomVal = legend.css("bottom");
-
-                if (floatVal === "right")
-                    this.callout.css("right", legend.width() + padding);
-                else if (floatVal === "left")
-                    sliderLeftOffset = legend.width();
-                else if (floatVal === "none" || floatVal === "") {
-                    if (bottomVal === "" || bottomVal === "inherit" || bottomVal === "auto") {
-                        this.callout.css("top", legend.height() + padding);
-                    }
-                    else {
-                        sliderBottomOffset = legend.height() + 35;
-                    }
-                }
-
-                if (this.playControl) {
-                    let container = this.playControl.getContainer();
-                    if (sliderLeftOffset)
-                        container.css("left", sliderLeftOffset);
-                    if (sliderBottomOffset)
-                        container.css("bottom", sliderBottomOffset);
-                }
-            }
-        }
-
-        public getCartesianExtents(existingExtents: CartesianExtents, getExtents: (T) => CartesianExtents): CartesianExtents {
-            if (this.playData && this.playData.allViewModels && this.playData.allViewModels.length > 0) {
-                return PlayChart.getMinMaxForAllFrames(this.playData, getExtents);
-            }
-
-            return existingExtents;
-        }
     }
 
     class PlayControl {
@@ -383,9 +364,10 @@ module powerbi.visuals {
         private noUiSlider: noUiSlider.noUiSlider;
         private renderDelegate: (index: number) => void;
 
-        private static SliderMarginLeft = 15 + 24 + 10 * 2; // left margin + playButton width + playButton margin
+        private static SliderMarginLeft = 24 + 10 * 2; // playButton width + playButton margin * 2
         private static SliderMarginRight = 20;
         private static SliderMaxMargin = 100;
+        private static PlayControlHeight = 80; //tuned for two rows of label text to be perfectly clipped before the third row. Dependent on current font sizes in noui-pips.css
 
         constructor(element: JQuery, renderDelegate: (index: number) => void) {
             this.createSliderDOM(element);
@@ -419,7 +401,7 @@ module powerbi.visuals {
             this.playButtonCircle.on('click', handler);
         }
 
-        private static calculateSliderWidth(labelData: PlayAxisTickLabelData, width: number): number {
+        private static calculateSliderWidth(labelData: PlayAxisTickLabelData, viewportWidth: number): number {
             let leftMargin = 0, rightMargin = 0;
             if (!_.isEmpty(labelData.labelInfo)) {
                 leftMargin = _.first(labelData.labelInfo).labelWidth / 2;
@@ -432,13 +414,14 @@ module powerbi.visuals {
             sliderLeftMargin = Math.min(PlayControl.SliderMaxMargin, sliderLeftMargin);
             sliderRightMargin = Math.min(PlayControl.SliderMaxMargin, sliderRightMargin);
             
-            let sliderWidth = Math.max((width - sliderLeftMargin - sliderRightMargin), 1);
+            let sliderWidth = Math.max((viewportWidth - sliderLeftMargin - sliderRightMargin), 1);
             return sliderWidth;
         }
 
         private createSliderDOM(element: JQuery): void {
             this.playAxisContainer = $('<div class="play-axis-container"></div>')
-                .appendTo(element);
+                .appendTo(element)
+                .css('height', PlayControl.PlayControlHeight + 'px');
 
             this.playButtonCircle = $('<div class="button-container"></div>')
                 .appendTo(this.playAxisContainer);
@@ -704,22 +687,33 @@ module powerbi.visuals {
             let convertedData: T = undefined;
             let matrixRows = dataView.matrix.rows;
             let rowChildrenLength = matrixRows.root.children ? matrixRows.root.children.length : 0;
+            let keySourceColumn: DataViewMetadataColumn;
             if (dataView.matrix && rowChildrenLength > 0) {
-                let keySourceColumn = matrixRows.levels[0].sources[0];
+                keySourceColumn = matrixRows.levels[0].sources[0];
 
                 // TODO: this should probably defer to the visual which knows how to format the categories.
-                let keyFormatter = valueFormatter.create({
-                    format: valueFormatter.getFormatString(keySourceColumn, scatterChartProps.general.formatString),
-                    value: matrixRows.root.children[0],
-                    value2: matrixRows.root.children[rowChildrenLength - 1],
-                });
+                let formatString = valueFormatter.getFormatString(keySourceColumn, scatterChartProps.general.formatString);
+                let keyFormatter: IValueFormatter;
+                if (keySourceColumn.type.numeric) {
+                    // use value range, not actual values
+                    let valueRange = Math.abs(matrixRows.root.children[rowChildrenLength - 1].value - matrixRows.root.children[0].value);
+                    keyFormatter = valueFormatter.create({
+                        format: formatString,
+                        value: valueRange,
+                        value2: 0,
+                    });
+                } else {
+                    keyFormatter = valueFormatter.createDefaultFormatter(formatString, true);
+                }
 
                 for (let i = 0, len = rowChildrenLength; i < len; i++) {
                     let key = matrixRows.root.children[i];
-                    frameKeys.push(keyFormatter.format(key.value));
+                    let frameLabel = keyFormatter.format(key.value);
+                    frameKeys.push(frameLabel);
 
                     let dataViewCategorical = convertMatrixToCategorical(dataView.matrix, i);
-                    convertedData = visualConverter(buildDataViewForFrame(dataView.metadata, dataViewCategorical));
+                    let frameInfo = { label: frameLabel, column: keySourceColumn };
+                    convertedData = visualConverter(buildDataViewForFrame(dataView.metadata, dataViewCategorical), frameInfo);
                     allViewModels.push(convertedData);
                 }
             }
@@ -737,7 +731,7 @@ module powerbi.visuals {
                 currentViewModel: convertedData,
                 frameKeys: frameKeys,
                 currentFrameIndex: objectProperties.currentFrameIndex,
-                labelData: getLabelData(frameKeys),
+                labelData: getLabelData(frameKeys, keySourceColumn),
             };
         }
 
@@ -783,7 +777,7 @@ module powerbi.visuals {
             return extents;
         }
 
-        export function getLabelData(keys: string[]): PlayAxisTickLabelData {
+        function getLabelData(keys: string[], keyColumn?: DataViewMetadataColumn): PlayAxisTickLabelData {
             let textProperties: TextProperties = {
                 fontFamily: 'wf_segoe-ui_normal',
                 fontSize: jsCommon.PixelConverter.toString(14),
@@ -800,6 +794,7 @@ module powerbi.visuals {
             return {
                 labelInfo: labelInfo,
                 anyWordBreaks: anyWordBreaks,
+                labelFieldName: keyColumn && keyColumn.displayName,
             };
         }
 

@@ -788,7 +788,7 @@ module powerbi.visuals.samples {
             var data = this.data;
             
             var origCatgSize = data.series && data.series.length > 0 ? data.series[0].data.length : 0;
-            var categoryThickness = CartesianChart.getCategoryThickness(data.series, origCatgSize, this.viewport.width, xDomain, data.isScalar);
+            var categoryThickness = CartesianChart.getCategoryThickness(data.series, origCatgSize, this.viewport.width, xDomain, data.isScalar, false);
 
             var categoryDataType: ValueType = AxisHelper.getCategoryValueType(data.categoryMetadata);
             

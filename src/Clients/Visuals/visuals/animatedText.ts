@@ -176,14 +176,15 @@ module powerbi.visuals {
                     'transform': SVGUtil.translate(translateX, translateY),
                 })
                 .style({
-                  'fill': this.style.titleText.color.value,
-                });
+                    'fill': this.style.titleText.color.value,
+                })
+                .call(tooltipUtils.tooltipUpdate, [startText]);
 
             if (endValue == null) {
-                textElementUpdate.text(endText);
+                textElementUpdate.text(endText).call(tooltipUtils.tooltipUpdate, [endText]);
             }
             else if (metaDataColumn && AxisHelper.isDateTime(metaDataColumn.type)) {
-                textElementUpdate.text(endText);
+                textElementUpdate.text(endText).call(tooltipUtils.tooltipUpdate, [endText]);
             }
             else {
                 let interpolatedValue = startValue;

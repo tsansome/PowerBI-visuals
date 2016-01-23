@@ -84,9 +84,9 @@ module powerbitests {
         describe('format strings', () => {
 
             describe("getFormatString", () => {
-                const DefaultDateFormat = 'd';
-                const DefaultIntegerFormat = 'g';
-                const DefaultNumericFormat = '#,0.00';
+                const DefaultDateFormat = valueFormatter.DefaultDateFormat;
+                const DefaultIntegerFormat = valueFormatter.DefaultIntegerFormat;
+                const DefaultNumericFormat = valueFormatter.DefaultNumericFormat;
 
                 let property: powerbi.DataViewObjectPropertyIdentifier = { objectName: "fmtObj", propertyName: "fmtProp" };
                 let getFormatString = (customFormat: string, columnType: ValueType): string => {
@@ -513,7 +513,8 @@ module powerbitests {
                 let columnType = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Integer);
                 let scale = valueFormatter.create({ format: format, value: input, formatSingleValues: true, columnType: columnType });
 
-                expect(scale.format(input)).toBe("9.99912345K");
+                // When using 'g' with display units we fall back to the the default format string for numeric.
+                expect(scale.format(input)).toBe("10.00K");
             });
 
             it("Verify single value number formatting with display units for values greater than 10K should show display units",() => {
@@ -522,7 +523,7 @@ module powerbitests {
                 let columnType = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double);
                 let scale = valueFormatter.create({ format: format, value: input, formatSingleValues: true, columnType: columnType });
 
-                expect(scale.format(input)).toBe("10.001K");
+                expect(scale.format(input)).toBe("10.00K");
             });
 
             it("Verify single value custom formatting with single decimal value should not show display units", () => {
@@ -549,7 +550,8 @@ module powerbitests {
                 let columnType = ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double);
                 let scale = valueFormatter.create({ format: format, value: input, formatSingleValues: true, columnType: columnType });
 
-                expect(scale.format(input)).toBe("1.9999K");
+                // When using 'g' with display units we fall back to the the default format string for numeric.
+                expect(scale.format(input)).toBe("2.00K");
             });
 
             it("create Boolean", () => {

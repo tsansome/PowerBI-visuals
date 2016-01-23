@@ -81,7 +81,9 @@ module powerbitests {
                     categories: [{
                         source: dataViewMetadataTwoColumn.columns[0],
                         values: ["abc", "def"],
-                        identity: [mocks.dataViewScopeIdentity("abc"), mocks.dataViewScopeIdentity("def")],
+                        identity: [
+                            mocks.dataViewScopeIdentityWithEquality(categoryColumnRef, "abc"),
+                            mocks.dataViewScopeIdentityWithEquality(categoryColumnRef, "def")],
                         identityFields: [categoryColumnRef]
                     }],
                     values: DataViewTransform.createValueColumns([

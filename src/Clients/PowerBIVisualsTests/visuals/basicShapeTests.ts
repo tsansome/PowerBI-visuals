@@ -67,6 +67,10 @@ module powerbitests {
             expect(powerbi.visuals.visualPluginFactory.create().getPlugin('basicShape').capabilities.objects).toBeDefined();
         });
 
+        it('capabilities should suppressDefaultPadding', () => {
+            expect(basicShapeCapabilities.suppressDefaultPadding).toBeTruthy();
+        });
+
         describe('rendering', () => {
             let element: JQuery;
             let viewport: powerbi.IViewport;

@@ -211,5 +211,6 @@ module powerbi.visuals {
         },
         suppressDefaultTitle: true,
         supportsSelection: false,
+        disableSeeData: true,
     };
 }

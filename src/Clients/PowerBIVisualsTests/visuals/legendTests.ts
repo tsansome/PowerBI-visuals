@@ -42,6 +42,7 @@ module powerbitests {
         let interactivityService: IInteractivityService;
         let hostServices: IVisualHostServices;
         let legendData: powerbi.visuals.LegendDataPoint[];
+        let legendTitleClassSelector = '.legendTitle';
 
         beforeEach(() => {
             powerbitests.mocks.setLocale();
@@ -232,7 +233,7 @@ module powerbitests {
                         { label: 'Texas', color: '#0000ff', identity: createSelectionIdentity(1), selected: false },
                         { label: 'Washington', color: '#00ff00', identity: createSelectionIdentity(2), selected: false }
                     ];
-                    
+
                     let mockBehavior = new MockBehavior(mockDatapoints, null);
                     interactivityService.bind(mockDatapoints, mockBehavior, null);
                     mockBehavior.selectIndex(1);
@@ -277,7 +278,41 @@ module powerbitests {
             let legendData = getLotsOfLegendData();
             legend.drawLegend({ dataPoints: legendData, title: 'states' }, viewport);
             powerbi.visuals.SVGUtil.flushAllD3Transitions();
-            expect($('.legendTitle').length).toBe(1);
+            expect($(legendTitleClassSelector).length).toBe(1);
+        });
+
+        it('legend title tooltip', () => {
+            let legendData = getLotsOfLegendData();
+            legend.drawLegend({ dataPoints: legendData, title: 'states' }, viewport);
+            powerbi.visuals.SVGUtil.flushAllD3Transitions();
+            expect(helpers.findElementTitle($(legendTitleClassSelector))).toBe('states');
+        });
+
+        it('legend truncated title tooltip', () => {
+            let legendData = getLotsOfLegendData();
+            legend.drawLegend({ dataPoints: legendData, title: 'Very Long Legend Header Data' }, viewport);
+            powerbi.visuals.SVGUtil.flushAllD3Transitions();
+            expect(helpers.findElementTitle($(legendTitleClassSelector))).toBe('Very Long Legend Header Data');
+        });
+
+        it('legend items tooltip', () => {
+            let legendData = getLotsOfLegendData();
+            legend.drawLegend({ dataPoints: legendData, title: 'states' }, viewport);
+            powerbi.visuals.SVGUtil.flushAllD3Transitions();
+            let lenOfLegendOnDom = $('.legendItem title').length;
+            for (let i = 0; i < lenOfLegendOnDom; i++) {
+                expect($('.legendItem title').eq(i).text()).toBe(legendData[i].tooltip);
+            }
+        });
+
+        it('legend truncated items tooltip', () => {
+            let legendData = getLotsOfLegendData();
+            legend.drawLegend({ dataPoints: legendData, title: 'states' }, viewport);
+            powerbi.visuals.SVGUtil.flushAllD3Transitions();
+            let lenOfLegendOnDom = $('.legendItem title').length;
+            for (let i = 0; i < lenOfLegendOnDom; i++) {
+                expect($('.legendItem title').eq(i).text()).toBe(legendData[i].tooltip);
+            }
         });
 
         xit('legend with long title on Right', () => {
@@ -356,7 +391,7 @@ module powerbitests {
         it('Intelligent Layout: Lots of small labels should get compacted in horizontal layout', () => {
             let legendData = getLotsOfLegendData();
             legend.changeOrientation(LegendPosition.Top);
-            legend.drawLegend({ dataPoints: legendData, fontSize:8 }, { height: 100, width: 1000 });
+            legend.drawLegend({ dataPoints: legendData, fontSize: 8 }, { height: 100, width: 1000 });
             powerbi.visuals.SVGUtil.flushAllD3Transitions();
             expect($('.legendItem').length).toBeLessThan(28);
             expect($('.legendItem').length).toBeGreaterThan(20);
@@ -397,12 +432,12 @@ module powerbitests {
                 color: 'red',
                 icon: LegendIcon.Line,
                 identity: powerbi.visuals.SelectionId.createNull(), selected: false
-            },{
-                label: 'The End',
-                color: 'blue',
-                icon: LegendIcon.Line,
-                identity: powerbi.visuals.SelectionId.createNull(), selected: false
-            }];
+            }, {
+                    label: 'The End',
+                    color: 'blue',
+                    icon: LegendIcon.Line,
+                    identity: powerbi.visuals.SelectionId.createNull(), selected: false
+                }];
 
             legend.changeOrientation(LegendPosition.Bottom);
             legend.drawLegend({ dataPoints: legendData }, { height: 100, width: 1000 });
@@ -489,7 +524,7 @@ module powerbitests {
         it('Intelligent Layout: Second arrow appears when you page right', () => {
             let legendData = getLotsOfLegendData();
             legend.changeOrientation(LegendPosition.Top);
-            legend.drawLegend({ dataPoints: legendData}, { height: 100, width: 1000 });
+            legend.drawLegend({ dataPoints: legendData }, { height: 100, width: 1000 });
             powerbi.visuals.SVGUtil.flushAllD3Transitions();
             expect($('.navArrow').length).toBe(1);
             (<any>$('.navArrow').first()).d3Click(0, 0);
@@ -509,7 +544,7 @@ module powerbitests {
         it('Intelligent Layout: Second arrow disappears when you page rigth to last page', () => {
             let legendData = getLotsOfLegendData();
             legend.changeOrientation(LegendPosition.Top);
-            legend.drawLegend({ dataPoints: legendData, fontSize:8 }, { height: 100, width: 1000 });
+            legend.drawLegend({ dataPoints: legendData, fontSize: 8 }, { height: 100, width: 1000 });
             powerbi.visuals.SVGUtil.flushAllD3Transitions();
             expect($('.navArrow').length).toBe(1);
             (<any>$('.navArrow').first()).d3Click(0, 0);
@@ -709,18 +744,18 @@ module powerbitests {
         }
     });
 
-    function createSelectionIdentity(key: number|string): powerbi.visuals.SelectionId {
+    function createSelectionIdentity(key: number | string): powerbi.visuals.SelectionId {
         return powerbi.visuals.SelectionId.createWithId(powerbitests.mocks.dataViewScopeIdentity('identity' + key));
     }
 
     function getLotsOfLegendData(): powerbi.visuals.LegendDataPoint[] {
-        let states = ['AL', 'AK', 'AS', 'AZ', 'AR', 'CA', 'CO',
-            'CT', 'DE', 'DC', 'FM', 'FL', 'GA', 'GU', 'HI', 'ID',
-            'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MH', 'MD',
-            'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH',
-            'NJ', 'NM', 'NY', 'NC', 'ND', 'MP', 'OH', 'OK', 'OR',
-            'PW', 'PA', 'PR', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT',
-            'VT', 'VI', 'VA', 'WA', 'WV', 'WI', 'WY', 'AE', 'AA',
+        let states = ['AL', 'AK', 'AS', 'AZ', 'AR', 'CA', 'AL1234567890',
+            'CT', 'DE', 'DC', 'FM', 'AL1234567890', 'GA', 'GU', 'HI', 'ID',
+            'IL', 'IN', 'AL1234567890', 'KS', 'KY', 'LA', 'ME', 'MH', 'MD',
+            'MA', 'MI', 'MN', 'MS', 'AL1234567890', 'MT', 'NE', 'NV', 'NH',
+            'NJ', 'NM', 'NY', 'NC', 'ND', 'MP', 'AL1234567890', 'OK', 'OR',
+            'PW', 'PA', 'PR', 'RI', 'AL1234567890', 'SD', 'TN', 'TX', 'UT',
+            'VT', 'VI', 'VA', 'WA', 'WV', 'WI', 'WY', 'AL1234567890', 'AA',
             'AP'];
 
         let colors = d3.scale.category20c();

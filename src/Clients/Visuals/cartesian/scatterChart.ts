@@ -224,7 +224,7 @@ module powerbi.visuals {
             return objectProperties;
         }
 
-        public static converter(dataView: DataView, options: ScatterConverterOptions): ScatterChartData {
+        public static converter(dataView: DataView, options: ScatterConverterOptions, playFrameInfo?: PlayFrameInfo): ScatterChartData {
             let categoryValues: any[],
                 categoryFormatter: IValueFormatter,
                 categoryObjects: DataViewObjects[],
@@ -276,7 +276,8 @@ module powerbi.visuals {
                 dataLabelsSettings,
                 objProps.defaultDataPointColor,
                 categoryQueryName,
-                objProps.colorByCategory);
+                objProps.colorByCategory,
+                playFrameInfo);
 
             let legendItems = hasDynamicSeries
                 ? ScatterChart.createSeriesLegend(dataValues, colorPalette, dataValues, valueFormatter.getFormatString(dvSource, scatterChartProps.general.formatString), objProps.defaultDataPointColor)
@@ -353,7 +354,8 @@ module powerbi.visuals {
             labelSettings: PointDataLabelsSettings,
             defaultDataPointColor?: string,
             categoryQueryName?: string,
-            colorByCategory?: boolean): ScatterChartDataPoint[] {
+            colorByCategory?: boolean,
+            playFrameInfo?: PlayFrameInfo): ScatterChartDataPoint[] {
 
             let dataPoints: ScatterChartDataPoint[] = [],
                 indicies = metadata.idx,
@@ -417,6 +419,9 @@ module powerbi.visuals {
                     }
                     if (measureSize && measureSize.values && measureSize.values.length > 0) {
                         seriesData.push({ value: measureSize.values[categoryIdx], metadata: measureSize });
+                    }
+                    if (playFrameInfo) {
+                        seriesData.push({ value: playFrameInfo.label, metadata: { source: playFrameInfo.column, values: [] } });
                     }
 
                     let tooltipInfo: TooltipDataItem[] = TooltipBuilder.createTooltipInfo(formatStringProp, null, categoryValue, null, categories, seriesData);
@@ -596,7 +601,10 @@ module powerbi.visuals {
                             this.playAxis.init(this.options);
                         }
 
-                        let playData = this.playAxis.setData(dataView, (dataView: DataView) => ScatterChart.converter(dataView, converterOptions), resized);
+                        let playData = this.playAxis.setData(
+                            dataView,
+                            (dataView: DataView, playFrameInfo?: PlayFrameInfo) =>
+                                ScatterChart.converter(dataView, converterOptions, playFrameInfo), resized);
                         this.mergeSizeRanges(playData);
                         this.data = playData.currentViewModel;
 
@@ -813,6 +821,7 @@ module powerbi.visuals {
 
             if (this.playAxis) {
                 extents = this.playAxis.getCartesianExtents(extents, ScatterChart.getExtents);
+                this.playAxis.setPlayControlPosition(options.playAxisControlLayout);
             }
             else if (!_.isEmpty(data.dataPoints)) {
                 extents = ScatterChart.getExtents(data);
@@ -934,7 +943,7 @@ module powerbi.visuals {
 
             let playRenderResult: PlayChartRenderResult<ScatterChartData, ScatterChartViewModel>;
             if (this.playAxis) {
-                playRenderResult = this.playAxis.render(suppressAnimations, viewModel, viewport);
+                playRenderResult = this.playAxis.render(suppressAnimations, viewModel, viewport, margin);
 
                 if (this.interactivityService) {
                     let playBehaviorOptions: PlayBehaviorOptions = {

@@ -36,8 +36,8 @@ module powerbi.visuals {
             if (!dataView || !dataView.categorical || _.isEmpty(dataView.categorical.categories))
                 return;
 
-            let category = dataView.categorical.categories[0];
-            let identityFields = category.identityFields;
+            let identityFields = dataView.categorical.categories[0].identityFields;
+
             if (!identityFields)
                 return;
 
@@ -72,7 +72,7 @@ module powerbi.visuals {
                 hostServices.persistProperties(changes);
             }
 
-            let slicerData = getSlicerData(filter, analyzer, dataView.metadata, category, localizedSelectAllText, <IInteractivityService>interactivityService, hostServices);
+            let slicerData = getSlicerData(filter, analyzer, dataView.metadata, dataView.categorical, localizedSelectAllText, <IInteractivityService>interactivityService, hostServices);
             return slicerData;
 
         }
@@ -81,7 +81,7 @@ module powerbi.visuals {
             filter: data.SemanticFilter,
             analyzer: AnalyzedFilter,
             dataViewMetadata: DataViewMetadata,
-            category: DataViewCategoryColumn,
+            categorical: DataViewCategorical,
             localizedSelectAllText: string, interactivityService: IInteractivityService, hostServices: IVisualHostServices): SlicerData {
             let isInvertedSelectionMode: boolean = interactivityService && interactivityService.isSelectionModeInverted();
             let hasSelectionOverride: boolean = false;
@@ -93,15 +93,23 @@ module powerbi.visuals {
             if (interactivityService)
                 interactivityService.setSelectionModeInverted(isInvertedSelectionMode);
 
+            let category = categorical.categories[0];
             let categoryValuesLen: number = category && category.values ? category.values.length : 0;
             let slicerDataPoints: SlicerDataPoint[] = [];
             let formatString = valueFormatter.getFormatString(category.source, slicerProps.formatString);
             let numOfSelected: number = 0;
+            let valueCounts = categorical.values && categorical.values[0] && categorical.values[0].values;
+            if (valueCounts && _.isEmpty(valueCounts))
+                valueCounts = undefined;
+
+            debug.assert(!valueCounts || valueCounts.length === categoryValuesLen, "valueCounts doesn't match values");
+
             for (let i = 0; i < categoryValuesLen; i++) {
                 let scopeId = category.identity && category.identity[i];
                 let value = category.values && category.values[i];
+                let count = valueCounts && valueCounts[i];
 
-                if (value) {
+                if (value != null) {
                     let isRetained = hasSelectionOverride ? SlicerUtil.tryRemoveValueFromRetainedList(scopeId, selectedScopeIds) : false;
                     let label: string = valueFormatter.format(value, formatString);
                     // TODO: need to add count as well
@@ -110,6 +118,7 @@ module powerbi.visuals {
                         tooltip: label,
                         identity: SelectionId.createWithId(scopeId),
                         selected: isRetained,
+                        count: <number>count,
                     };
 
                     slicerDataPoints.push(slicerData);
@@ -124,11 +133,13 @@ module powerbi.visuals {
                 for (let scopeId of selectedScopeIds) {
                     let label = getLabel(scopeId, formatString);
 
+                    // When there is no valueCounts, set count to be undefined, otherwise use 0 as the count for retained values
                     let slicerData: SlicerDataPoint = {
                         value: label,
                         tooltip: label,
                         identity: SelectionId.createWithId(scopeId),
                         selected: true,
+                        count: valueCounts != null ? 0 : undefined,
                     };
 
                     slicerDataPoints.push(slicerData);
@@ -136,25 +147,26 @@ module powerbi.visuals {
                 }
             }
 
-            //When all the items are selected and there is no more data to request, then unselect all and toggle the invertedSelectionMode
-            if (numOfSelected > 0 && !dataViewMetadata.segment && numOfSelected === slicerDataPoints.length) {
-                isInvertedSelectionMode = !isInvertedSelectionMode;
-                interactivityService.setSelectionModeInverted(isInvertedSelectionMode);
-                for (let item of slicerDataPoints) {
-                    item.selected = false;
-                }
-                hasSelectionOverride = false;
-                numOfSelected = 0;
-            }
-
             let defaultSettings = createDefaultSettings(dataViewMetadata);
             if (defaultSettings.selection.selectAllCheckboxEnabled) {
+                //If selectAllCheckboxEnabled, and all the items are selected and there is no more data to request, then unselect all and toggle the invertedSelectionMode
+                if (numOfSelected > 0 && !dataViewMetadata.segment && numOfSelected === slicerDataPoints.length) {
+                    isInvertedSelectionMode = !isInvertedSelectionMode;
+                    interactivityService.setSelectionModeInverted(isInvertedSelectionMode);
+                    for (let item of slicerDataPoints) {
+                        item.selected = false;
+                    }
+                    hasSelectionOverride = false;
+                    numOfSelected = 0;
+                }
+
                 slicerDataPoints.unshift({
                     value: localizedSelectAllText,
                     tooltip: localizedSelectAllText,
                     identity: SelectionId.createWithMeasure(localizedSelectAllText),
                     selected: !!isInvertedSelectionMode && numOfSelected === 0,
-                    isSelectAllDataPoint: true
+                    isSelectAllDataPoint: true,
+                    count: undefined,
                 });
             }
 

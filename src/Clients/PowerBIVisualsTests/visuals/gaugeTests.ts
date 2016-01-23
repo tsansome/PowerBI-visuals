@@ -262,7 +262,7 @@ module powerbitests {
 
     class GaugeVisualDataBuilder extends GaugeDataBuilder {
         public get gauge() {
-            return <GaugeVisual> this.visual;
+            return <GaugeVisual>this.visual;
         }
 
         private _warningSpy;
@@ -434,11 +434,16 @@ module powerbitests {
                 expect(foregroundArc.length).toBe(1);
                 expect(foregroundArc.attr("d")).toBeDefined();
 
-                let labels = $(".labelText");
+                let textLabels: JQuery = $(".labelText");
 
-                expect(labels.length).toBe(2);
-                expect($(labels[0]).text()).toEqual("$0");
-                expect($(labels[1]).text()).toEqual("$1");
+                expect(textLabels.length).toBe(2);
+                expect(helpers.findElementText(textLabels)).toEqual("$0");
+                expect(helpers.findElementText(textLabels.eq(1))).toEqual("$1");
+
+                //check titles
+                expect(helpers.findElementTitle(textLabels)).toEqual("$0");
+                expect(helpers.findElementTitle(textLabels.eq(1))).toEqual("$1");
+
                 expect($(".mainText").length).toBe(1);
                 expect($(".mainText").text()).toEqual("-$25");
                 done();
@@ -581,9 +586,13 @@ module powerbitests {
                 expect($(".mainText").text()).toBe("$1000.00K");
                 
                 //Data labels
-                let labels = $(".labelText");
-                expect($(labels[0]).text()).toBe("$0");
-                expect($(labels[1]).text()).toBe("$3000");
+                let textLabels: JQuery = $(".labelText");
+
+                expect(helpers.findElementText(textLabels)).toEqual("$0");
+                expect(helpers.findElementText(textLabels.eq(1))).toEqual("$3000");
+                //check titles
+                expect(helpers.findElementTitle(textLabels)).toEqual("$0");
+                expect(helpers.findElementTitle(textLabels.eq(1))).toEqual("$3000");
                 done();
             }, DefaultWaitForRender);
         });
@@ -611,9 +620,13 @@ module powerbitests {
                 expect($(".mainText").text()).toBe("500T");
                 
                 //Data labels
-                let labels = $(".labelText");
-                expect(labels.eq(0).text()).toBe("0T");
-                expect(labels.eq(1).text()).toBe("1E+15");
+                let textLabels: JQuery = $(".labelText");
+
+                expect(helpers.findElementText(textLabels)).toEqual("0T");
+                expect(helpers.findElementText(textLabels.eq(1))).toEqual("1E+15");
+                //check titles
+                expect(helpers.findElementTitle(textLabels)).toEqual("0T");
+                expect(helpers.findElementText(textLabels.eq(1))).toEqual("1E+15");
                 done();
             }, DefaultWaitForRender);
         });
@@ -645,10 +658,13 @@ module powerbitests {
                 expect($(".mainText").text()).toBe("$563.73T");
                 
                 //Data labels
-                let labels = $(".labelText");
-                expect(labels.eq(0).text()).toBe("$0.00T");
-                expect(labels.eq(1).text()).toBe("$1,127.46T");
+                let textLabels: JQuery = $(".labelText");
 
+                expect(helpers.findElementText(textLabels)).toEqual("$0.00T");
+                expect(helpers.findElementText(textLabels.eq(1))).toEqual("$1,127.46T");
+                //check titles
+                expect(helpers.findElementTitle(textLabels)).toEqual("$0.00T");
+                expect(helpers.findElementTitle(textLabels.eq(1))).toEqual("$1,127.46T");
                 done();
             }, DefaultWaitForRender);
         });
@@ -1152,9 +1168,13 @@ module powerbitests {
                 gaugeVisualDataBuilder.onResizing(100, 400);
 
                 setTimeout(() => {
-                    let targetText = $(".targetText").text();
-                    expect(targetText).toEqual("6.50");
+                    //Data labels
+                    let targetText = $(".targetText");
 
+                    expect(targetText.length).toBe(1);
+                    expect(helpers.findElementText(targetText)).toEqual("6.50");
+                    //check titles
+                    expect(helpers.findElementTitle(targetText)).toEqual("6.50");
                     done();
                 }, DefaultWaitForRender);
             });
@@ -1212,7 +1232,7 @@ module powerbitests {
 
         it("Gauge margin test with view port sideNumbersVisibleGreaterThanMinHeightString", () => {
             gaugeVisualDataBuilder.height = gaugeVisualDataBuilder.width =
-            sideNumbersVisibleGreaterThanMinHeightString;
+                sideNumbersVisibleGreaterThanMinHeightString;
 
             let expectedViewPortProperty = {
                 margin: {
@@ -1229,7 +1249,7 @@ module powerbitests {
 
         it("Gauge margin test with view port sideNumbersVisibleSmallerThanMinHeightString", () => {
             gaugeVisualDataBuilder.height = gaugeVisualDataBuilder.width =
-            sideNumbersVisibleGreaterThanMinHeightString;
+                sideNumbersVisibleGreaterThanMinHeightString;
 
             let expectedViewPortProperty = {
                 margin: {
@@ -1246,7 +1266,7 @@ module powerbitests {
 
         it("Gauge margin test with view port sideNumbersVisibleGreaterThanMinHeightString mobile", () => {
             gaugeVisualDataBuilder.height = gaugeVisualDataBuilder.width =
-            sideNumbersVisibleGreaterThanMinHeightString;
+                sideNumbersVisibleGreaterThanMinHeightString;
             gaugeVisualDataBuilder.isMobile = true;
 
             let expectedViewPortProperty = {
@@ -1488,13 +1508,14 @@ module powerbitests {
             gaugeDataBuilder.onDataChanged();
 
             setTimeout(() => {
-                let labels = $(".labelText");
-
-                expect(labels.length).toBe(2);
-                expect($(labels[0]).text()).toEqual("$0");
-                expect($(labels[1]).text()).toEqual("$1");
+                let textLabels: JQuery = $(".labelText");
+                expect(textLabels.length).toBe(2);
+                expect(helpers.findElementText(textLabels)).toEqual("$0");
+                expect(helpers.findElementText(textLabels.eq(1))).toEqual("$1");
+                //check titles
+                expect(helpers.findElementTitle(textLabels)).toEqual("$0");
+                expect(helpers.findElementTitle(textLabels.eq(1))).toEqual("$1");
                 done();
-
             }, DefaultWaitForRender);
         });
 
@@ -1506,13 +1527,14 @@ module powerbitests {
             gaugeDataBuilder.onDataChanged();
 
             setTimeout(() => {
-                let labels = $(".labelText");
-
-                expect(labels.length).toBe(2);
-                expect($(labels[0]).text()).toEqual("$0");
-                expect($(labels[1]).text()).toEqual("$1");
+                let textLabels: JQuery = $(".labelText");
+                expect(textLabels.length).toBe(2);
+                expect(helpers.findElementText(textLabels)).toEqual("$0");
+                expect(helpers.findElementText(textLabels.eq(1))).toEqual("$1");
+                //check titles
+                expect(helpers.findElementTitle(textLabels)).toEqual("$0");
+                expect(helpers.findElementTitle(textLabels.eq(1))).toEqual("$1");
                 done();
-
             }, DefaultWaitForRender);
         });
 
@@ -1524,13 +1546,14 @@ module powerbitests {
             gaugeDataBuilder.onDataChanged();
 
             setTimeout(() => {
-                let labels = $(".labelText");
-
-                expect(labels.length).toBe(2);
-                expect($(labels[0]).text()).toEqual("$0");
-                expect($(labels[1]).text()).toEqual("$1");
+                let textLabels: JQuery = $(".labelText");
+                expect(textLabels.length).toBe(2);
+                expect(helpers.findElementText(textLabels)).toEqual("$0");
+                expect(helpers.findElementText(textLabels.eq(1))).toEqual("$1");
+                //check titles
+                expect(helpers.findElementTitle(textLabels)).toEqual("$0");
+                expect(helpers.findElementTitle(textLabels.eq(1))).toEqual("$1");
                 done();
-
             }, DefaultWaitForRender);
         });
     });

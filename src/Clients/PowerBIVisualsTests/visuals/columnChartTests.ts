@@ -54,6 +54,7 @@ module powerbitests {
 
     describe("ColumnChart", () => {
         let categoryColumn: powerbi.DataViewMetadataColumn = { displayName: 'year', queryName: 'selectYear', type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Text) };
+        let categoryColumnDate: powerbi.DataViewMetadataColumn = { displayName: 'date', queryName: 'selectDate', type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Date) };
         let measureColumn: powerbi.DataViewMetadataColumn = { displayName: 'sales', queryName: 'selectSales', isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Integer), objects: { general: { formatString: '$0' } } };
         let measure2Column: powerbi.DataViewMetadataColumn = { displayName: 'tax', queryName: 'selectTax', isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) };
         let measure3Column: powerbi.DataViewMetadataColumn = { displayName: 'profit', queryName: 'selectProfit', isMeasure: true, type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double) };
@@ -246,7 +247,7 @@ module powerbitests {
             expect(data.legendData.dataPoints[0].selected).toBe(true);
         });
 
-        it('has positive measure',() => {
+        it('has positive measure', () => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("2011"),
                 mocks.dataViewScopeIdentity("2012"),
@@ -1025,7 +1026,7 @@ module powerbitests {
                             }
                         ]
                     }]
-                );
+            );
             expect(AxisHelper.createValueDomain(data.series, true)).toEqual([0, 200]);
             expect(StackedUtil.calcValueDomain(data.series, /*is100Pct*/ false)).toEqual({
                 min: 0,
@@ -1177,7 +1178,7 @@ module powerbitests {
                             }
                         ]
                     }]
-                );
+            );
 
             expect(data.legendData.title).toEqual("sales");
             expect(legendItems).toEqual([
@@ -1369,7 +1370,7 @@ module powerbitests {
                             }
                         ]
                     }]
-                );
+            );
 
             expect(data.legendData.title).toEqual("sales");
             expect(legendItems).toEqual([
@@ -1388,10 +1389,10 @@ module powerbitests {
                 mocks.dataViewScopeIdentityWithEquality(measureColumnDynamic1RefExpr, "B"),
             ];
             let hexDefaultColorRed = "#FF0000";
-            let metadata: powerbi.DataViewMetadata = {      
-                columns: null,         
+            let metadata: powerbi.DataViewMetadata = {
+                columns: null,
                 objects: { dataPoint: { defaultColor: { solid: { color: hexDefaultColorRed } } } }
-             };
+            };
             let dataView: powerbi.DataViewCategorical = {
                 categories: [{
                     source: categoryColumn,
@@ -1416,7 +1417,7 @@ module powerbitests {
             dataView.values.grouped = () => groupedValues;
 
             let colors = powerbi.visuals.visualStyles.create().colorPalette.dataColors;
-                        
+
             let data = ColumnChart.converter(dataView, colors, null, null, metadata);
             let selectionIds: SelectionId[] = [
                 SelectionId.createWithSelectorForColumnAndMeasure(buildSelector(measureColumnDynamic1.queryName, seriesIdentities[0], buildSelector(categoryColumn.queryName, categoryIdentities[0])), measureColumnDynamic1.queryName),
@@ -1523,7 +1524,7 @@ module powerbitests {
                             }
                         ]
                     }]
-                );
+            );
 
             expect(legendItems).toEqual([
                 { icon: LegendIcon.Box, color: hexDefaultColorRed, label: measureColumnDynamic1.groupName, identity: SelectionId.createWithIdAndMeasure(seriesIdentities[0], measureColumnDynamic1.queryName), selected: false },
@@ -1677,7 +1678,7 @@ module powerbitests {
                             }
                         ]
                     }]
-                );
+            );
 
             expect(legendItems).toEqual([
                 { icon: LegendIcon.Box, color: hexDefaultColorRed, label: measureColumnDynamic1.groupName, identity: SelectionId.createWithIdAndMeasure(seriesIdentities[0], measureColumnDynamic1.queryName), selected: false },
@@ -1745,6 +1746,26 @@ module powerbitests {
                 { icon: LegendIcon.Box, color: legendItems[0].color, label: powerbi.visuals.valueFormatter.format(null), identity: SelectionId.createWithMeasure(nullMeasureColumn.queryName), selected: false },
                 { icon: LegendIcon.Box, color: legendItems[1].color, label: dataView.values[1].source.displayName, identity: SelectionId.createWithMeasure(measure2Column.queryName), selected: false },
             ]);
+        });
+
+        it('variant measure - datetime column with a text category', () => {
+            let dataView: powerbi.DataViewCategorical = {
+                categories: [{
+                    source: categoryColumnDate,
+                    values: [new Date(2011), new Date(2012), new Date(2013), 'TheFuture']
+                }],
+                values: DataViewTransform.createValueColumns([
+                    {
+                        source: nullMeasureColumn,
+                        values: [100, 200, 300, 1000]
+                    }
+                ])
+            };
+            let colors = powerbi.visuals.visualStyles.create().colorPalette.dataColors;
+
+            let data = ColumnChart.converter(dataView, colors);
+            // the text value is ignored
+            expect(data.series[0].data.length).toBe(3);
         });
 
         it('multiple measures (100%)', () => {
@@ -2871,7 +2892,7 @@ module powerbitests {
             expect(legendItems.map(l => l.label)).toEqual(['a', 'b']);
 
             // Should get a result shaped like a diagonal matrix
-            let item = 
+            let item =
                 [{
                     key: 'series0', index: 0, displayName: 'a', identity: SelectionId.createWithIdAndMeasure(categoryIdentities[0], 'selectCol2'), color: legendItems[0].color, labelSettings: data.series[0].labelSettings, data: [
                         {
@@ -2937,7 +2958,7 @@ module powerbitests {
                                 originalValueAbsolute: 200,
                                 identity: selectionIds[1],
                                 key: selectionIds[1].getKey(),
-                            tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: 'col2', value: '200' }],
+                                tooltipInfo: [{ displayName: "col1", value: "b" }, { displayName: 'col2', value: '200' }],
                                 lastSeries: undefined,
                                 chartType: undefined,
                                 labelSettings: defaultLabelSettings,
@@ -3222,15 +3243,16 @@ module powerbitests {
             expect(CartesianChart.getLayout(
                 categoricalData,
                 {
+                    trimOrdinalDataOnOverflow: true,
                     availableWidth: 114,
                     categoryCount: 1,
                     domain: []
                 })).toEqual({
-                categoryCount: 1,
-                categoryThickness: 30,
-                outerPaddingRatio: 1.4,
-                isScalar: false
-            });
+                    categoryCount: 1,
+                    categoryThickness: 30,
+                    outerPaddingRatio: 1.4,
+                    isScalar: false
+                });
         });
 
         it('getLayout: text (one)', () => {
@@ -3239,15 +3261,16 @@ module powerbitests {
             expect(CartesianChart.getLayout(
                 categoricalData,
                 {
+                    trimOrdinalDataOnOverflow: true,
                     availableWidth: 114,
                     categoryCount: 1,
                     domain: []
                 })).toEqual({
-                categoryCount: 1,
-                categoryThickness: 30,
-                outerPaddingRatio: 1.4,
-                isScalar: false
-            });
+                    categoryCount: 1,
+                    categoryThickness: 30,
+                    outerPaddingRatio: 1.4,
+                    isScalar: false
+                });
         });
 
         it('getLayout: text (few)', () => {
@@ -3256,15 +3279,16 @@ module powerbitests {
             expect(CartesianChart.getLayout(
                 categoricalData,
                 {
+                    trimOrdinalDataOnOverflow: true,
                     availableWidth: 204,
                     categoryCount: 6,
                     domain: []
                 })).toEqual({
-                categoryCount: 6,
-                categoryThickness: 30,
-                outerPaddingRatio: 0.4,
-                isScalar: false
-            });
+                    categoryCount: 6,
+                    categoryThickness: 30,
+                    outerPaddingRatio: 0.4,
+                    isScalar: false
+                });
         });
 
         it('getLayout: text (too many)', () => {
@@ -3277,15 +3301,34 @@ module powerbitests {
             expect(CartesianChart.getLayout(
                 categoricalData,
                 {
+                    trimOrdinalDataOnOverflow: true,
                     availableWidth: 220,
                     categoryCount: 200,
                     domain: []
                 })).toEqual({
-                categoryCount: 10,
-                categoryThickness: 20,
-                outerPaddingRatio: 0.5,
-                isScalar: false
-            });
+                    categoryCount: 10,
+                    categoryThickness: 20,
+                    outerPaddingRatio: 0.5,
+                    isScalar: false
+                });
+        });
+
+        it('getLayout: text (too many - not trimmed)', () => {
+            let cats = [];
+            for (let i = 0, len = 200; i < len; i++) {
+                cats.push(Math.round(Math.random()).toString());
+            }
+            categoricalData.categories = cats;
+            categoricalData.categoryMetadata = metadataColumnText;
+            let layout = CartesianChart.getLayout(
+                categoricalData,
+                {
+                    trimOrdinalDataOnOverflow: false,
+                    availableWidth: 220,
+                    categoryCount: 200,
+                    domain: []
+                });
+            expect(layout.categoryCount).toEqual(200);
         });
 
         it('getLayout: number (few)', () => {
@@ -3320,16 +3363,17 @@ module powerbitests {
             expect(CartesianChart.getLayout(
                 scalarData,
                 {
+                    trimOrdinalDataOnOverflow: true,
                     availableWidth: 100,
                     categoryCount: 10,
                     domain: [0, 6400],
                     isScalar: true
                 })).toEqual({
-                categoryCount: 10,
-                categoryThickness: 2,
-                outerPaddingRatio: 0.4,
-                isScalar: true
-            });
+                    categoryCount: 10,
+                    categoryThickness: 2,
+                    outerPaddingRatio: 0.4,
+                    isScalar: true
+                });
         });
 
         it('getLayout: number (many)', () => {
@@ -3362,16 +3406,17 @@ module powerbitests {
             expect(CartesianChart.getLayout(
                 scalarData,
                 {
+                    trimOrdinalDataOnOverflow: true,
                     availableWidth: 100,
                     categoryCount: 100,
                     domain: [0, 4000],
                     isScalar: true
                 })).toEqual({
-                categoryCount: 49,
-                categoryThickness: 2,
-                outerPaddingRatio: 0.4,
-                isScalar: true
-            });
+                    categoryCount: 49,
+                    categoryThickness: 2,
+                    outerPaddingRatio: 0.4,
+                    isScalar: true
+                });
         });
 
         it('getLayout: datetime', () => {
@@ -3405,6 +3450,7 @@ module powerbitests {
             let layout = CartesianChart.getLayout(
                 scalarData,
                 {
+                    trimOrdinalDataOnOverflow: true,
                     availableWidth: 100,
                     categoryCount: 25,
                     domain: [series[0].categoryValue, series[series.length - 1].categoryValue],
@@ -3451,6 +3497,7 @@ module powerbitests {
             let layout = CartesianChart.getLayout(
                 scalarData,
                 {
+                    trimOrdinalDataOnOverflow: true,
                     availableWidth: 400,
                     categoryCount: idx + 1,
                     domain: [series[0].categoryValue, series[series.length - 1].categoryValue],
@@ -3744,7 +3791,7 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it('clustered column chart negative partial highlight dom validation', (done) => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("abc"),
@@ -3919,10 +3966,13 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .x.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.column').length).toBe(3);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('def');
+                expect(helpers.findElementText($(ticksText).last())).toBe('def');
+                expect(helpers.findElementTitle($(ticksText).last())).toBe('def');
                 done();
             }, DefaultWaitForRender);
         });
@@ -3959,10 +4009,13 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .x.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.column').length).toBe(3);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('def');
+                expect(helpers.findElementText(ticksText.last())).toBe('def');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('def');
                 done();
             }, DefaultWaitForRender);
         });
@@ -4020,11 +4073,14 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBe(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('10');
+                expect(helpers.findElementText(ticksText.last())).toBe('10');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('10');
                 done();
             }, DefaultWaitForRender);
         });
@@ -4054,11 +4110,14 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('2.5');
+                expect(helpers.findElementText(ticksText.last())).toBe('2.5');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('2.5');
                 done();
             }, DefaultWaitForRender);
         });
@@ -4229,7 +4288,7 @@ module powerbitests {
             v.onDataChanged({
                 dataViews: [dataView]
             });
-            
+
             setTimeout(() => {
                 let graphicsContext = $('.columnChart .columnChartMainGraphicsContext');
 
@@ -4252,7 +4311,7 @@ module powerbitests {
                             verticalPosition: powerbi.visuals.referenceLineDataLabelVerticalPosition.above,
                         },
                     });
-                
+
                 yAxisReferenceLine['lineColor'] = { solid: { color: refLineColor2 } };
                 yAxisReferenceLine['transparency'] = 0;
                 yAxisReferenceLine['style'] = powerbi.visuals.lineStyle.dotted;
@@ -4368,7 +4427,8 @@ module powerbitests {
                             });
                             setTimeout(() => {
                                 expect($('.legend').attr('orientation')).toBe(LegendPosition.Right.toString());
-                                expect($('.legendTitle').text()).toBe(testTitle);
+                                expect(helpers.findElementText($('.legendTitle'))).toBe(testTitle);
+                                expect(helpers.findElementTitle($('.legendTitle'))).toBe(testTitle);
                                 expect($('#legendGroup').attr('transform')).not.toBeDefined();
                                 
                                 //hide legend
@@ -4410,7 +4470,7 @@ module powerbitests {
                 }
             ],
         };
-        let dataViewMetadataFourColumn: powerbi.DataViewMetadata = {
+        let dataViewMetadataFiveColumn: powerbi.DataViewMetadata = {
             columns: [
                 {
                     displayName: 'col1',
@@ -4426,7 +4486,18 @@ module powerbitests {
                     queryName: 'col3',
                     isMeasure: true,
                     type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
+                }, {
+                    displayName: 'col4',
+                    queryName: 'col4',
+                    isMeasure: true,
+                    type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
+                }, {
+                    displayName: 'col5',
+                    queryName: 'col5',
+                    isMeasure: true,
+                    type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
                 }],
+            objects: {}
         };
         let hostServices = powerbitests.mocks.createVisualHostServices();
 
@@ -4472,11 +4543,14 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.column').length).toBe(2);
                 expect($('.label').length).toBe(0);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('200K');
+                expect(helpers.findElementText(ticksText.last())).toBe('200K');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('200K');
                 if (interactiveChart) expect($('.interactive-legend').length).toBe(1);
                 else expect($('.legend').attr('orientation')).toBe(LegendPosition.None.toString());
                 done();
@@ -4526,6 +4600,8 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
 
@@ -4533,7 +4609,8 @@ module powerbitests {
                 expect($('.column').length).toBeLessThan(15);
 
                 // The max value in the view is ...
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('25');
+                expect(helpers.findElementText(ticksText.last())).toBe('25');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('25');
 
                 if (interactiveChart) expect($('.interactive-legend').length).toBe(1);
                 else expect($('.legend').attr('orientation')).toBe(LegendPosition.None.toString());
@@ -4566,22 +4643,22 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -4601,6 +4678,118 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
+        it('stacked column chart dom validation - start/end axis extents - pos', (done) => {
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity("a"),
+                mocks.dataViewScopeIdentity("b"),
+            ];
+            let metadata = _.cloneDeep(dataViewMetadataFiveColumn);
+            metadata.objects = {
+                valueAxis: {
+                    show: true,
+                    start: 1,
+                    end: 6,
+                }
+            };
+            let dataViews: powerbi.DataView[] = [{
+                metadata: metadata,
+                categorical: {
+                    categories: [{
+                        source: dataViewMetadataFiveColumn.columns[0],
+                        values: ['a', 'b'],
+                        identity: categoryIdentities,
+                    }],
+                    values: DataViewTransform.createValueColumns([
+                        {
+                            source: dataViewMetadataFiveColumn.columns[1],
+                            values: [2, -2]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[2],
+                            values: [-3, 4]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[3],
+                            values: [2.5, 2.5]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[4],
+                            values: [-3, -4]
+                        }])
+                }
+            }];
+
+            v.onDataChanged({
+                dataViews: dataViews
+            });
+
+            setTimeout(() => {
+                expect($('.columnChart')).toBeInDOM();
+                let rects = $('.columnChart .column');
+                let factor = interactiveChart ? 0.84 : 1;
+                expect(rects.length).toBe(8);
+                expect(rects.eq(0).attr('height')).toBeCloseTo(50 * factor, -1); //clipped so only takes up 1/5th of the 1-6 range
+                expect(rects.eq(0).attr('y')).toBeCloseTo(195 * factor, -1);
+                expect(+rects.eq(1).attr('height')).toBe(0); //negative value, not in view
+                expect(rects.eq(4).attr('height')).toBeCloseTo(120 * factor, -1); //stacked, in full view
+                expect(rects.eq(4).attr('y')).toBeCloseTo(75 * factor, -1);
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it('stacked column chart dom validation - start/end axis extents - neg', (done) => {
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity("a"),
+                mocks.dataViewScopeIdentity("b"),
+            ];
+            let metadata = _.cloneDeep(dataViewMetadataFiveColumn);
+            metadata.objects = {
+                valueAxis: {
+                    show: true,
+                    start: -7,
+                    end: -1,
+                }
+            };
+            let dataViews: powerbi.DataView[] = [{
+                metadata: metadata,
+                categorical: {
+                    categories: [{
+                        source: dataViewMetadataFiveColumn.columns[0],
+                        values: ['a', 'b'],
+                        identity: categoryIdentities,
+                    }],
+                    values: DataViewTransform.createValueColumns([
+                        {
+                            source: dataViewMetadataFiveColumn.columns[1],
+                            values: [2, -2]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[2],
+                            values: [-3, 4]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[3],
+                            values: [2.5, 2.5]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[4],
+                            values: [-3, -4]
+                        }])
+                }
+            }];
+
+            v.onDataChanged({
+                dataViews: dataViews
+            });
+
+            setTimeout(() => {
+                expect($('.columnChart')).toBeInDOM();
+                let rects = $('.columnChart .column');
+                let factor = interactiveChart ? 0.84 : 1;
+                expect(rects.length).toBe(8);
+                expect(rects.eq(1).attr('height')).toBeCloseTo(40 * factor, -1); //clipped so only takes up 1/5th of the 1-6 range
+                expect(rects.eq(1).attr('y')).toBeCloseTo(0, -1);
+                expect(+rects.eq(3).attr('height')).toBe(0); //positive value, not in view
+                expect(rects.eq(6).attr('height')).toBeCloseTo(120 * factor, -1); //stacked, in full view
+                expect(rects.eq(6).attr('y')).toBeCloseTo(80 * factor, -1);
+                done();
+            }, DefaultWaitForRender);
+        });
+
         it('stacked column chart with partial highlight dom validation', (done) => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("abc"),
@@ -4608,23 +4797,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [54, 204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -4649,7 +4838,7 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it('stacked column chart with negative partial highlight dom validation', (done) => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("abc"),
@@ -4657,23 +4846,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: -234,
                                 max: -123,
                                 subtotal: -357,
                                 values: [-123, -234],
                                 highlights: [-54, -204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: -88,
                                 max: -12,
                                 subtotal: -100,
@@ -4706,23 +4895,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [154, 274]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -4751,23 +4940,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [-54, -204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -4796,16 +4985,16 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
@@ -4842,16 +5031,16 @@ module powerbitests {
             // Now add another series and make sure we get a stacked as expected...
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
@@ -4859,7 +5048,7 @@ module powerbitests {
                                 highlights: [154, null],
                             },
                             {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -4882,29 +5071,29 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
-        it('stacked column chart missing measure dom validation',(done) => {
+        it('stacked column chart missing measure dom validation', (done) => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("abc"),
                 mocks.dataViewScopeIdentity("def"),
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -4915,10 +5104,13 @@ module powerbitests {
             });
             v.onResizing({ height: 500, width: 500 });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .x.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.column').length).toBe(3);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('def');
+                expect(helpers.findElementText(ticksText.last())).toBe('def');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('def');
                 done();
             }, DefaultWaitForRender);
         });
@@ -4930,19 +5122,19 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [0.0001, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [12, -0.0001]
                             }])
                     }
@@ -4966,27 +5158,30 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [1, 3]
                             }])
                     }
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.column').length).toBe(2);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBe(4);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('3');
+                expect(helpers.findElementText(ticksText.last())).toBe('3');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('3');
                 done();
             }, DefaultWaitForRender);
         });
@@ -5008,11 +5203,14 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBe(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('10');
+                expect(helpers.findElementText(ticksText.last())).toBe('10');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('10');
                 done();
             }, DefaultWaitForRender);
         });
@@ -5042,11 +5240,14 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('2.5');
+                expect(helpers.findElementText(ticksText.last())).toBe('2.5');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('2.5');
                 done();
             }, DefaultWaitForRender);
         });
@@ -5103,19 +5304,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, 30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, 20, null, 88, 10]
                             }])
                     }
@@ -5134,19 +5335,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, -30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, -20, null, 88, 10]
                             }])
                     }
@@ -5232,7 +5433,7 @@ module powerbitests {
                 }
             ],
         };
-        let dataViewMetadataFourColumn: powerbi.DataViewMetadata = {
+        let dataViewMetadataFiveColumn: powerbi.DataViewMetadata = {
             columns: [
                 {
                     displayName: 'col1',
@@ -5278,15 +5479,15 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([{
-                            source: dataViewMetadataFourColumn.columns[1],
+                            source: dataViewMetadataFiveColumn.columns[1],
                             min: 100000,
                             max: 200000,
                             subtotal: 300000,
@@ -5296,10 +5497,13 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.column').length).toBe(2);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('100%');
+                expect(helpers.findElementText(ticksText.last())).toBe('100%');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('100%');
                 done();
             }, DefaultWaitForRender);
         });
@@ -5311,15 +5515,15 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([{
-                            source: dataViewMetadataFourColumn.columns[1],
+                            source: dataViewMetadataFiveColumn.columns[1],
                             min: 100000,
                             max: 200000,
                             subtotal: 300000,
@@ -5330,6 +5534,8 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.column').length).toBe(4);
@@ -5338,12 +5544,13 @@ module powerbitests {
                     .toBeLessThan(+$('.column')[0].attributes.getNamedItem('height').value);
                 expect(+$('.highlight')[0].attributes.getNamedItem('y').value)
                     .toBeGreaterThan(+$('.column')[0].attributes.getNamedItem('y').value);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('100%');
+                expect(helpers.findElementText(ticksText.last())).toBe('100%');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('100%');
                 expect($('.label').length).toBe(0);
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it('multi measure hundred percent column chart dom validation', (done) => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("abc"),
@@ -5351,22 +5558,22 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 100000,
                                 max: 200000,
                                 subtotal: 300000,
                                 values: [100000, 200000]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 100000,
                                 max: 200000,
                                 subtotal: 300000,
@@ -5376,10 +5583,13 @@ module powerbitests {
                 }]
             });
 
+            let ticksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.column').length).toBe(4);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('100%');
+                expect(helpers.findElementText(ticksText.last())).toBe('100%');
+                expect(helpers.findElementTitle(ticksText.last())).toBe('100%');
                 done();
             }, DefaultWaitForRender);
         });
@@ -5461,19 +5671,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, 30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, 20, null, 88, 10]
                             }])
                     }
@@ -5492,19 +5702,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, -30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, -20, null, 88, 10]
                             }])
                     }
@@ -5545,22 +5755,30 @@ module powerbitests {
                     type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
                 }]
         };
-        let dataViewMetadataFourColumn: powerbi.DataViewMetadata = {
+        let dataViewMetadataFiveColumn: powerbi.DataViewMetadata = {
             columns: [
                 {
                     displayName: 'col1',
                     queryName: 'col1',
                     type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Text)
-                },
-                {
+                }, {
                     displayName: 'col2',
                     queryName: 'col2',
                     isMeasure: true,
                     type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Integer)
-                },
-                {
+                }, {
                     displayName: 'col3',
                     queryName: 'col3',
+                    isMeasure: true,
+                    type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
+                }, {
+                    displayName: 'col4',
+                    queryName: 'col4',
+                    isMeasure: true,
+                    type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
+                }, {
+                    displayName: 'col5',
+                    queryName: 'col5',
                     isMeasure: true,
                     type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
                 }]
@@ -5619,7 +5837,7 @@ module powerbitests {
 
                 // Note: the exact text will be different depending on the environment in which the test is run, so we can't do an exact match.
                 // Just check that the text is truncated with ellipses.
-                let labelText = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text').first().text();
+                let labelText = helpers.findElementText($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').first());
                 expect(labelText.length).toBeLessThan(30);
                 expect(labelText.substr(labelText.length - 1)).toBe('…');
                 done();
@@ -5651,11 +5869,16 @@ module powerbitests {
                 }]
             });
 
+            let xTicksText: JQuery = $('.columnChart .axisGraphicsContext .x.axis .tick').find('text');
+            let yTicksText: JQuery = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.bar').length).toBe(2);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('200K');
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('def');
+                expect(helpers.findElementText(xTicksText.last())).toBe('200K');
+                expect(helpers.findElementTitle(xTicksText.last())).toBe('200K');
+                expect(helpers.findElementText(yTicksText.last())).toBe('def');
+                expect(helpers.findElementTitle(yTicksText.last())).toBe('def');
                 done();
             }, DefaultWaitForRender);
         });
@@ -5667,22 +5890,22 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -5699,6 +5922,116 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
 
+        it('stacked bar chart dom validation - start/end axis extents - pos', (done) => {
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity("a"),
+                mocks.dataViewScopeIdentity("b"),
+            ];
+            let metadata = _.cloneDeep(dataViewMetadataFiveColumn);
+            metadata.objects = {
+                valueAxis: {
+                    show: true,
+                    start: 1,
+                    end: 6,
+                }
+            };
+            let dataViews: powerbi.DataView[] = [{
+                metadata: metadata,
+                categorical: {
+                    categories: [{
+                        source: dataViewMetadataFiveColumn.columns[0],
+                        values: ['a', 'b'],
+                        identity: categoryIdentities,
+                    }],
+                    values: DataViewTransform.createValueColumns([
+                        {
+                            source: dataViewMetadataFiveColumn.columns[1],
+                            values: [2, -2]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[2],
+                            values: [-3, 4]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[3],
+                            values: [2.5, 2.5]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[4],
+                            values: [-3, -4]
+                        }])
+                }
+            }];
+
+            v.onDataChanged({
+                dataViews: dataViews
+            });
+
+            setTimeout(() => {
+                expect($('.columnChart')).toBeInDOM();
+                let rects = $('.columnChart .bar');
+                expect(rects.length).toBe(8);
+                expect(rects.eq(0).attr('width')).toBeCloseTo(95, -1); //clipped so only takes up 1/5th of the 1-6 range
+                expect(+rects.eq(0).attr('x')).toBeCloseTo(0, -1);
+                expect(+rects.eq(1).attr('width')).toBe(0); //negative value, not in view
+                expect(rects.eq(4).attr('width')).toBeCloseTo(240, -1); //stacked, in full view
+                expect(rects.eq(4).attr('x')).toBeCloseTo(95, -1);
+                done();
+            }, DefaultWaitForRender);
+        });
+
+        it('stacked bar chart dom validation - start/end axis extents - neg', (done) => {
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity("a"),
+                mocks.dataViewScopeIdentity("b"),
+            ];
+            let metadata = _.cloneDeep(dataViewMetadataFiveColumn);
+            metadata.objects = {
+                valueAxis: {
+                    show: true,
+                    start: -7,
+                    end: -1,
+                }
+            };
+            let dataViews: powerbi.DataView[] = [{
+                metadata: metadata,
+                categorical: {
+                    categories: [{
+                        source: dataViewMetadataFiveColumn.columns[0],
+                        values: ['a', 'b'],
+                        identity: categoryIdentities,
+                    }],
+                    values: DataViewTransform.createValueColumns([
+                        {
+                            source: dataViewMetadataFiveColumn.columns[1],
+                            values: [2, -2]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[2],
+                            values: [-3, 4]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[3],
+                            values: [2.5, 2.5]
+                        }, {
+                            source: dataViewMetadataFiveColumn.columns[4],
+                            values: [-3, -4]
+                        }])
+                }
+            }];
+
+            v.onDataChanged({
+                dataViews: dataViews
+            });
+
+            setTimeout(() => {
+                expect($('.columnChart')).toBeInDOM();
+                let rects = $('.columnChart .bar');
+                expect(rects.length).toBe(8);
+                expect(rects.eq(1).attr('width')).toBeCloseTo(80, -1); //clipped so only takes up 1/5th of the 1-6 range
+                expect(rects.eq(1).attr('x')).toBeCloseTo(400, -1);
+                expect(+rects.eq(3).attr('width')).toBe(0); //positive value, not in view
+                expect(rects.eq(6).attr('width')).toBeCloseTo(240, -1); //stacked, in full view
+                expect(rects.eq(6).attr('x')).toBeCloseTo(80, -1);
+                done();
+            }, DefaultWaitForRender);
+        });
+
         it('stacked bar chart partial highlight dom validation', (done) => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("abc"),
@@ -5706,23 +6039,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [54, 204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -5744,7 +6077,7 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it('stacked bar chart negative partial highlight dom validation', (done) => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("abc"),
@@ -5752,23 +6085,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: -234,
                                 max: -123,
                                 subtotal: -357,
                                 values: [-123, -234],
                                 highlights: [-54, -204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: -88,
                                 max: -12,
                                 subtotal: -100,
@@ -5798,23 +6131,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [154, 264]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -5840,23 +6173,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [-54, -204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -5903,8 +6236,16 @@ module powerbitests {
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.bar').length).toBe(2);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('200K');
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('def');
+
+                let labels = $('.columnChart .axisGraphicsContext .x.axis .tick').find('text');
+
+                expect(helpers.findElementText($(labels).last())).toBe('200K');
+                expect(helpers.findElementTitle($(labels).last())).toBe('200K');
+
+                labels = $('.columnChart .axisGraphicsContext .y.axis .tick').find('text');
+
+                expect(helpers.findElementText($(labels).last())).toBe('def');
+                expect(helpers.findElementTitle($(labels).last())).toBe('def');
 
                 // Legend should be empty, axis should be further up to take the extra space.
                 if (!interactiveChart) expect($('.legendItem')).not.toBeInDOM();
@@ -5916,22 +6257,22 @@ module powerbitests {
                 // Update the data set so that the chart is redrawn with multiple series and a legend
                 v.onDataChanged({
                     dataViews: [{
-                        metadata: dataViewMetadataFourColumn,
+                        metadata: dataViewMetadataFiveColumn,
                         categorical: {
                             categories: [{
-                                source: dataViewMetadataFourColumn.columns[0],
+                                source: dataViewMetadataFiveColumn.columns[0],
                                 values: ['abc', 'def'],
                                 identity: categoryIdentities,
                             }],
                             values: DataViewTransform.createValueColumns([
                                 {
-                                    source: dataViewMetadataFourColumn.columns[1],
+                                    source: dataViewMetadataFiveColumn.columns[1],
                                     min: 123,
                                     max: 234,
                                     subtotal: 357,
                                     values: [123, 234]
                                 }, {
-                                    source: dataViewMetadataFourColumn.columns[2],
+                                    source: dataViewMetadataFiveColumn.columns[2],
                                     min: 12,
                                     max: 88,
                                     subtotal: 100,
@@ -5964,22 +6305,22 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -6003,19 +6344,19 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [0.0001, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [12, -0.0001]
                             }])
                     }
@@ -6039,16 +6380,16 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [1, 3]
                             }])
                     }
@@ -6059,7 +6400,8 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.bar').length).toBe(2);
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBe(4);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('3');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('3');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('3');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6085,7 +6427,8 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBe(0);
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('10');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('10');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('10');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6119,7 +6462,8 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('2.5');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('2.5');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('2.5');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6176,19 +6520,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, 30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, 20, null, 88, 10]
                             }])
                     }
@@ -6207,19 +6551,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, -30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, -20, null, 88, 10]
                             }])
                     }
@@ -6260,7 +6604,7 @@ module powerbitests {
                 }
             ],
         };
-        let dataViewMetadataFourColumn: powerbi.DataViewMetadata = {
+        let dataViewMetadataFiveColumn: powerbi.DataViewMetadata = {
             columns: [
                 {
                     displayName: 'col1',
@@ -6306,15 +6650,15 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([{
-                            source: dataViewMetadataFourColumn.columns[1],
+                            source: dataViewMetadataFiveColumn.columns[1],
                             min: 100000,
                             max: 200000,
                             subtotal: 300000,
@@ -6327,7 +6671,8 @@ module powerbitests {
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.bar').length).toBe(2);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('100%');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('100%');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('100%');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6339,15 +6684,15 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([{
-                            source: dataViewMetadataFourColumn.columns[1],
+                            source: dataViewMetadataFiveColumn.columns[1],
                             min: 100000,
                             max: 200000,
                             subtotal: 300000,
@@ -6366,7 +6711,8 @@ module powerbitests {
                     .toBeLessThan(+$('.bar')[0].attributes.getNamedItem('width').value);
                 expect(+$('.highlight')[0].attributes.getNamedItem('x').value)
                     .toBe(+$('.bar')[0].attributes.getNamedItem('x').value);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('100%');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('100%');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('100%');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6378,22 +6724,22 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 100000,
                                 max: 200000,
                                 subtotal: 300000,
                                 values: [100000, 200000]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 100000,
                                 max: 200000,
                                 subtotal: 300000,
@@ -6406,7 +6752,8 @@ module powerbitests {
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.bar').length).toBe(4);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('100%');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('100%');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('100%');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6488,19 +6835,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, 30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, 20, null, 88, 10]
                             }])
                     }
@@ -6519,19 +6866,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, -30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, -20, null, 88, 10]
                             }])
                     }
@@ -6572,7 +6919,7 @@ module powerbitests {
                 }
             ],
         };
-        let dataViewMetadataFourColumn: powerbi.DataViewMetadata = {
+        let dataViewMetadataFiveColumn: powerbi.DataViewMetadata = {
             columns: [
                 {
                     displayName: 'col1',
@@ -6624,28 +6971,28 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
                                 values: [12, 88]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[3],
+                                source: dataViewMetadataFiveColumn.columns[3],
                                 min: 27,
                                 max: 113,
                                 subtotal: 140,
@@ -6676,23 +7023,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [54, 204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -6715,7 +7062,7 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it('clustered bar chart negative partial highlight dom validation', (done) => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("abc"),
@@ -6723,23 +7070,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: -234,
                                 max: -54,
                                 subtotal: -357,
                                 values: [-123, -234],
                                 highlights: [-54, -204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: -88,
                                 max: -12,
                                 subtotal: -100,
@@ -6769,23 +7116,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [150, 264]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -6817,23 +7164,23 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234],
                                 highlights: [-54, -204]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -6865,22 +7212,22 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 min: 123,
                                 max: 234,
                                 subtotal: 357,
                                 values: [123, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 min: 12,
                                 max: 88,
                                 subtotal: 100,
@@ -6893,7 +7240,8 @@ module powerbitests {
             setTimeout(() => {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.bar').length).toBe(3);
-                expect($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last().text()).toBe('def');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last())).toBe('def');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .y.axis .tick').find('text').last())).toBe('def');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6905,19 +7253,19 @@ module powerbitests {
             ];
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: ['abc', 'def'],
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [0.0001, 234]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [12, -0.0001]
                             }])
                     }
@@ -6955,7 +7303,8 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBe(0);
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('10');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('10');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('10');
                 done();
             }, DefaultWaitForRender);
         });
@@ -6989,7 +7338,8 @@ module powerbitests {
                 expect($('.columnChart')).toBeInDOM();
                 expect($('.columnChart .axisGraphicsContext .x.axis .tick').length).toBeGreaterThan(0);
                 expect($('.columnChart .axisGraphicsContext .y.axis .tick').length).toBeGreaterThan(0);
-                expect($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last().text()).toBe('2.5');
+                expect(helpers.findElementText($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('2.5');
+                expect(helpers.findElementTitle($('.columnChart .axisGraphicsContext .x.axis .tick').find('text').last())).toBe('2.5');
                 done();
             }, DefaultWaitForRender);
         });
@@ -7046,19 +7396,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, 30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, 20, null, 88, 10]
                             }])
                     }
@@ -7077,19 +7427,19 @@ module powerbitests {
             let categoryIdentities = categoryValues.map(d => mocks.dataViewScopeIdentity(d));
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataFourColumn,
+                    metadata: dataViewMetadataFiveColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataFourColumn.columns[0],
+                            source: dataViewMetadataFiveColumn.columns[0],
                             values: categoryValues,
                             identity: categoryIdentities,
                         }],
                         values: DataViewTransform.createValueColumns([
                             {
-                                source: dataViewMetadataFourColumn.columns[1],
+                                source: dataViewMetadataFiveColumn.columns[1],
                                 values: [10, 0, -30, null, 0]
                             }, {
-                                source: dataViewMetadataFourColumn.columns[2],
+                                source: dataViewMetadataFiveColumn.columns[2],
                                 values: [0, -20, null, 88, 10]
                             }])
                     }
@@ -7116,19 +7466,19 @@ module powerbitests {
             let refLineColor2 = '#ff00ff';
 
             let dataView: powerbi.DataView = {
-                metadata: dataViewMetadataFourColumn,
+                metadata: dataViewMetadataFiveColumn,
                 categorical: {
                     categories: [{
-                        source: dataViewMetadataFourColumn.columns[0],
+                        source: dataViewMetadataFiveColumn.columns[0],
                         values: categoryValues,
                         identity: categoryIdentities,
                     }],
                     values: DataViewTransform.createValueColumns([
                         {
-                            source: dataViewMetadataFourColumn.columns[1],
+                            source: dataViewMetadataFiveColumn.columns[1],
                             values: [10, 0, -30, null, 0]
                         }, {
-                            source: dataViewMetadataFourColumn.columns[2],
+                            source: dataViewMetadataFiveColumn.columns[2],
                             values: [0, -20, null, 88, 10]
                         }])
                 }
@@ -7286,7 +7636,7 @@ module powerbitests {
                 var points = <VisualObjectInstanceEnumerationObject>v.enumerateObjectInstances({ objectName: 'dataPoint' });
                 expect(points.instances.length).toBe(3);
                 expect(points.instances[0]['properties']['defaultColor']).toBeDefined();
-                expect(points.instances[0]['properties']['showAllDataPoints']).toBeDefined();    
+                expect(points.instances[0]['properties']['showAllDataPoints']).toBeDefined();
 
                 let defaultColor = (<powerbi.Fill>(points.instances[0]['properties']['defaultColor'])).solid.color;
                 let color1 = (<powerbi.Fill>(points.instances[2]['properties']['fill'])).solid.color;
@@ -7301,7 +7651,7 @@ module powerbitests {
                 expect(points.instances.length).toBe(1);
                 expect(points.instances[0].displayName).toBeUndefined();
 
-                var points = <VisualObjectInstanceEnumerationObject>v.enumerateObjectInstances({ objectName: 'legend' });                
+                var points = <VisualObjectInstanceEnumerationObject>v.enumerateObjectInstances({ objectName: 'legend' });
                 expect(points).toBeUndefined();
 
                 done();
@@ -7397,7 +7747,7 @@ module powerbitests {
                 expect('axisType' in points.instances[0].properties).toBeTruthy();
                 expect('show' in points.instances[0].properties).toBeTruthy();
                 expect('showAxisTitle' in points.instances[0].properties).toBeTruthy();
-                expect('axisStyle' in points.instances[0].properties).toBeTruthy();               
+                expect('axisStyle' in points.instances[0].properties).toBeTruthy();
 
                 done();
             }, DefaultWaitForRender);
@@ -7435,7 +7785,7 @@ module powerbitests {
 
             setTimeout(() => {
                 var points = <VisualObjectInstanceEnumerationObject>v.enumerateObjectInstances({ objectName: 'dataPoint' });
-                expect(points.instances.length).toBe(2);                
+                expect(points.instances.length).toBe(2);
                 expect(points.instances[0].displayName).toBe(measureColumn.displayName);
                 expect(points.instances[0].selector).toEqual({ metadata: measureColumn.queryName });
                 expect(points.instances[1].displayName).toBe(measure2Column.displayName);
@@ -7738,7 +8088,7 @@ module powerbitests {
             }, DefaultWaitForRender);
         });
     });
-    
+
     describe("BarChart Interactivity", () => {
         let v: powerbi.IVisual, element: JQuery;
         let dataViewMetadataTwoColumn: powerbi.DataViewMetadata = {
@@ -7863,7 +8213,7 @@ module powerbitests {
             let trigger = powerbitests.helpers.getDragStartTriggerFunctionForD3(bars[1]);
             expect(trigger).not.toBeDefined();
         });
-        
+
         it('Bar chart without selection enabled', () => {
             let hostServices = mocks.createVisualHostServices();
             v = powerbi.visuals.visualPluginFactory.create().getPlugin('barChart').create();
@@ -7945,7 +8295,7 @@ module powerbitests {
 
             let bars = element.find('.bar');
             expect(bars.length).toBe(5);
-            
+
             let trigger0 = powerbitests.helpers.getClickTriggerFunctionForD3(bars[0]);
             let trigger3 = powerbitests.helpers.getClickTriggerFunctionForD3(bars[3]);
             let mockEvent = {
@@ -7955,7 +8305,7 @@ module powerbitests {
             };
 
             spyOn(hostServices, 'onSelect').and.callThrough();
-            
+
             expect(bars[0].style.fillOpacity).toBe(DefaultOpacity);
             expect(bars[1].style.fillOpacity).toBe(DefaultOpacity);
             expect(bars[2].style.fillOpacity).toBe(DefaultOpacity);
@@ -8064,7 +8414,7 @@ module powerbitests {
 
             let bars = element.find('.bar');
             expect(bars.length).toBe(5);
-            
+
             let trigger0 = powerbitests.helpers.getClickTriggerFunctionForD3(bars[0]);
             let trigger3 = powerbitests.helpers.getClickTriggerFunctionForD3(bars[3]);
             let mockEvent = {
@@ -8322,7 +8672,7 @@ module powerbitests {
             expect(bars[1].style.fillOpacity).toBe(DimmedOpacity);
             expect(bars[2].style.fillOpacity).toBe(DimmedOpacity);
             expect(bars[3].style.fillOpacity).toBe(DimmedOpacity);
-            expect(bars[4].style.fillOpacity).toBe(DefaultOpacity); 
+            expect(bars[4].style.fillOpacity).toBe(DefaultOpacity);
             expect(hostServices.onSelect).toHaveBeenCalledWith(
                 {
                     data: [
@@ -8597,7 +8947,7 @@ module powerbitests {
             expect(cartesianVisualHost.updateLegend).not.toHaveBeenCalled();
         });
 
-        it('Legend validation',() => {
+        it('Legend validation', () => {
             let barChart = (<any>v).layers[0];
 
             // trigger select column
@@ -9119,7 +9469,7 @@ module powerbitests {
 
                     setTimeout(() => {
                         ticks = $('.columnChart .axisGraphicsContext .y.axis .tick');
-                        let tickValues = _.map(ticks.get(), (v) => $(v).text());
+                        let tickValues = _.map(ticks.get(), (v) => $(v).clone().find('title').remove().end().text());
 
                         expect(tickValues).toEqual(expectedValues);
 
@@ -9178,7 +9528,7 @@ module powerbitests {
 
                     setTimeout(() => {
                         ticks = $('.columnChart .axisGraphicsContext .x.axis .tick');
-                        let tickValues = _.map(ticks.get(), (v) => $(v).text());
+                        let tickValues = _.map(ticks.get(), (v) => $(v).clone().find('title').remove().end().text());
 
                         expect(tickValues).toEqual(expectedValues);
 
@@ -9308,7 +9658,7 @@ module powerbitests {
                 interactivity: { isInteractiveLegend: false },
                 animation: { transitionImmediate: true },
             });
-        }); 
+        });
 
         function setAxisType(xType: any) {
             (<any>dataViewMetadataTwoColumn.objects['categoryAxis']).axisType = xType;
@@ -9366,19 +9716,19 @@ module powerbitests {
                     }
                 }]
             });
-            
-            labels = $('.x.axis').children('.tick');            
+
+            labels = $('.x.axis').children('.tick').find('text');            
 
             //Verify begin&end labels
-            expect(labels[0].textContent).toBe('0.00000M');
-            expect(labels[labels.length - 1].textContent).toBe('0.10000M');
+            expect(helpers.findElementText(labels.first())).toBe('0.00000M');
+            expect(helpers.findElementText(labels.last())).toBe('0.10000M');
 
-            labels = $('.y.axis').children('.tick');            
+            labels = $('.y.axis').children('.tick').find('text');            
 
             //Verify begin&end labels
-            expect(labels[0].textContent).toBe('0.00000M');
-            expect(labels[labels.length - 1].textContent).toBe('0.20000M');
-        }); 
+            expect(helpers.findElementText(labels.first())).toBe('0.00000M');
+            expect(helpers.findElementText(labels.last())).toBe('0.20000M');
+        });
 
         it('X Axis Customization: Verify Scalar and Categorical axis type', () => {
             let categoryIdentities = [
@@ -9470,7 +9820,7 @@ module powerbitests {
                 }]
             });
             bars = $('.column');
-            labels = $('.x.axis').children('.tick');
+            labels = $('.x.axis').children('.tick').find('text');
             unitLength = (bars[1].getAttribute('x') - bars[0].getAttribute('x')) / 1500;
             columnWidth = bars[0].getAttribute('width');
 
@@ -9484,9 +9834,13 @@ module powerbitests {
             expect(+bars[1].getAttribute('x') + +columnWidth).toBeLessThan(+bars[2].getAttribute('x'));
             expect(+bars[2].getAttribute('x') + +columnWidth).toBeLessThan(+bars[3].getAttribute('x'));
 
-            //Verify begin&end labels
-            expect(labels[0].textContent).toBe('0K');
-            expect(labels[labels.length - 1].textContent).toBe('100K');
+            //Verify begin&end labels text
+            expect(helpers.findElementText(labels.first())).toBe('0K');
+            expect(helpers.findElementTitle(labels.first())).toBe('0K');
+
+            //Verify begin&end labels tooltip
+            expect(helpers.findElementText(labels.last())).toBe('100K');
+            expect(helpers.findElementTitle(labels.last())).toBe('100K');
         });
 
         it('Big Range scale check', () => {
@@ -9528,7 +9882,7 @@ module powerbitests {
                 }]
             });
             bars = $('.column');
-            labels = $('.x.axis').children('.tick');
+            labels = $('.x.axis').children('.tick').find('text');
             unitLength = (bars[1].getAttribute('x') - bars[0].getAttribute('x')) / 19950;
             columnWidth = bars[0].getAttribute('width');
 
@@ -9543,8 +9897,12 @@ module powerbitests {
             expect(+bars[1].getAttribute('x') + +columnWidth).toBeLessThan(+bars[3].getAttribute('x'));
 
             //Verify begin&end labels
-            expect(labels[0].textContent).toBe('0K');
-            expect(labels[labels.length - 1].textContent).toBe('50K');
+            expect(helpers.findElementText(labels.first())).toBe('0K');
+            expect(helpers.findElementText(labels.last())).toBe('50K');
+
+            //Verify begin&end label tooltip
+            expect(helpers.findElementTitle(labels.first())).toBe('0K');
+            expect(helpers.findElementTitle(labels.last())).toBe('50K');
         });
 
         it('Negative And Positive scale values check', () => {
@@ -9587,7 +9945,7 @@ module powerbitests {
                 }]
             });
             bars = $('.column');
-            labels = $('.x.axis').children('.tick');
+            labels = $('.x.axis').children('.tick').find('text');
             unitLength = (+bars[1].getAttribute('x') - +bars[0].getAttribute('x')) / 50;
             columnWidth = bars[0].getAttribute('width');
 
@@ -9602,8 +9960,11 @@ module powerbitests {
             expect(+bars[1].getAttribute('x') + +columnWidth).toBeLessThan(+bars[2].getAttribute('x'));
 
             //Verify begin&end labels
-            expect(labels[0].textContent).toBe('-100');
-            expect(labels[labels.length - 1].textContent).toBe('100');
+            expect(helpers.findElementText(labels.first())).toBe('-100');
+            expect(helpers.findElementTitle(labels.first())).toBe('-100');
+
+            expect(helpers.findElementText(labels.last())).toBe('100');
+            expect(helpers.findElementTitle(labels.last())).toBe('100');
         });
 
         it('X Axis Customization: Set axis color', () => {
@@ -9646,7 +10007,7 @@ module powerbitests {
                     }
                 }]
             };
-            v.onDataChanged(dataChangedOptions);            
+            v.onDataChanged(dataChangedOptions);
             expect($('.x.axis').children('.tick').find('text').css('fill')).toBe(labelColor);
         });
 
@@ -9704,10 +10065,18 @@ module powerbitests {
 
             let axisLabels = $('.x.axis .tick text');
             expect(axisLabels.length).toBe(4);
-            expect(axisLabels.eq(0).text()).toBe('(Blank)');
-            expect(axisLabels.eq(1).text()).toBe('1/1/2012');
-            expect(axisLabels.eq(2).text()).toBe('1/1/2013');
-            expect(axisLabels.eq(3).text()).toBe('1/1/2014');
+
+            //check text
+            expect(helpers.findElementText(axisLabels.eq(0))).toBe('(Blank)');
+            expect(helpers.findElementText(axisLabels.eq(1))).toBe('1/1/2012');
+            expect(helpers.findElementText(axisLabels.eq(2))).toBe('1/1/2013');
+            expect(helpers.findElementText(axisLabels.eq(3))).toBe('1/1/2014');
+
+            //check tooltip
+            expect(helpers.findElementTitle(axisLabels.eq(0))).toBe('(Blank)');
+            expect(helpers.findElementTitle(axisLabels.eq(1))).toBe('1/1/2012');
+            expect(helpers.findElementTitle(axisLabels.eq(2))).toBe('1/1/2013');
+            expect(helpers.findElementTitle(axisLabels.eq(3))).toBe('1/1/2014');
         });
     });
 
@@ -9768,7 +10137,7 @@ module powerbitests {
                 interactivity: { isInteractiveLegend: false },
                 animation: { transitionImmediate: true },
             });
-        });       
+        });
 
         it('verify begin & end', () => {
             let categoryIdentities = [
@@ -9779,7 +10148,7 @@ module powerbitests {
             ];
 
             v.onDataChanged({
-                    dataViews: [{
+                dataViews: [{
                     metadata: dataViewMetadataTwoColumn,
                     categorical: {
                         categories: [{
@@ -9798,10 +10167,13 @@ module powerbitests {
                 }]
             });
             bars = $('.column');
-            labels = $('.y.axis').children('.tick');
+            labels = $('.y.axis').children('.tick').find('text');
 
-            expect(labels[0].textContent).toBe('0K');
-            expect(labels[labels.length - 1].textContent).toBe('200K');
+            expect(helpers.findElementText(labels.first())).toBe('0K');
+            expect(helpers.findElementTitle(labels.first())).toBe('0K');
+
+            expect(helpers.findElementText(labels.last())).toBe('200K');
+            expect(helpers.findElementTitle(labels.last())).toBe('200K');
         });
 
         it('verify begin & end - Big Scale', () => {
@@ -9832,10 +10204,13 @@ module powerbitests {
                 }]
             });
             bars = $('.column');
-            labels = $('.y.axis').children('.tick');
+            labels = $('.y.axis').children('.tick').find('text');
 
-            expect(labels[0].textContent).toBe('0K');
-            expect(labels[labels.length - 1].textContent).toBe('200K');
+            expect(helpers.findElementText(labels.first())).toBe('0K');
+            expect(helpers.findElementTitle(labels.first())).toBe('0K');
+
+            expect(helpers.findElementText(labels.last())).toBe('200K');
+            expect(helpers.findElementTitle(labels.last())).toBe('200K');
         });
 
         it('verify Y axis set color', () => {
@@ -9869,11 +10244,15 @@ module powerbitests {
                 }]
             });
             bars = $('.column');
-            labels = $('.y.axis').children('.tick');
+            labels = $('.y.axis').children('.tick').find('text');
 
-            expect(labels[0].textContent).toBe('0K');
-            expect(labels[labels.length - 1].textContent).toBe('200K');
-            expect(labels.find('text').css('fill')).toBe(labelColor);
+            expect(helpers.findElementText(labels.first())).toBe('0K');
+            expect(helpers.findElementTitle(labels.first())).toBe('0K');
+
+            expect(helpers.findElementText(labels.last())).toBe('200K');
+            expect(helpers.findElementTitle(labels.last())).toBe('200K');
+
+            expect(labels.css('fill')).toBe(labelColor);
         });
 
         it('verify Y position change: the axis text should be further right than the axis line', () => {
@@ -9919,9 +10298,9 @@ module powerbitests {
                 });
                 expect(yaxisText['x']['baseVal'].getItem(0).value).toBeLessThan(yaxisLine['x2'].baseVal.value);
             }, DefaultWaitForRender);
-        });        
+        });
     });
-    
+
     describe("X Axis Customization: Bar Chart", () => {
         let v: powerbi.IVisual, element: JQuery;
         let hostServices = powerbitests.mocks.createVisualHostServices();
@@ -10033,18 +10412,24 @@ module powerbitests {
                 }]
             });
 
-            labels = $('.y.axis').children('.tick');            
+            labels = $('.y.axis').children('.tick').find('text');            
 
             //Verify begin&end labels
-            expect(labels[0].textContent).toBe('0.00000M');
-            expect(labels[labels.length - 1].textContent).toBe('0.10000M');
+            expect(helpers.findElementText(labels.first())).toBe('0.00000M');
+            expect(helpers.findElementText(labels.last())).toBe('0.10000M');
 
-            labels = $('.x.axis').children('.tick');            
+            expect(helpers.findElementTitle(labels.first())).toBe('0.00000M');
+            expect(helpers.findElementTitle(labels.last())).toBe('0.10000M');
+
+            labels = $('.x.axis').children('.tick').find('text');            
 
             //Verify begin&end labels
-            expect(labels[0].textContent).toBe('0.00000M');
-            expect(labels[labels.length - 1].textContent).toBe('0.20000M');
-        }); 
+            expect(helpers.findElementText(labels.first())).toBe('0.00000M');
+            expect(helpers.findElementText(labels.last())).toBe('0.20000M');
+
+            expect(helpers.findElementTitle(labels.first())).toBe('0.00000M');
+            expect(helpers.findElementTitle(labels.last())).toBe('0.20000M');
+        });
 
         it('verify begin & end', () => {
             let categoryIdentities = [
@@ -10074,10 +10459,13 @@ module powerbitests {
                 }]
             });
             bars = $('.column');
-            labels = $('.x.axis').children('.tick');
+            labels = $('.x.axis').children('.tick').find('text');
 
-            expect(labels[0].textContent).toBe('0K');
-            expect(labels[labels.length - 1].textContent).toBe('200K');
+            expect(helpers.findElementText(labels.first())).toBe('0K');
+            expect(helpers.findElementTitle(labels.first())).toBe('0K');
+
+            expect(helpers.findElementText(labels.last())).toBe('200K');
+            expect(helpers.findElementTitle(labels.last())).toBe('200K');
         });
 
         it('verify begin & end - Big Range', () => {
@@ -10108,10 +10496,13 @@ module powerbitests {
                 }]
             });
             bars = $('.column');
-            labels = $('.x.axis').children('.tick');
+            labels = $('.x.axis').children('.tick').find('text');
 
-            expect(labels[0].textContent).toBe('0K');
-            expect(labels[labels.length - 1].textContent).toBe('200K');
+            expect(helpers.findElementText(labels.first())).toBe('0K');
+            expect(helpers.findElementTitle(labels.first())).toBe('0K');
+
+            expect(helpers.findElementText(labels.last())).toBe('200K');
+            expect(helpers.findElementTitle(labels.last())).toBe('200K');
         });
     });
 
@@ -10123,7 +10514,7 @@ module powerbitests {
         let labels;
         let barHeight: number;
         let barHeightArray = [];
-        let barArrayLength;        
+        let barArrayLength;
 
         let dataViewMetadataTwoColumn: powerbi.DataViewMetadata = {
             columns: [
@@ -10177,7 +10568,7 @@ module powerbitests {
                 animation: { transitionImmediate: true },
             });
         });
-        
+
         it('Basic scale check', () => {
             let categoryIdentities = [
                 mocks.dataViewScopeIdentity("500"),
@@ -10206,7 +10597,7 @@ module powerbitests {
                 }]
             });
             bars = $('.bar');
-            labels = $('.y.axis').children('.tick');
+            labels = $('.y.axis').children('.tick').find('text');
             barHeight = bars[0].getAttribute('height');
             barHeightArray = [];
             barArrayLength = bars.length;
@@ -10217,8 +10608,11 @@ module powerbitests {
             unitLength = (+barHeightArray[1] - +barHeightArray[0]) / 5000;            
 
             //Verify begin&end labels
-            expect(labels[0].textContent).toBe('0K');
-            expect(labels[labels.length - 1].textContent).toBe('100K');
+            expect(helpers.findElementText(labels.first())).toBe('0K');
+            expect(helpers.findElementTitle(labels.first())).toBe('0K');
+
+            expect(helpers.findElementText(labels.last())).toBe('100K');
+            expect(helpers.findElementTitle(labels.last())).toBe('100K');
         });
     });
 
@@ -10340,7 +10734,7 @@ module powerbitests {
                     }
                 }]
             });
-;
+            ;
             let title = $('.legendText');
             expect(title.length).toBe(1);
             expect(title.text()).toBe('group');
@@ -10362,7 +10756,7 @@ module powerbitests {
                 interactivity: { dragDataPoint: true },
             });
             v.onDataChanged(getMetadataForLegendTest(dataViewMetadataTwoColumnWithGroup, labelColor, labelFontSize));
-            
+
             let legend = element.find('.legend');
             let legendTitle = legend.find('.legendTitle');
             let legendText = legend.find('.legendItem').find('.legendText');
@@ -10404,44 +10798,44 @@ module powerbitests {
         });
     });
 
-    function getMetadataForLegendTest(baseMetadata: powerbi.DataViewMetadata, labelColor: string,labelFontSize: number): powerbi.VisualDataChangedOptions {
+    function getMetadataForLegendTest(baseMetadata: powerbi.DataViewMetadata, labelColor: string, labelFontSize: number): powerbi.VisualDataChangedOptions {
 
-            let identities = [mocks.dataViewScopeIdentity('identity'),
-            ];
+        let identities = [mocks.dataViewScopeIdentity('identity'),
+        ];
 
         let dataViewMetadata = Prototype.inherit(baseMetadata);
-            dataViewMetadata.objects = {
-                legend:
-                {
-                    titleText: 'my title text',
-                    show: true,
-                    showTitle: true,
-                    labelColor: { solid: { color: labelColor } },
+        dataViewMetadata.objects = {
+            legend:
+            {
+                titleText: 'my title text',
+                show: true,
+                showTitle: true,
+                labelColor: { solid: { color: labelColor } },
                 fontSize: labelFontSize,
-                }
-            };
+            }
+        };
 
         return {
-                dataViews: [{
-                    metadata: dataViewMetadata,
-                    categorical: {
-                        categories: [
-                            {
-                                source: dataViewMetadata.columns[0],
-                                values: ['a', 'b', 'c', 'd', 'e'],
-                                identity: identities,
+            dataViews: [{
+                metadata: dataViewMetadata,
+                categorical: {
+                    categories: [
+                        {
+                            source: dataViewMetadata.columns[0],
+                            values: ['a', 'b', 'c', 'd', 'e'],
+                            identity: identities,
 
-                            }],
+                        }],
 
-                        values: DataViewTransform.createValueColumns([
-                            {
-                                source: dataViewMetadata.columns[1],
-                                values: [0.5, 2, 1, 1.5, 9],
-                                identity: identities[0],
-                            },
-                        ]),
-                    },
-                }]
+                    values: DataViewTransform.createValueColumns([
+                        {
+                            source: dataViewMetadata.columns[1],
+                            values: [0.5, 2, 1, 1.5, 9],
+                            identity: identities[0],
+                        },
+                    ]),
+                },
+            }]
         };
     }
 
@@ -10455,7 +10849,7 @@ module powerbitests {
 
         let element = powerbitests.helpers.testDom('500', '500');
         let hostServices = powerbitests.mocks.createVisualHostServices();
-            let categoryIdentities = [mocks.dataViewScopeIdentity("John Domo")];
+        let categoryIdentities = [mocks.dataViewScopeIdentity("John Domo")];
         let v = powerbi.visuals.visualPluginFactory.create().getPlugin('columnChart').create();
         v.init({
             element: element,
@@ -10502,8 +10896,11 @@ module powerbitests {
                 }
             }]
         });
-        expect($('.xAxisLabel').first().text()).toBe('AxesTitleTest');
-        expect($('.yAxisLabel').first().text()).toBe('AxesTitleTest');
+        expect(helpers.findElementText($('.xAxisLabel'))).toBe('AxesTitleTest');
+        expect(helpers.findElementTitle($('.xAxisLabel'))).toBe('AxesTitleTest');
+
+        expect(helpers.findElementText($('.yAxisLabel'))).toBe('AxesTitleTest');
+        expect(helpers.findElementTitle($('.yAxisLabel'))).toBe('AxesTitleTest');
 
         dataViewMetadataOneColumn.objects = {
             categoryAxis: {
@@ -10574,7 +10971,8 @@ module powerbitests {
             }]
         });
         expect($('.xAxisLabel').length).toBe(0);
-        expect($('.yAxisLabel').first().text()).toBe('AxesTitleTest');
+        expect(helpers.findElementText($('.yAxisLabel'))).toBe('AxesTitleTest');
+        expect(helpers.findElementTitle($('.yAxisLabel'))).toBe('AxesTitleTest');
 
         dataViewMetadataOneColumn.objects = {
             categoryAxis: {
@@ -10602,7 +11000,8 @@ module powerbitests {
                 }
             }]
         });
-        expect($('.xAxisLabel').first().text()).toBe('AxesTitleTest');
+        expect(helpers.findElementText($('.xAxisLabel').first())).toBe('AxesTitleTest');
+        expect(helpers.findElementTitle($('.xAxisLabel').first())).toBe('AxesTitleTest');
         expect($('.yAxisLabel').length).toBe(0);
     });
 
@@ -10738,7 +11137,7 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-        
+
         it('with NaN value shows warning', (done) => {
             let warningSpy = jasmine.createSpy('setWarnings');
 
@@ -10933,11 +11332,11 @@ module powerbitests {
     describe("Clustered Bar Chart Labels Color", () => columnChartDataLabelsFormatValidation('clusteredBarChart'));
     describe("Clustered Column Chart Labels Color", () => columnChartDataLabelsFormatValidation('clusteredColumnChart'));
 
-    describe("Log scale checks", () => {
+    function logScaleTests(chartType: string) {
         let v: powerbi.IVisual, element: JQuery;
         let hostServices = powerbitests.mocks.createVisualHostServices();
 
-        let dataViewMetadataTwoColumn: powerbi.DataViewMetadata = {
+        let dataViewMetadataThreeColumn: powerbi.DataViewMetadata = {
             columns: [
                 {
                     displayName: 'col1',
@@ -10953,14 +11352,7 @@ module powerbitests {
                 {
                     displayName: 'col3',
                     queryName: 'col3',
-                    isMeasure: true,
-                    type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
-                },
-                {
-                    displayName: 'col4',
-                    queryName: 'col4',
-                    isMeasure: true,
-                    type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Double)
+                    type: ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Text)
                 }],
             objects: {
                 valueAxis: {
@@ -10976,7 +11368,7 @@ module powerbitests {
 
         beforeEach(() => {
             element = powerbitests.helpers.testDom('500', '900');
-            v = powerbi.visuals.visualPluginFactory.create().getPlugin('columnChart').create();
+            v = powerbi.visuals.visualPluginFactory.create().getPlugin(chartType).create();
             v.init({
                 element: element,
                 host: hostServices,
@@ -10997,7 +11389,7 @@ module powerbitests {
                 mocks.dataViewScopeIdentity("5000"),
                 mocks.dataViewScopeIdentity("10000"),
             ];
-            dataViewMetadataTwoColumn.objects = {
+            dataViewMetadataThreeColumn.objects = {
                 valueAxis: {
                     show: true,
                     start: 10,
@@ -11010,15 +11402,15 @@ module powerbitests {
             };
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataTwoColumn,
+                    metadata: dataViewMetadataThreeColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataTwoColumn.columns[0],
+                            source: dataViewMetadataThreeColumn.columns[0],
                             values: [500, 2000, 5000, 10000],
                             identity: categoryIdentities
                         }],
                         values: DataViewTransform.createValueColumns([{
-                            source: dataViewMetadataTwoColumn.columns[1],
+                            source: dataViewMetadataThreeColumn.columns[1],
                             min: 50000,
                             max: 200000,
                             subtotal: 500000,
@@ -11027,12 +11419,80 @@ module powerbitests {
                     }
                 }]
             });
-            let logLabels: any = $('.y.axis').children('.tick');
+            let valueAxisSelector = chartType.indexOf('bar') >= 0 ? '.x.axis' : '.y.axis';
+            let logLabels: any = $(valueAxisSelector).children('.tick').find('text');
             expect(logLabels.length).toBeGreaterThan(0);
 
             for (let i = 0, ilen = logLabels.length; i < ilen; i++) {
-                let labelValue = +expect(logLabels[i].textContent).actual.replace(',', '');
+                let labelValue = +expect(helpers.findElementText(logLabels.eq(i))).actual.replace(',', '');
                 expect(AxisHelper.powerOfTen(labelValue)).toBeTruthy();
+            }
+        });
+
+        it('Log scale - DOM size checks', () => {
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity("Jan"),
+                mocks.dataViewScopeIdentity("Feb"),
+                mocks.dataViewScopeIdentity("Mar"),
+                mocks.dataViewScopeIdentity("Apr"),
+            ];
+            dataViewMetadataThreeColumn.objects = {
+                valueAxis: {
+                    show: true,
+                    start: 100,
+                    end: undefined, //auto
+                    axisType: AxisType.categorical,
+                    showAxisTitle: true,
+                    axisStyle: true,
+                    axisScale: axisScale.log,
+                }
+            };
+            v.onDataChanged({
+                dataViews: [{
+                    metadata: dataViewMetadataThreeColumn,
+                    categorical: {
+                        categories: [{
+                            source: dataViewMetadataThreeColumn.columns[2],
+                            values: ['Jan','Feb','Mar','Apr'],
+                            identity: categoryIdentities
+                        }],
+                        values: DataViewTransform.createValueColumns([{
+                            source: dataViewMetadataThreeColumn.columns[1],
+                            values: [2600, 2000, 5600, 1500]
+                        }, {
+                            source: dataViewMetadataThreeColumn.columns[0],
+                            values: [1700, 1400, 1500, 855]
+                        }])
+                    }
+                }]
+            });
+            let valueAxisSelector = chartType.indexOf('bar') >= 0 ? '.x.axis' : '.y.axis';
+            let logLabels: any = $(valueAxisSelector).children('.tick').find('text');
+            expect(logLabels.length).toBeGreaterThan(0);
+
+            for (let i = 0, ilen = logLabels.length; i < ilen; i++) {
+                let labelValue = +expect(helpers.findElementText(logLabels.eq(i))).actual.replace(',', '');
+                expect(AxisHelper.powerOfTen(labelValue)).toBeTruthy();
+            }
+
+            let allSeries = $('.series');
+            expect(allSeries.length).toBe(2);
+            let stackedLengths = [];          
+            let lengthAttribute = chartType.indexOf('bar') >= 0 ? 'width' : 'height';
+            for (let i = 0, ilen = allSeries.length; i < ilen; i++) {
+                let series = allSeries[i];
+                let seriesRects = $('rect', series);
+                if (i === 0) {
+                    for (let j = 0; j < seriesRects.length; j++) {
+                        stackedLengths[j] = seriesRects.eq(j).attr(lengthAttribute);
+                    }
+                }
+                else {
+                    for (let j = 0; j < seriesRects.length; j++) {
+                        let len = seriesRects.eq(j).attr(lengthAttribute);
+                        expect(len).toBeLessThan(stackedLengths[j] * 0.5);
+                    }
+                }
             }
         });
 
@@ -11043,7 +11503,7 @@ module powerbitests {
                 mocks.dataViewScopeIdentity("5000"),
                 mocks.dataViewScopeIdentity("10000"),
             ];
-            dataViewMetadataTwoColumn.objects = {
+            dataViewMetadataThreeColumn.objects = {
                 valueAxis: {
                     show: true,
                     start: 0,
@@ -11056,15 +11516,15 @@ module powerbitests {
             };
             v.onDataChanged({
                 dataViews: [{
-                    metadata: dataViewMetadataTwoColumn,
+                    metadata: dataViewMetadataThreeColumn,
                     categorical: {
                         categories: [{
-                            source: dataViewMetadataTwoColumn.columns[0],
+                            source: dataViewMetadataThreeColumn.columns[0],
                             values: [500, 2000, 5000, 10000],
                             identity: categoryIdentities
                         }],
                         values: DataViewTransform.createValueColumns([{
-                            source: dataViewMetadataTwoColumn.columns[1],
+                            source: dataViewMetadataThreeColumn.columns[1],
                             min: 50000,
                             max: 200000,
                             subtotal: 500000,
@@ -11076,6 +11536,13 @@ module powerbitests {
             let logLabels: any = $('.y.axis').children('.tick');
             expect(logLabels.length).toBe(6);
         });
+    };
+
+    describe("Log scale checks - columnChartStacked", () => {
+        logScaleTests('columnChart'); //stacked
+    });
+    describe("Log scale checks - barChartStacked", () => {
+        logScaleTests('barChart'); //stacked
     });
 
     function columnChartDataLabelsPerSeriesFormatValidation(chartType: string) {
@@ -11219,7 +11686,7 @@ module powerbitests {
                 done();
             }, DefaultWaitForRender);
         });
-    } 
+    }
 
     describe("Column chart format per series validation", () => columnChartDataLabelsPerSeriesFormatValidation('columnChart'));
     describe("Bar chart format per series validation", () => columnChartDataLabelsPerSeriesFormatValidation('barChart'));
@@ -11230,7 +11697,7 @@ module powerbitests {
         let v: powerbi.IVisual, element: JQuery;
 
         let categoryColumnRef = powerbi.data.SQExprBuilder.fieldDef({ schema: 's', entity: 'e', column: 'p' });
-        
+
         let hostServices = powerbitests.mocks.createVisualHostServices();
 
         beforeEach(() => {
@@ -11365,7 +11832,70 @@ module powerbitests {
             helpers.assertColorsMatch(labelDataPoints[4].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
             helpers.assertColorsMatch(labelDataPoints[5].insideFill, powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
         });
-        
+
+        it("Label data points have correct default fill for combo", () => {
+            let dataViewMetadata1Category2Measure: powerbi.DataViewMetadata = {
+                columns: [
+                    { displayName: 'col1', queryName: 'col1' },
+                    { displayName: 'col2', queryName: 'col2', format: '#,0.0', isMeasure: true },
+                    { displayName: 'col3', queryName: 'col3', format: '#,0.0', isMeasure: true }],
+                objects: {
+                    labels: {
+                        show: true,
+                        color: undefined,
+                        labelDisplayUnits: undefined,
+                        labelPosition: undefined,
+                        labelPrecision: undefined,
+                    }
+                },
+            };
+
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity("John Domo"),
+                mocks.dataViewScopeIdentity("Delta Force"),
+                mocks.dataViewScopeIdentity("Mr Bing"),
+            ];
+
+            let dataChangedOptions = {
+                dataViews: [{
+                    metadata: dataViewMetadata1Category2Measure,
+                    categorical: {
+                        categories: [{
+                            source: dataViewMetadata1Category2Measure.columns[0],
+                            values: ['John Domo', 'Delta Force', 'Mr Bing'],
+                            identity: categoryIdentities,
+                            identityFields: [categoryColumnRef],
+                        }],
+                        values: DataViewTransform.createValueColumns([{
+                            source: dataViewMetadata1Category2Measure.columns[1],
+                            values: [-200, 100, 150],
+                            subtotal: 450
+                        }, {
+                                source: dataViewMetadata1Category2Measure.columns[2],
+                                values: [-300, 300, 90],
+                                subtotal: 630
+                            }])
+                    }
+                }]
+            };
+            v.onDataChanged(dataChangedOptions);
+
+            (<any>v).layers[0].columnChart.isComboChart = true;
+            let labelDataPoints = callCreateLabelDataPoints(v);
+            helpers.assertColorsMatch(labelDataPoints[0].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[3].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[4].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[5].outsideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[0].insideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].insideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].insideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[3].insideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[4].insideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[5].insideFill, powerbi.visuals.NewDataLabelUtils.defaultLabelColor);
+        });
+
         it("Label data points have correct fill", () => {
             let labelColor = "#007700";
             let dataViewMetadata1Category2Measure: powerbi.DataViewMetadata = {
@@ -11421,12 +11951,76 @@ module powerbitests {
             helpers.assertColorsMatch(labelDataPoints[3].outsideFill, labelColor);
             helpers.assertColorsMatch(labelDataPoints[4].outsideFill, labelColor);
             helpers.assertColorsMatch(labelDataPoints[5].outsideFill, labelColor);
-            helpers.assertColorsMatch(labelDataPoints[0].insideFill, stacked ? labelColor : powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
-            helpers.assertColorsMatch(labelDataPoints[1].insideFill, stacked ? labelColor : powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
-            helpers.assertColorsMatch(labelDataPoints[2].insideFill, stacked ? labelColor : powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
-            helpers.assertColorsMatch(labelDataPoints[3].insideFill, stacked ? labelColor : powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
-            helpers.assertColorsMatch(labelDataPoints[4].insideFill, stacked ? labelColor : powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
-            helpers.assertColorsMatch(labelDataPoints[5].insideFill, stacked ? labelColor : powerbi.visuals.NewDataLabelUtils.defaultInsideLabelColor);
+            helpers.assertColorsMatch(labelDataPoints[0].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[3].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[4].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[5].insideFill, labelColor);
+        });
+
+        it("Label data points have correct fill for combo", () => {
+            let labelColor = "#007700";
+            let dataViewMetadata1Category2Measure: powerbi.DataViewMetadata = {
+                columns: [
+                    { displayName: 'col1', queryName: 'col1' },
+                    { displayName: 'col2', queryName: 'col2', format: '#,0.0', isMeasure: true },
+                    { displayName: 'col3', queryName: 'col3', format: '#,0.0', isMeasure: true }],
+                objects: {
+                    labels: {
+                        show: true,
+                        color: { solid: { color: labelColor } },
+                        labelDisplayUnits: undefined,
+                        labelPosition: undefined,
+                        labelPrecision: undefined,
+                    }
+                },
+            };
+
+            let categoryIdentities = [
+                mocks.dataViewScopeIdentity("John Domo"),
+                mocks.dataViewScopeIdentity("Delta Force"),
+                mocks.dataViewScopeIdentity("Mr Bing"),
+            ];
+
+            let dataChangedOptions = {
+                dataViews: [{
+                    metadata: dataViewMetadata1Category2Measure,
+                    categorical: {
+                        categories: [{
+                            source: dataViewMetadata1Category2Measure.columns[0],
+                            values: ['John Domo', 'Delta Force', 'Mr Bing'],
+                            identity: categoryIdentities,
+                            identityFields: [categoryColumnRef],
+                        }],
+                        values: DataViewTransform.createValueColumns([{
+                            source: dataViewMetadata1Category2Measure.columns[1],
+                            values: [-200, 100, 150],
+                            subtotal: 450
+                        }, {
+                                source: dataViewMetadata1Category2Measure.columns[2],
+                                values: [-300, 300, 90],
+                                subtotal: 630
+                            }])
+                    }
+                }]
+            };
+            v.onDataChanged(dataChangedOptions);
+
+            (<any>v).layers[0].columnChart.isComboChart = true;
+            let labelDataPoints = callCreateLabelDataPoints(v);
+            helpers.assertColorsMatch(labelDataPoints[0].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[3].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[4].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[5].outsideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[0].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[1].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[2].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[3].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[4].insideFill, labelColor);
+            helpers.assertColorsMatch(labelDataPoints[5].insideFill, labelColor);
         });
 
         it("Label data points have correct display units", () => {
@@ -11540,7 +12134,7 @@ module powerbitests {
             expect(labelDataPoints[4].text).toEqual("300");
             expect(labelDataPoints[5].text).toEqual("90");
         });
-        
+
         it("Label data points have correct position", () => {
             let dataViewMetadata1Category2Measure: powerbi.DataViewMetadata = {
                 columns: [
@@ -11727,7 +12321,7 @@ module powerbitests {
         it("should not support format painter copy", () => {
             expect(capabilitiesObjects["categoryAxis"].properties["end"].suppressFormatPainterCopy).toBe(true);
         });
-        
+
         it("should not support format painter copy", () => {
             expect(capabilitiesObjects["valueAxis"].properties["start"].suppressFormatPainterCopy).toBe(true);
         });
@@ -11735,7 +12329,7 @@ module powerbitests {
         it("should not support format painter copy", () => {
             expect(capabilitiesObjects["valueAxis"].properties["end"].suppressFormatPainterCopy).toBe(true);
         });
-        
+
         it("should not support format painter copy", () => {
             expect(capabilitiesObjects["labels"].properties["labelDisplayUnits"].suppressFormatPainterCopy).toBe(true);
         });

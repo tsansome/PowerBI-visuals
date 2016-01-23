@@ -124,7 +124,6 @@ module powerbi.visuals {
         private static CircleClassName = 'selection-circle';
         private static LineElementName = 'line';
         private static RectOverlayName = 'rect';
-        private static NumberOfPreferredLabels = 4;
         private static ScalarOuterPadding = 10;
         public static AreaFillOpacity = 0.4;
         public static DimmedAreaFillOpacity = 0.2;
@@ -317,6 +316,10 @@ module powerbi.visuals {
 
                     // When Scalar, skip null categories and null values so we draw connected lines and never draw isolated dots.
                     if (isScalar && (categoryValue == null || value == null))
+                        continue;
+
+                    // ignore variant measures
+                    if (isDateTime && categoryValue != null && !(categoryValue instanceof Date))
                         continue;
 
                     let categorical: DataViewCategorical = dataView.categorical;
@@ -589,6 +592,7 @@ module powerbi.visuals {
             let origCatgSize = data.series && data.series.length > 0 ? data.series[0].data.length : 0;
             let categoryWidth = CartesianChart.MinOrdinalRectThickness;
             let isScalar = this.data.isScalar;
+            let trimOrdinalDataOnOverflow = options.trimOrdinalDataOnOverflow;
 
             let preferredPlotArea = this.getPreferredPlotArea(isScalar, origCatgSize, categoryWidth);
 
@@ -600,7 +604,7 @@ module powerbi.visuals {
             preferredPlotArea.height -= (margin.top + margin.bottom);
 
             this.clippedData = undefined;
-            if (data && !isScalar && !this.isScrollable) {
+            if (data && !isScalar && !this.isScrollable && trimOrdinalDataOnOverflow) {
                 // trim data that doesn't fit on dashboard
                 let categoryCount = this.getCategoryCount(origCatgSize);
                 let catgSize = Math.min(origCatgSize, categoryCount);
@@ -634,7 +638,8 @@ module powerbi.visuals {
                 isCategoryAxis: false,
                 scaleType: options.valueAxisScaleType,
                 axisDisplayUnits: options.valueAxisDisplayUnits,
-                axisPrecision: options.valueAxisPrecision
+                axisPrecision: options.valueAxisPrecision,
+                shouldClamp: false, // clamping causes incorrect lines when you have axis extents specified, do not enable this.
             });
 
             let xDomain = AxisHelper.createDomain(data.series, this.xAxisProperties.axisType, this.data.isScalar, options.forcedXDomain);
@@ -650,7 +655,7 @@ module powerbi.visuals {
                 forcedTickCount: options.forcedTickCount,
                 useTickIntervalForDisplayUnits: true,
                 getValueFn: (index, type) => CartesianHelper.lookupXValue(this.data, index, type, this.data.isScalar),
-                categoryThickness: CartesianChart.getCategoryThickness(data.series, origCatgSize, this.getAvailableWidth(), xDomain, isScalar),
+                categoryThickness: CartesianChart.getCategoryThickness(data.series, origCatgSize, this.getAvailableWidth(), xDomain, isScalar, trimOrdinalDataOnOverflow),
                 isCategoryAxis: true,
                 scaleType: options.categoryAxisScaleType,
                 axisDisplayUnits: options.categoryAxisDisplayUnits,
@@ -778,12 +783,19 @@ module powerbi.visuals {
 
             let hasSelection = this.interactivityService && this.interactivityService.hasSelection();
             let renderAreas: boolean = EnumExtensions.hasFlag(this.lineType, LineChartType.area) || EnumExtensions.hasFlag(this.lineType, LineChartType.stackedArea);
-            let area;
-            let yDomain = yScale.domain();
             let xPosition = (d: LineChartDataPoint) => { return xScale(this.getXValue(d)) + horizontalOffset; };
-            let y0Position = isStackedArea ? (d: LineChartDataPoint) => { return yScale(Math.max(d.stackedValue - d.value, yDomain[0])); } : (d: LineChartDataPoint) => height;
-            let yPosition = isStackedArea ? (d: LineChartDataPoint) => { return yScale(d.stackedValue); } : (d: LineChartDataPoint) => { return yScale(d.value); };
 
+            let y0Position, yPosition;
+            if (isStackedArea) {
+                y0Position = (d: LineChartDataPoint) => { return yScale(d.stackedValue - d.value); };
+                yPosition = (d: LineChartDataPoint) => { return yScale(d.stackedValue); };
+            }
+            else {
+                y0Position = yScale(0);
+                yPosition = (d: LineChartDataPoint) => { return yScale(d.value); };
+            } 
+
+            let area;
             if (renderAreas) {
                 area = d3.svg.area()
                     .x(xPosition)
@@ -1293,7 +1305,7 @@ module powerbi.visuals {
         private findMaxDataPoint(series: LineChartSeries[]): number {
             if (series.length === 0)
                 return 0;
-            let maxLength: number = 0;
+            let maxLength: number = 0;           
             for (let singleSeries of series) {
                 let length = singleSeries.data.length;
                 if (length > maxLength)
@@ -1472,19 +1484,22 @@ module powerbi.visuals {
 
         private createTooltipDataPoints(columnIndex: number): HoverLineDataPoint[] {
             let data = this.data;
-            if (!data || data.series.length === 0)
+            if (!data || data.series.length === 0 || !data.categoryData)
                 return [];
 
             let dataPoints: HoverLineDataPoint[] = [];
             let category: any;
 
+            debug.assert(columnIndex < data.categoryData.length, 'category index out of range');
             let categoryDataPoint: LineChartDataPoint = data.categoryData[columnIndex];
             if (this.data.isScalar) {
-                if (AxisHelper.isDateTime(this.xAxisProperties.axisType)) {
-                    category = CartesianHelper.lookupXValue(this.data, categoryDataPoint.categoryValue, this.xAxisProperties.axisType, this.data.isScalar);
-                }
-                else {
-                    category = categoryDataPoint.categoryValue;
+                if (categoryDataPoint) {
+                    if (AxisHelper.isDateTime(this.xAxisProperties.axisType)) {
+                        category = CartesianHelper.lookupXValue(this.data, categoryDataPoint.categoryValue, this.xAxisProperties.axisType, this.data.isScalar);
+                    }
+                    else {
+                        category = categoryDataPoint.categoryValue;
+                    }
                 }
             }
             else {
@@ -1495,11 +1510,16 @@ module powerbi.visuals {
 
             for (let series of data.series) {
                 let lineData = series.data;
-                let lineDataPoint = lineData[columnIndex];
+                let lineDataPoint: LineChartDataPoint;
                 if (this.data.isScalar) {
-                    lineDataPoint = lineData.filter((data) => {
-                        return data.categoryValue === categoryDataPoint.categoryValue;
-                    })[0];
+                    if (categoryDataPoint) {
+                        lineDataPoint = lineData.filter((data) => {
+                            return data.categoryValue === categoryDataPoint.categoryValue;
+                        })[0];
+                    }
+                }
+                else {
+                    lineDataPoint = lineData[columnIndex];
                 }
 
                 let value = lineDataPoint && lineDataPoint.value;
@@ -1597,34 +1617,33 @@ module powerbi.visuals {
             let xScale = this.xAxisProperties.scale;
             let yScale = this.yAxisProperties.scale;
             let horizontalOffset = LineChart.HorizontalShift + this.extraLineShift();
-            let allLabelDataPoints: LabelDataPoint[] = [];
-            let dataPointsCandidates: LineChartDataPoint[] = [];
             let data = this.data;
             let series = data.series;
             let formattersCache = NewDataLabelUtils.createColumnFormatterCacheManager();
-            let maxIndex, minIndex, maxValue, minValue;
-            let currentIndex = 0, currentSeriesNumber = 0, totalLabelWidth = 0;
             let dataLabelsSettings = data.dataLabelsSettings;
-            let showLabelPerSeries = this.showLabelPerSeries() && dataLabelsSettings.showLabelPerSeries;
             let isStackedArea = EnumExtensions.hasFlag(this.lineType, LineChartType.stackedArea);
-            let LabelDataPointsGroups: LabelDataPointsGroup[] = [];
+            let labelDataPointsGroups: LabelDataPointsGroup[] = [];
+            let labelSettings: LineChartDataLabelsSettings;
+            let axisFormatter: number;
+            let seriesLabelDataPoints: LabelDataPoint[];
+            let seriesDataPointsCandidates: LineChartDataPoint[];
+            let seriesIndex;
+            let seriesCount;
 
-            for (let currentSeries of series) {
-                let labelSettings = (currentSeries.labelSettings) ? currentSeries.labelSettings : dataLabelsSettings;
+            for (seriesIndex = 0, seriesCount = series.length; seriesIndex < seriesCount; seriesIndex++) {
+                let currentSeries = series[seriesIndex];
+                labelSettings = (currentSeries.labelSettings) ? currentSeries.labelSettings : dataLabelsSettings;
                 if (!labelSettings.show)
                     continue;
 
-                let axisFormatter: number = NewDataLabelUtils.getDisplayUnitValueFromAxisFormatter(this.yAxisProperties.formatter, labelSettings);
+                axisFormatter = NewDataLabelUtils.getDisplayUnitValueFromAxisFormatter(this.yAxisProperties.formatter, labelSettings);
                 let dataPoints = currentSeries.data;
-                let seriesLabelDataPoints: LabelDataPoint[] = [];
-                let seriesDataPointsCandidates: LineChartDataPoint[] = [];
-                let seriesIndex = 0, seriesLabelWidth = 0;
-                let seriesMaxIndex = 0, seriesMinIndex = 0;
-                let seriesMaxValue, seriesMinValue;
-
-                for (let dataPoint of dataPoints) {
+                seriesLabelDataPoints = [];
+                seriesDataPointsCandidates = [];
+                
+                let createLabelDataPoint: (dataPoint: LineChartDataPoint, seriesIndex) => LabelDataPoint = (dataPoint: LineChartDataPoint) => {
                     if (dataPoint.value == null)
-                        continue;
+                        return null;
 
                     let formatString = "";
                     formatString = dataPoint.labelFormatString;
@@ -1667,7 +1686,6 @@ module powerbi.visuals {
                             validPositions: this.lineChartLabelDensityEnabled ? LineChart.validLabelPositions : [NewPointLabelPosition.Above],
                         };
                     }
-                    seriesLabelWidth += textWidth;
 
                     let labelDataPoint: LabelDataPoint = {
                         isPreferred: false,
@@ -1684,162 +1702,74 @@ module powerbi.visuals {
                         identity: dataPoint.identity,
                         key: dataPoint.key,
                     };
+                    return labelDataPoint;
+                };
 
-                    if (showLabelPerSeries) {
-                        seriesLabelDataPoints.push(labelDataPoint);
-                        seriesDataPointsCandidates.push(dataPoint);
+                if (!_.isEmpty(dataPoints)) {
+                    let categoryCount = dataPoints.length;
+                    let lastDataPoint = dataPoints[categoryCount - 1];
+                    let lastLabelDataPoint = createLabelDataPoint(lastDataPoint, seriesIndex);
+                    if (lastLabelDataPoint)
+                        seriesLabelDataPoints.push(lastLabelDataPoint);
+                    for (let categoryIndex = 0; categoryIndex < categoryCount - 1; categoryIndex++) {
+                        let labelDataPoint = createLabelDataPoint(dataPoints[categoryIndex], seriesIndex);
+                        if (labelDataPoint)
+                            seriesLabelDataPoints.push(labelDataPoint);
                     }
-                    else {
-                        allLabelDataPoints.push(labelDataPoint);
-                        dataPointsCandidates.push(dataPoint);
-                    }
-
-                    // Maintain series min/max
-                    let currentValue = dataPoint.value;
-
-                    if (seriesMinValue === undefined || currentValue < seriesMinValue) {
-                        seriesMinIndex = seriesIndex;
-                        seriesMinValue = currentValue;
-                    }
-                    if (seriesMaxValue === undefined || currentValue > seriesMaxValue) {
-                        seriesMaxIndex = seriesIndex;
-                        seriesMaxValue = currentValue;
-                    }
-
-                    seriesIndex++;
-                    currentIndex++;
                 }
-
-                // Check if there are no data points to display in the current series
-                if (seriesIndex === 0)
-                    continue;
-
-                totalLabelWidth += seriesLabelWidth;
-
-                // Maintain overall min/max
-                if (minIndex === undefined || minValue > seriesMinValue) {
-                    minIndex = currentIndex - seriesIndex + seriesMinIndex;
-                    minValue = seriesMinValue;
-                }
-
-                if (maxIndex === undefined || maxValue < seriesMaxValue) {
-                    maxIndex = currentIndex - seriesIndex + seriesMaxIndex;
-                    maxValue = seriesMaxValue;
-                }
-
-                if (showLabelPerSeries) {
-                    let maxLabelsToRender = this.calculateNumberOfLabelsToRender(labelSettings.labelDensity, seriesLabelWidth, seriesLabelDataPoints.length);
-                    LabelDataPointsGroups[currentSeriesNumber] = {
-                        labelDataPoints: this.prepareLabelsToRender(seriesLabelDataPoints, seriesDataPointsCandidates, seriesMinIndex, seriesMaxIndex, maxLabelsToRender),
-                        maxNumberOfLabels: maxLabelsToRender,
-                    };
-                }
-
-                currentSeriesNumber++;
-            }
-
-            if (!showLabelPerSeries) {
-                let maxLabelsToRender = this.calculateNumberOfLabelsToRender(dataLabelsSettings.labelDensity, totalLabelWidth, allLabelDataPoints.length);
-                LabelDataPointsGroups[0] = {
-                    labelDataPoints: this.prepareLabelsToRender(allLabelDataPoints, dataPointsCandidates, minIndex, maxIndex, maxLabelsToRender),
+                
+                let maxLabelsToRender = dataPoints.length;
+                labelDataPointsGroups[seriesIndex] = {
+                    labelDataPoints: seriesLabelDataPoints,
                     maxNumberOfLabels: maxLabelsToRender,
                 };
             }
 
-            return LabelDataPointsGroups;
+            return labelDataPointsGroups;
         }
 
-        private isMinMax(index: number, dataPoints: LineChartDataPoint[]): boolean {
-            // Check if the point is the start/end point
-            if (!dataPoints[index - 1] || !dataPoints[index + 1])
-                return true;
+        //private isMinMax(index: number, dataPoints: LineChartDataPoint[]): boolean {
+        //    // Check if the point is the start/end point
+        //    if (!dataPoints[index - 1] || !dataPoints[index + 1])
+        //        return true;
 
-            let currentValue = dataPoints[index].value;
-            let prevValue = dataPoints[index - 1].value;
-            let nextValue = dataPoints[index + 1].value;
-            return (prevValue > currentValue && currentValue < nextValue) // Min point
-                || (prevValue < currentValue && currentValue > nextValue); // Max point
-        }
+        //    let currentValue = dataPoints[index].value;
+        //    let prevValue = dataPoints[index - 1].value;
+        //    let nextValue = dataPoints[index + 1].value;
+        //    return (prevValue > currentValue && currentValue < nextValue) // Min point
+        //        || (prevValue < currentValue && currentValue > nextValue); // Max point
+        //}
 
-        private calculatePointsWeight(labelDataPoints: LabelDataPoint[], dataPointsCandidates: LineChartDataPoint[], minIndex: number, maxIndex: number) {
-            let previousMinMaxIndex = 0;
-            labelDataPoints[0].weight = dataPointsCandidates[0].weight = 0;
-            let previousMinMax: LineChartDataPoint = dataPointsCandidates[0];
-            let dataPointCount = labelDataPoints.length;
-            let yScale = this.yAxisProperties.scale;
-            let totalValueDelta = yScale(dataPointsCandidates[maxIndex].value) - yScale(dataPointsCandidates[minIndex].value);
+        //private calculatePointsWeight(labelDataPoints: LabelDataPoint[], dataPointsCandidates: LineChartDataPoint[], minIndex: number, maxIndex: number) {
+        //    let previousMinMaxIndex = 0;
+        //    labelDataPoints[0].weight = dataPointsCandidates[0].weight = 0;
+        //    let previousMinMax: LineChartDataPoint = dataPointsCandidates[0];
+        //    let dataPointCount = labelDataPoints.length;
+        //    let yScale = this.yAxisProperties.scale;
+        //    let totalValueDelta = yScale(dataPointsCandidates[maxIndex].value) - yScale(dataPointsCandidates[minIndex].value);
 
-            for (let i = 1; i < dataPointCount; i++) {
-                let dataPoint = dataPointsCandidates[i];
-                let weight = (Math.abs(yScale(previousMinMax.value) - yScale(dataPoint.value))) / totalValueDelta + (i - previousMinMaxIndex) / dataPointCount;
-                labelDataPoints[i].weight = weight;
-                if (this.isMinMax(i, dataPointsCandidates)) {
-                    previousMinMax.weight += weight;
-                    previousMinMax = dataPoint;
-                    previousMinMaxIndex = i;
-                }
-            }
-        }
+        //    for (let i = 1; i < dataPointCount; i++) {
+        //        let dataPoint = dataPointsCandidates[i];
+        //        let weight = (Math.abs(yScale(previousMinMax.value) - yScale(dataPoint.value))) / totalValueDelta + (i - previousMinMaxIndex) / dataPointCount;
+        //        labelDataPoints[i].weight = weight;
+        //        if (this.isMinMax(i, dataPointsCandidates)) {
+        //            previousMinMax.weight += weight;
+        //            previousMinMax = dataPoint;
+        //            previousMinMaxIndex = i;
+        //        }
+        //    }
+        //}
 
-        private sortByWeightAndPreferrance(a: LabelDataPoint, b: LabelDataPoint): number {
-            // Compare by prederrance first
-            if (!a.isPreferred && b.isPreferred) return 1;
-            if (a.isPreferred && !b.isPreferred) return -1;
-            // Compare by weight
-            if ((!a.weight && b.weight) || (a.weight < b.weight)) return 1;
-            if ((a.weight && !b.weight) || (a.weight > b.weight)) return -1;
-            return 0;
-        }
-
-        private calculateNumberOfLabelsToRender(labelDensityFactor: number, totalLabelWidth: number, numOfLabels: number): number {
-            if (!this.lineChartLabelDensityEnabled)
-                return numOfLabels;
-            let averageLabelWidth = totalLabelWidth / numOfLabels;
-            let numberOfLabelsToRender = LineChart.NumberOfPreferredLabels + Math.round((numOfLabels - LineChart.NumberOfPreferredLabels) * (labelDensityFactor / NewDataLabelUtils.LabelDensityMax));
-            // Limit number of labels according to the available viewport width
-            return Math.min(numberOfLabelsToRender, Math.round(this.currentViewport.width / averageLabelWidth));
-        }
-
-        /**
-          * 1. Calculate weight for each label data point
-          * 2. Sort the labels according to the weight
-          * 3. Populate dataPointsToLayout with labels to render with additional buffer
-          */
-        private prepareLabelsToRender(
-            labelDataPoints: LabelDataPoint[],
-            dataPointsCandidates: LineChartDataPoint[],
-            minIndex: number,
-            maxIndex: number,
-            maxLabelsToRender: number): LabelDataPoint[] {
-
-            // Check if there are no data points
-            if (_.isEmpty(labelDataPoints))
-                return [];
-
-            this.calculatePointsWeight(labelDataPoints, dataPointsCandidates, minIndex, maxIndex);
-            
-            // Mark important labels as preferred
-            // First and last
-            labelDataPoints[0].isPreferred = labelDataPoints[labelDataPoints.length - 1].isPreferred = true;
-            // Highest and lowest
-            labelDataPoints[minIndex].isPreferred = labelDataPoints[maxIndex].isPreferred = true;
-
-            // Sort the labels according to their weight            
-            let sortedLabelDataPoints = labelDataPoints.sort(this.sortByWeightAndPreferrance);
-
-            if (!this.data.isScalar)
-                return sortedLabelDataPoints;
-
-            let dataPointsToLayout: LabelDataPoint[] = [];
-
-            // If the chart is a scalar we don't have a scroll bar so we can send a small amounts of labels to try and render
-            for (let i = 0, ilen = maxLabelsToRender * NewDataLabelUtils.LabelDensityBufferFactor; i < ilen && i < sortedLabelDataPoints.length; i++) {
-                dataPointsToLayout.push(sortedLabelDataPoints[i]);
-            }
-
-            return dataPointsToLayout;
-        }
-
+        //private sortByWeightAndPreferrance(a: LabelDataPoint, b: LabelDataPoint): number {
+        //    // Compare by prederrance first
+        //    if (!a.isPreferred && b.isPreferred) return 1;
+        //    if (a.isPreferred && !b.isPreferred) return -1;
+        //    // Compare by weight
+        //    if ((!a.weight && b.weight) || (a.weight < b.weight)) return 1;
+        //    if ((a.weight && !b.weight) || (a.weight > b.weight)) return -1;
+        //    return 0;
+        //}
+        
         private showLabelPerSeries(): boolean {
             let data = this.data;
             return !data.hasDynamicSeries && (data.series.length > 1 || !data.categoryMetadata) && this.seriesLabelFormattingEnabled;

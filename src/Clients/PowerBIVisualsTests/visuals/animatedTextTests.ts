@@ -182,7 +182,7 @@ module powerbitests {
             expect($(".animatedText")).toBeInDOM();
             expect($(".mainText")).toBeInDOM();
             setTimeout(() => {
-                expect($(".mainText").text()).toEqual("(Blank)");
+                expect(helpers.findElementText($(".mainText"))).toEqual("(Blank)");
                 done();
             }, DefaultWaitForRender);
         });

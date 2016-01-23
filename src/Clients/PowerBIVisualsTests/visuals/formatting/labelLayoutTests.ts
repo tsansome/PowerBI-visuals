@@ -94,6 +94,24 @@ module powerbitests {
             expect(labelArrangeGrid.hasConflict(createRect(150, 100, 100, 100))).toBe(true);
             expect(labelArrangeGrid.hasConflict(createRect(425, 35, 50, 50))).toBe(true);
         });
+
+        it("Grid tryPositionInViewport", () => {
+            expect(labelArrangeGrid.tryPositionInViewport(createRect(-5, 0, 50, 50))).toEqual(createRect(0, 0, 50, 50));
+            expect(labelArrangeGrid.tryPositionInViewport(createRect(10, -10, 50, 50))).toEqual(createRect(10, 0, 50, 50));
+            expect(labelArrangeGrid.tryPositionInViewport(createRect(-5, -5, 50, 50))).toEqual(createRect(0, 0, 50, 50));
+            expect(labelArrangeGrid.tryPositionInViewport(createRect(510, 10, 50, 50))).toEqual(createRect(450, 10, 50, 50));
+            expect(labelArrangeGrid.tryPositionInViewport(createRect(10, 510, 50, 50))).toEqual(createRect(10, 450, 50, 50));
+            expect(labelArrangeGrid.tryPositionInViewport(createRect(510, 510, 50, 50))).toEqual(createRect(450, 450, 50, 50));
+        });
+
+        it("Grid tryPositionInViewport returns null when movement causes a collision", () => {
+            labelArrangeGrid.add(createRect(10, 10, 30, 30));
+            expect(labelArrangeGrid.tryPositionInViewport(createRect(10, -10, 20, 20))).toBeUndefined();
+        });
+
+        it("Grid tryPositionInViewport returns null for rects too far outside viewport", () => {
+            expect(labelArrangeGrid.tryPositionInViewport(createRect(-100, 20, 30, 30))).toBeUndefined();
+        });
     });
 
     describe("LabelLayout tests", () => {
@@ -366,7 +384,14 @@ module powerbitests {
     function createLabelDataPoint(text: string, isParentRect?: boolean, parentRect?: LabelParentRect, parentPoint?: LabelParentPoint): LabelDataPoint {
         return {
             text: text,
-            textSize: { width: text.length * 10, height: 10 },
+            textSize: {
+                width: text.length * 10,
+                height: 10
+            },
+            labelSize: {
+                width: text.length * 10,
+                height: 10
+            },
             isPreferred: true,
             insideFill: testInsideFillColor,
             outsideFill: testOutsideFillColor,

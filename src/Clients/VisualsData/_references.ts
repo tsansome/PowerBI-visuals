@@ -57,6 +57,7 @@
 /// <reference path="displayNameGetter.ts"/>
 /// <reference path="dataReader/dataReader.ts"/>
 /// <reference path="iFormattingService.ts"/>
+/// <reference path="semanticQuery\exprPatterns\fieldExprPattern.ts"/>
 /// <reference path="dataView\dataView.ts"/>
 /// <reference path="dataView\dataViewAnalysis.ts"/>
 /// <reference path="dataView\dataViewMapping.ts"/>
@@ -68,6 +69,7 @@
 /// <reference path="dataView\rules\ruleEvaluation.ts"/>
 /// <reference path="dataView\rules\colorRuleEvaluation.ts"/>
 /// <reference path="dataView\rules\filterRuleEvaluation.ts"/>
+/// <reference path="dataView\scriptResultUtil.ts"/>
 /// <reference path="segmentation\dataViewMerger.ts"/>
 /// <reference path="semanticQuery\sqExprRewriter.ts"/>
 /// <reference path="semanticQuery\exprPatterns\equalsToInRewriter.ts"/>

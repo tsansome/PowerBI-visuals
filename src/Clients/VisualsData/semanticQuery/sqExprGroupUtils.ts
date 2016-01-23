@@ -37,13 +37,13 @@ module powerbi.data {
 
     export module SQExprGroupUtils {
         /** Group all projections. Eacch group can consist of either a single property, or a collection of hierarchy items. */
-        export function groupExprs(schema: FederatedConceptualSchema, exprs: SQExpr[], columnVariationEnabled: boolean): SQExprGroup[] {
+        export function groupExprs(schema: FederatedConceptualSchema, exprs: SQExpr[]): SQExprGroup[] {
             let groups: SQExprGroup[] = [];
             for (let i = 0, len = exprs.length; i < len; i++) {
                 let expr = exprs[i];
                 debug.assertValue(expr, "Expression not found");
 
-                if (!columnVariationEnabled || !(expr instanceof SQHierarchyLevelExpr)) {
+                if (!(expr instanceof SQHierarchyLevelExpr)) {
                     groups.push({ expr: expr, children: null, selectQueryIndex: i });
                 }
                 else {

@@ -102,84 +102,125 @@ module powerbitests {
             expect(slicerData.slicerDataPoints[4].selected).toBe(true);
         });
 
-        it("when all are selected in filter", () => {
+        it("all filter values selected with selectAllCheckbox disabled", () => {
             let hostServices = slicerHelper.createHostServices();
             let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
-            let semanticFilter: data.SemanticFilter = data.SemanticFilter.fromSQExpr(
-                SQExprBuilder.inExpr(
-                    [field],
-                    [
-                        [SQExprBuilder.text('Apple')],
-                        [SQExprBuilder.text('Orange')],
-                        [SQExprBuilder.text('Kiwi')],
-                        [SQExprBuilder.text('Grapes')],
-                        [SQExprBuilder.text('Banana')],
-                    ]));
-            let dataView = applyDataTransform(slicerHelper.buildDefaultDataView(field), semanticFilter);
-            dataView[0].metadata.objects["selection"] = { selectAllCheckboxEnabled: true, singleSelect: false };
-            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
-            expect(slicerData.slicerDataPoints.length).toBe(6);
-            expect(slicerData.slicerDataPoints[0].tooltip).toBe('Select All');
-            expect(slicerData.slicerDataPoints[1].tooltip).toBe('Apple');
-            expect(slicerData.slicerDataPoints[2].tooltip).toBe('Orange');
-            expect(slicerData.slicerDataPoints[3].tooltip).toBe('Kiwi');
-            expect(slicerData.slicerDataPoints[4].tooltip).toBe('Grapes');
-            expect(slicerData.slicerDataPoints[5].tooltip).toBe('Banana');
-            expect(slicerData.slicerDataPoints[0].isSelectAllDataPoint).toBe(true);
-            expect(slicerData.slicerDataPoints[0].selected).toBe(true);
-            expect(slicerData.slicerDataPoints[1].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[2].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[3].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[4].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[5].selected).toBe(false);
+            allItemsSelectedSlicerTestHelper(interactivityService, hostServices, false, false, false);
+            expect(interactivityService.isSelectionModeInverted()).toBe(false);
         });
 
-        it("when all are selected in Not filter", () => {
+        it("all filter values selected with selectAllCheckbox enabled", () => {
             let hostServices = slicerHelper.createHostServices();
             let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
-            let semanticFilter: data.SemanticFilter = data.SemanticFilter.fromSQExpr(
-                SQExprBuilder.not(
-                SQExprBuilder.inExpr(
-                    [field],
-                    [
-                        [SQExprBuilder.text('Apple')],
-                        [SQExprBuilder.text('Orange')],
-                        [SQExprBuilder.text('Kiwi')],
-                        [SQExprBuilder.text('Grapes')],
-                        [SQExprBuilder.text('Banana')],
-                    ])));
-            let dataView = applyDataTransform(slicerHelper.buildDefaultDataView(field), semanticFilter);
-            dataView[0].metadata.objects["selection"] = { selectAllCheckboxEnabled: true, singleSelect: false };
-            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
-            expect(slicerData.slicerDataPoints.length).toBe(6);
-            expect(slicerData.slicerDataPoints[0].tooltip).toBe('Select All');
-            expect(slicerData.slicerDataPoints[1].tooltip).toBe('Apple');
-            expect(slicerData.slicerDataPoints[2].tooltip).toBe('Orange');
-            expect(slicerData.slicerDataPoints[3].tooltip).toBe('Kiwi');
-            expect(slicerData.slicerDataPoints[4].tooltip).toBe('Grapes');
-            expect(slicerData.slicerDataPoints[5].tooltip).toBe('Banana');
-            expect(slicerData.slicerDataPoints[0].isSelectAllDataPoint).toBe(true);
-            expect(slicerData.slicerDataPoints[0].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[1].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[2].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[3].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[4].selected).toBe(false);
-            expect(slicerData.slicerDataPoints[5].selected).toBe(false);
+            allItemsSelectedSlicerTestHelper(interactivityService, hostServices, true, false, false);
+            expect(interactivityService.isSelectionModeInverted()).toBe(true);
         });
 
-        function applyDataTransform(dataView: powerbi.DataView, semanticFilter: data.SemanticFilter): powerbi.DataView[] {
+        it("NotFilter - all filter values selected with selectAllCheckbox enabled", () => {
+            let hostServices = slicerHelper.createHostServices();
+            let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
+            allItemsSelectedSlicerTestHelper(interactivityService, hostServices, true, false, true);
+            expect(interactivityService.isSelectionModeInverted()).toBe(false);
+        });
+
+        it("NotFilter - all filter values selected with selectAllCheckbox disabled", () => {
+            let hostServices = slicerHelper.createHostServices();
+            let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
+            allItemsSelectedSlicerTestHelper(interactivityService, hostServices, false, false, true);
+            expect(interactivityService.isSelectionModeInverted()).toBe(true);
+        });
+
+        function allItemsSelectedSlicerTestHelper(
+            interactivityService: powerbi.visuals.IInteractivityService,
+            hostServices: powerbi.IVisualHostServices,
+            selectAllEnabled: boolean,
+            singleSelectEnabled: boolean,
+            isNotFilter: boolean): void {
+            let inExpr = SQExprBuilder.inExpr(
+                [field],
+                [
+                    [SQExprBuilder.text('Apple')],
+                    [SQExprBuilder.text('Orange')],
+                    [SQExprBuilder.text('Kiwi')],
+                    [SQExprBuilder.text('Grapes')],
+                    [SQExprBuilder.text('Banana')],
+                ]);
+            let semanticFilter: data.SemanticFilter = isNotFilter ? data.SemanticFilter.fromSQExpr(SQExprBuilder.not(inExpr)) : data.SemanticFilter.fromSQExpr(inExpr);
+
+            let dataView = applyDataTransform(slicerHelper.buildDefaultDataView(field), semanticFilter);
+            dataView[0].metadata.objects["selection"] = { selectAllCheckboxEnabled: selectAllEnabled, singleSelect: singleSelectEnabled };
+            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
+
+            if (selectAllEnabled) {
+                expect(slicerData.slicerDataPoints[0].tooltip).toBe('Select All');
+                expect(slicerData.slicerDataPoints[0].isSelectAllDataPoint).toBe(true);
+                expect(slicerData.slicerDataPoints[0].selected).toBe(!isNotFilter);
+            }
+
+            let index: number = selectAllEnabled ? 0 : -1;
+            expect(slicerData.slicerDataPoints[index + 1].tooltip).toBe('Apple');
+            expect(slicerData.slicerDataPoints[index + 2].tooltip).toBe('Orange');
+            expect(slicerData.slicerDataPoints[index + 3].tooltip).toBe('Kiwi');
+            expect(slicerData.slicerDataPoints[index + 4].tooltip).toBe('Grapes');
+            expect(slicerData.slicerDataPoints[index + 5].tooltip).toBe('Banana');
+
+            let selected = selectAllEnabled ? false : true;
+            expect(slicerData.slicerDataPoints[index + 1].selected).toBe(selected);
+            expect(slicerData.slicerDataPoints[index + 2].selected).toBe(selected);
+            expect(slicerData.slicerDataPoints[index + 3].selected).toBe(selected);
+            expect(slicerData.slicerDataPoints[index + 4].selected).toBe(selected);
+            expect(slicerData.slicerDataPoints[index + 5].selected).toBe(selected);
+        }
+
+        it('slicer convert boolean values', () => {
+            let hostServices = slicerHelper.createHostServices();
+            let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
+            let descriptor: powerbi.ValueTypeDescriptor = { bool: true };
+            let dataView = applyDataTransform(slicerHelper.buildBooleanValuesDataView(field), undefined, descriptor);
+            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
+            expect(slicerData.slicerDataPoints.length).toBe(3);
+            expect(slicerData.slicerDataPoints[0].value).toBe('True');
+            expect(slicerData.slicerDataPoints[1].value).toBe('False');
+            expect(slicerData.slicerDataPoints[2].value).toBe('False');
+            expect(slicerData.slicerDataPoints[0].count).toBeUndefined();
+            expect(slicerData.slicerDataPoints[1].count).toBe(3);
+            expect(slicerData.slicerDataPoints[2].count).toBe(4);
+        });
+
+        it('slicer convert boolean values', () => {
+            let hostServices = slicerHelper.createHostServices();
+            let interactivityService = powerbi.visuals.createInteractivityService(hostServices);
+            let descriptor: powerbi.ValueTypeDescriptor = { bool: true };
+            let dataView = applyDataTransform(slicerHelper.buildBooleanValuesDataView(field), undefined, descriptor);
+            let slicerData = powerbi.visuals.DataConversion.convert(dataView[0], slicerHelper.SelectAllTextKey, interactivityService, hostServices);
+            expect(slicerData.slicerDataPoints.length).toBe(3);
+            expect(slicerData.slicerDataPoints[0].value).toBe('True');
+            expect(slicerData.slicerDataPoints[1].value).toBe('False');
+            expect(slicerData.slicerDataPoints[2].value).toBe('False');
+            expect(slicerData.slicerDataPoints[0].count).toBeUndefined();
+            expect(slicerData.slicerDataPoints[1].count).toBe(3);
+            expect(slicerData.slicerDataPoints[2].count).toBe(4);
+        });
+
+        function applyDataTransform(dataView: powerbi.DataView, semanticFilter: data.SemanticFilter, descriptor?: powerbi.ValueTypeDescriptor): powerbi.DataView[]{
+            if (descriptor == null)
+                descriptor = { text: true };
+
             let transforms: data.DataViewTransformActions = {
                 selects: [
                     {
-                        type: powerbi.ValueType.fromDescriptor({ text: true }),
+                        type: powerbi.ValueType.fromDescriptor(descriptor),
                         roles: { 'Category': true },
                         queryName: 'queryName',
                     }
                 ],
-                objects: {
-                    general: [{ properties: { filter: semanticFilter } }],
-                }
             };
+
+            if (semanticFilter != null) {
+                transforms.objects = {
+                    general: [{ properties: { filter: semanticFilter } }],
+                };
+            }
 
             return DataViewTransform.apply({
                 prototype: dataView,

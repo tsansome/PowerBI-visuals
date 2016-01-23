@@ -89,7 +89,6 @@ module powerbi.visuals {
             }
         };
 
-        private toolTip: D3.Selection;
         private animationOptions: AnimationOptions;
         private displayUnitSystemType: DisplayUnitSystemType;
         private isScrollable: boolean;
@@ -246,7 +245,7 @@ module powerbi.visuals {
             let width = this.currentViewport.width;
             let height = this.currentViewport.height;
             let translateX = this.getTranslateX(width);
-            let translateY = (height - calculatedHeight - labelTextSizeInPx ) / 2;
+            let translateY = (height - calculatedHeight - labelTextSizeInPx) / 2;
             let statusGraphicInfo: KpiImageMetadata = getKpiImageMetadata(metaDataColumn, target, KpiImageSize.Big);
 
             if (this.isScrollable) {
@@ -280,8 +279,6 @@ module powerbi.visuals {
                         'text-anchor': this.getTextAnchor()
                     });
 
-                labelElement.exit().remove();
-
                 let labelElementNode = <SVGTextElement>labelElement.node();
                 if (labelElementNode) {
                     if (formatSettings.wordWrap)
@@ -291,6 +288,12 @@ module powerbi.visuals {
                             width,
                             TextMeasurementService.svgEllipsis);
                 }
+
+                labelElement
+                    .append('title')
+                    .text((d) => d);
+
+                //labelElement.exit().remove();
 
                 if (statusGraphicInfo) {
                     // Display card KPI icon
@@ -313,7 +316,7 @@ module powerbi.visuals {
                     valueElement
                         .text((d: any) => d)
                         .style({
-                        'font-size': jsCommon.PixelConverter.fromPoint(labelSettings.fontSize),
+                            'font-size': jsCommon.PixelConverter.fromPoint(labelSettings.fontSize),
                             'fill': labelSettings.labelColor,
                             'font-family': valueStyles.fontFamily,
                             'text-anchor': this.getTextAnchor(),
@@ -322,6 +325,10 @@ module powerbi.visuals {
                     valueElement.call(AxisHelper.LabelLayoutStrategy.clip,
                         width,
                         TextMeasurementService.svgEllipsis);
+
+                    valueElement
+                        .append('title')
+                        .text((d) => d);
 
                     valueElement.exit().remove();
                 }
@@ -342,11 +349,13 @@ module powerbi.visuals {
                         duration,
                         forceUpdate,
                         formatter
-                        );
+                    );
+
+                    //in order to remove duplicated title values we first remove all and than add a new one 
+                    this.graphicsContext.call(tooltipUtils.tooltipUpdate, [target]);
                 }
             }
 
-            this.updateTooltip(target);
             this.value = target;
         }
 
@@ -370,12 +379,6 @@ module powerbi.visuals {
 
             // Position based on image height
             kpiImageDiv.style('transform', SVGUtil.translateWithPixels((translateX - (imageWidth / 2)), this.getTranslateY(valueStyles.textSize + translateY) - imageHeight));
-        }
-
-        private updateTooltip(target: number) {
-            if (!this.toolTip)
-                this.toolTip = this.graphicsContext.append("svg:title");
-            this.toolTip.text(target);
         }
 
         private getDefaultFormatSettings(): CardFormatSetting {

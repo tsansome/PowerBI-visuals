@@ -468,11 +468,17 @@ module powerbitests {
 
             dataViewBuilder.onDataChanged();
 
+            let labels = $(".dataDotChart .axisGraphicsContext .y.axis .tick").find("text");
+
             setTimeout(() => {
                 expect($(".dataDotChart .axisGraphicsContext .x.axis .tick").length).toBeGreaterThan(0);
                 expect($(".dataDotChart .axisGraphicsContext .y.axis .tick").length).toBeGreaterThan(0);
-                expect($(".dataDotChart .axisGraphicsContext .y.axis .tick").find("text").first().text()).toBe("0.0M");
-                expect($(".dataDotChart .axisGraphicsContext .y.axis .tick").find("text").last().text()).toBe("0.5M");
+
+                expect(helpers.findElementText($(labels).first())).toBe("0.0M");
+                expect(helpers.findElementTitle($(labels).first())).toBe("0.0M");
+
+                expect(helpers.findElementText($(labels).last())).toBe("0.5M");
+                expect(helpers.findElementTitle($(labels).last())).toBe("0.5M");
                 done();
             }, DefaultWaitForRender);
         });

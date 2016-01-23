@@ -54,7 +54,6 @@ module powerbi.visuals {
                         objectName: 'script',
                         propertyName: 'provider'
                     },
-                    imageFormat: 'svg',
                 }
             }
         }],

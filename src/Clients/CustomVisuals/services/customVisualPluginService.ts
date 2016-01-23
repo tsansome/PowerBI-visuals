@@ -114,6 +114,16 @@ module powerbi.visuals.visualPluginFactory {
 
             // Force Graph
             createPlugin(this.customVisualPlugins, powerbi.visuals.plugins.forceGraph, () => new samples.ForceGraph());
+
+            // Mekko Chart
+            createPlugin(this.customVisualPlugins, powerbi.visuals.plugins.mekkoChart, () => new samples.MekkoChart({
+                chartType: samples.MekkoChartType.HundredPercentStackedColumn,
+                isScrollable: true,
+                animator: new WebColumnChartAnimator(),
+                behavior: new CartesianChartBehavior([new ColumnChartWebBehavior()]),
+                //seriesLabelFormattingEnabled: seriesLabelFormattingEnabled,
+            }));
+
         }
     }
 

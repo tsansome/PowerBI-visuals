@@ -43,7 +43,6 @@ module powerbi.visuals {
     export interface ScriptObject extends DataViewObject {
         provider: string;
         source: string;
-        imageFormat: string;
     }
     
     export interface ScriptVisualOptions {
@@ -87,7 +86,7 @@ module powerbi.visuals {
                 saveScriptResult = false;
             }
             else {
-                imageUrl = "data:image/svg+xml;base64," + dataView.scriptResult.imageBase64;
+                imageUrl = "data:image/png;base64," + dataView.scriptResult.imageBase64;
             }
 
             let div: JQuery = this.imageBackgroundElement;

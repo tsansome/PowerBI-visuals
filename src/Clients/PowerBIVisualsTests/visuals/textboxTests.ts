@@ -29,6 +29,7 @@
 module powerbitests {
     import Textbox = powerbi.visuals.Textbox;
     import richTextboxCapabilities = powerbi.visuals.textboxCapabilities;
+    import RichText = powerbi.visuals.RichText;
     import IVisualHostServices = powerbi.IVisualHostServices;
     import Paragraph = powerbi.Paragraph;
 
@@ -304,7 +305,7 @@ module powerbitests {
                     verifyEditor($element, false);
                 });
 
-                it("change to view-mode should format any urls", () => {
+                xit("change to view-mode should format any urls", () => {
                     textbox.onDataChanged({ dataViews: buildParagraphsDataView(paragraphs3) });
 
                     switchToViewMode(powerbi.ViewMode.View);
@@ -348,6 +349,35 @@ module powerbitests {
                     expect(paragraphs[1].textRuns[0].value).toBe("Power BI");
                     expect(paragraphs[1].textRuns[0].textStyle).toEqual({});
                     expect(paragraphs[1].textRuns[0].url).toEqual("http://www.powerbi.com");
+                });
+
+                it("font names should be saved without quotes", () => {
+                    let changes: powerbi.VisualObjectInstance[] = [];
+                    spyOn(host, "persistProperties").and.callFake((c) => changes = c);
+
+                    textbox.onDataChanged({
+                        dataViews: buildParagraphsDataView([
+                            {
+                                textRuns: [
+                                    { value: "foo", textStyle: { fontFamily: "'Comic Sans'" } },
+                                ]
+                            }
+                        ])
+                    });
+
+                    switchToViewMode(powerbi.ViewMode.View);
+
+                    expect(changes).toHaveLength(1);
+
+                    let change = changes[0];
+                    expect(change.objectName).toEqual("general");
+
+                    let paragraphs: Paragraph[] = (<any>change.properties).paragraphs;
+                    expect(paragraphs.length).toBe(1);
+                    expect(paragraphs[0].textRuns.length).toBe(1);
+
+                    expect(paragraphs[0].textRuns[0].value).toBe("foo");
+                    expect(paragraphs[0].textRuns[0].textStyle).toEqual({ fontFamily: "Comic Sans" });  // No quotes
                 });
 
                 it("change to view-mode should preserve empty lines", () => {
@@ -772,7 +802,7 @@ module powerbitests {
                         let fontFace = "Symbol";
 
                         beforeEach(() => {
-                            setSelectValue(fontSelect(getToolbar()), fontFace);
+                            setSelectValue(fontSelect(getToolbar()), "'" + fontFace + "'" );
                         });
 
                         it("should change font in editor", () => {
@@ -804,7 +834,7 @@ module powerbitests {
                         let fontFace = "wf_segoe-ui_normal";
 
                         beforeEach(() => {
-                            setSelectValue(fontSelect(getToolbar()), fontFace);
+                            setSelectValue(fontSelect(getToolbar()), "'" + fontFace + "'");
                         });
 
                         it("should change font in editor", () => {
@@ -1047,6 +1077,20 @@ module powerbitests {
                 function getSelectText($select: JQuery): string {
                     return $select.children("option:selected").text();
                 }
+            });
+
+            describe('RichText module', () => {
+                describe('getFontFamily', () => {
+                    it('quotes font name', () => {
+                        expect(RichText.getFontFamily('foo bar')).toEqual("'foo bar'");
+                        expect(RichText.getFontFamily("'foo bar'")).toEqual("'foo bar'");
+                    });
+
+                    it('uses font map if possible', () => {
+                        expect(RichText.getFontFamily('Body')).toEqual("'wf_segoe-ui_normal'");
+                        expect(RichText.getFontFamily('Arial')).toEqual("'Arial'");  // Not in font map
+                    });
+                });
             });
 
             function switchToViewMode(viewMode: powerbi.ViewMode): void {

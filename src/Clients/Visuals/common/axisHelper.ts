@@ -426,21 +426,15 @@ module powerbi.visuals {
             let maxWidthY1 = 0;
             let maxWidthY2 = 0;
             let xMax = 0; // bottom margin
-            // TODO: using outerPadding to indicate lineChart - we need a better way to indicate whether the label has a rectangle or point as a marker
-            // half-category width is extra space only caused by rectangles being used to plot a category position, line charts don't have this.
-            let labelOffset = xAxisProperties.outerPadding && xAxisProperties.categoryThickness ? xAxisProperties.categoryThickness / 2 : 0;
-            let xLabelOuterPadding = 0;
-
-            // TODO: #6153261 - improve clarity of the outerPadding property.
-            // only Ordinal scales actually use outpadding, Scalar/Continuous axes do not have outer padding and only use this property to incorporate rectangle half-width.
+            let ordinalLabelOffset = xAxisProperties.categoryThickness ? xAxisProperties.categoryThickness / 2 : 0;
             let scaleIsOrdinal = isOrdinalScale(xAxisProperties.scale);
-            if (scaleIsOrdinal) {
-                if (xAxisProperties.outerPadding !== undefined) {
-                    xLabelOuterPadding = xAxisProperties.outerPadding;
-                }
-                else if (xAxisProperties.xLabelMaxWidth !== undefined) {
-                    xLabelOuterPadding = Math.max(0, (viewport.width - xAxisProperties.xLabelMaxWidth * xLabels.length) / 2);
-                }
+
+            let xLabelOuterPadding = 0;
+            if (xAxisProperties.outerPadding !== undefined) {
+                xLabelOuterPadding = xAxisProperties.outerPadding;
+            }
+            else if (xAxisProperties.xLabelMaxWidth !== undefined) {
+                xLabelOuterPadding = Math.max(0, (viewport.width - xAxisProperties.xLabelMaxWidth * xLabels.length) / 2);
             }
 
             if (getRecommendedNumberOfTicksForXAxis(viewport.width) !== 0
@@ -468,12 +462,15 @@ module powerbi.visuals {
 
                 let textHeight = textHeightMeasurer(properties);
                 let maxNumLines = Math.floor(bottomMarginLimit / textHeight);
+                let xScale = xAxisProperties.scale;
+                let xDomain = xScale.domain();
                 if (renderXAxis && xLabels.length > 0) {
                     for (let i = 0, len = xLabels.length; i < len; i++) {
+                        // find the max height of the x-labels, perhaps rotated or wrapped
                         let height: number;
                         properties.text = xLabels[i];
                         let width = textWidthMeasurer(properties);
-                        if (xAxisProperties.willLabelsWordBreak && isOrdinal(xAxisProperties.axisType)) {
+                        if (xAxisProperties.willLabelsWordBreak) {
                             // Split label and count rows
                             let wordBreaks = jsCommon.WordBreaker.splitByWidth(properties.text, properties, textWidthMeasurer, xAxisProperties.xLabelMaxWidth, maxNumLines);
                             height = wordBreaks.length * textHeight;
@@ -486,18 +483,37 @@ module powerbi.visuals {
                             height = TextHeightConstant;
                         }
 
-                        // Account for wide X label (Note: no right overflow when rotated)
-                        let overflow = 0;
+                        // calculate left and right overflow due to wide X labels
+                        // (Note: no right overflow when rotated)
                         if (i === 0) {
-                            if (!xAxisProperties.willLabelsFit /*rotated text*/)
-                                overflow = width - labelOffset - xLabelOuterPadding;
-                            else
-                                overflow = (width / 2) - labelOffset - xLabelOuterPadding;
-                            leftOverflow = Math.max(leftOverflow, overflow);
-                        } else if (i === len - 1 && xAxisProperties.willLabelsFit) {
+                            if (scaleIsOrdinal) {
+                                if (!xAxisProperties.willLabelsFit /*rotated text*/)
+                                    leftOverflow = width - ordinalLabelOffset - xLabelOuterPadding;
+                                else
+                                    leftOverflow = (width / 2) - ordinalLabelOffset - xLabelOuterPadding;
+                                leftOverflow = Math.max(leftOverflow, 0);
+                            }
+                            else if (xDomain && xDomain.length > 1) {
+                                // Scalar - do some math
+                                let xPos = xScale(xDomain[0]);
+                                // xPos already incorporates xLabelOuterPadding, don't subtract it twice
+                                leftOverflow = (width / 2) - xPos;
+                                leftOverflow = Math.max(leftOverflow, 0);
+                            }
+                        } else if (i === len - 1 && (xAxisProperties.willLabelsFit || xAxisProperties.willLabelsWordBreak)) {
                             // if we are rotating text (!willLabelsFit) there won't be any right overflow
-                            overflow = (width / 2) - labelOffset - xLabelOuterPadding;
-                            rightOverflow = Math.max(rightOverflow, overflow);
+                            if (scaleIsOrdinal) {
+                                // assume this label is placed near the edge
+                                rightOverflow = (width / 2) - ordinalLabelOffset - xLabelOuterPadding;
+                                rightOverflow = Math.max(rightOverflow, 0);
+                            }
+                            else if (xDomain && xDomain.length > 1) {
+                                // Scalar - do some math
+                                let xPos = xScale(xDomain[1]);
+                                // xPos already incorporates xLabelOuterPadding, don't subtract it twice
+                                rightOverflow = (width / 2) - (viewport.width - xPos);
+                                rightOverflow = Math.max(rightOverflow, 0);
+                            }
                         }
 
                         xMax = Math.max(xMax, height);

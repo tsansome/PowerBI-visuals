@@ -2074,7 +2074,8 @@ module powerbitests {
                                 setTimeout(() => {
 
                                     expect($('.legendItem')).toBeInDOM();
-                                    expect($('.legendTitle').text()).toBe(testTitle);
+                                    expect(helpers.findElementText($('.legendTitle'))).toBe(testTitle);
+                                    expect(helpers.findElementTitle($('.legendTitle'))).toBe(testTitle);
                                     expect($('#legendGroup').attr('transform')).not.toBeDefined();
 
                                     //hide legend

@@ -82,7 +82,6 @@ module powerbitests {
             expect(scriptVisualCapabilities.dataViewMappings[0].scriptResult.script).toBeDefined();
             expect(scriptVisualCapabilities.dataViewMappings[0].scriptResult.script.source).toBeDefined();
             expect(scriptVisualCapabilities.dataViewMappings[0].scriptResult.script.provider).toBeDefined();
-            expect(scriptVisualCapabilities.dataViewMappings[0].scriptResult.script.imageFormat).toBe('svg');
         });
 
         it("Capabilities should include dataRoles", () => {
@@ -127,26 +126,26 @@ module powerbitests {
 
             it('visual shows last saved image from objects', () => {
                 let visualUpdateOptions = ScriptVisualHelpers.buildUpdateOptions(viewport, {
-                    lastSavedImage: { imageUrl: 'data:image/svg+xml;base64,datadatadata' }
+                    lastSavedImage: { imageUrl: 'data:image/png;base64,datadatadata' }
                 });
                 scriptVisual.update(visualUpdateOptions);
 
                 //Verifying the DOM
                 let imageDiv = element.find('.imageBackground');
-                expect(imageDiv.css('background-image')).toBe('url(data:image/svg+xml;base64,datadatadata)');
+                expect(imageDiv.css('background-image')).toBe('url(data:image/png;base64,datadatadata)');
                 expect(imageDiv.css('height')).toBe(viewport.height + 'px');
                 expect(imageDiv.css('width')).toBe(viewport.width + 'px');
             });
 
             it('visual shows the image from the dataView result', () => {
                 let visualUpdateOptions = ScriptVisualHelpers.buildUpdateOptions(viewport, {
-                    lastSavedImage: { imageUrl: 'data:image/svg+xml;base64,datadatadata' }
+                    lastSavedImage: { imageUrl: 'data:image/png;base64,datadatadata' }
                 }, 'imageimageimage');
                 scriptVisual.update(visualUpdateOptions);
 
                 //Verifying the DOM
                 let imageDiv = element.find('.imageBackground');
-                expect(imageDiv.css('background-image')).toBe('url(data:image/svg+xml;base64,imageimageimage)');
+                expect(imageDiv.css('background-image')).toBe('url(data:image/png;base64,imageimageimage)');
                 expect(imageDiv.css('height')).toBe(viewport.height + 'px');
                 expect(imageDiv.css('width')).toBe(viewport.width + 'px');
             });
@@ -161,7 +160,7 @@ module powerbitests {
                 scriptVisual.init(visualInitOptions);
 
                 let visualUpdateOptions = ScriptVisualHelpers.buildUpdateOptions(viewport, {
-                    lastSavedImage: { imageUrl: 'data:image/svg+xml;base64,datadatadata' }
+                    lastSavedImage: { imageUrl: 'data:image/png;base64,datadatadata' }
                 }, 'imageimageimage');
                 scriptVisual.update(visualUpdateOptions);
 
@@ -180,7 +179,7 @@ module powerbitests {
                 scriptVisual.init(visualInitOptions);
 
                 let visualUpdateOptions = ScriptVisualHelpers.buildUpdateOptions(viewport, {
-                    lastSavedImage: { imageUrl: 'data:image/svg+xml;base64,datadatadata' }
+                    lastSavedImage: { imageUrl: 'data:image/png;base64,datadatadata' }
                 }, 'imageimageimage');
                 scriptVisual.update(visualUpdateOptions);
 
