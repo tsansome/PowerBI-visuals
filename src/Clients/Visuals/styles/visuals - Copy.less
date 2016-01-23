@@ -25,23 +25,17 @@
  */
 
 @import "sprites.less";
+@import "../../StyleLibrary/less/powervisuals-glyphs.less";
 @import "../../PowerBI/styles/colorPalette.less";
 @import "../../PowerBI/styles/fonts.less";
 @import "../../PowerBI/styles/mixins.less";
 @import "../../PowerBI/styles/constants.less";
-@import (optional) "bingNews.less";
-@import (optional) "bingSocialTweets.less";
-@import (optional) "bingSocialNews.less";
-@import (optional) "webChart.less";
-@import (optional) "partitionMap.less";
-@import (optional) "sunburstChart.less";
 
-.slicerContainer {
+@defaultShapeRendering: crispEdges;
 
-    .slicerHeader {
-        margin: 0 0 0 8px;
-        box-sizing: border-box;
-    }
+.slicerHeader {
+    margin: 0 0 0 8px;
+    box-sizing: border-box;
 
     .headerText {
         color: @neutralPrimaryColor;
@@ -54,48 +48,109 @@
         float: none;
     }
 
+    .clear {
+        .sprite(@slicer-reset);
+        margin: 4px 2px;
+        float: right;
+        cursor: pointer;
+        display: block;
+        visibility: hidden;
+    }
+}
+
+.slicerContainer, .horizontalSlicerContainer {
+    &.hasSelection, &:hover {
+        .clear {
+            visibility: visible;
+        }   
+    }
+}
+
+.slicerContainer {
     .slicerItemContainer {
         margin: 2px 0 0 8px;
         box-sizing: border-box;
         white-space: nowrap;
+        cursor: pointer;
 
         * {
             display: table-cell;
-	        vertical-align: bottom;
+            vertical-align: bottom;
         }
 
-        &:hover .slicerCheckbox span::before {
-            opacity: 1;
+        img {
+            max-width: 100px;
+            width: 100%;
+        }
+
+        &:hover {
+            .slicerText {
+                color: @neutralDarkColor !important;
+            }
+
+            .slicerCheckbox {
+                span.checkbox {
+                    border-color: @neutralSecondaryColor;
+                }
+
+                &.selected span.checkbox {
+                    border-color: @neutralDarkColor;
+                }
+
+                &.partiallySelected span.checkbox::before {
+                    background-color: @neutralSecondaryColor;
+                }
+            }
         }
     }
 
     .slicerCheckbox {
         cursor: pointer;
+        vertical-align: middle;
 
         input {
             display: none;
         }
 
         span {
-            display: table-cell;
-        }
-
-        span::before {
-            content: '';
             display: inline-block;
-            vertical-align: middle;
-            .sprite(@slicer-checkbox);
-            opacity: 0.5;
+            width: 9px;
+            height: 9px;
+            border: 2px solid @neutralTertiaryAltColor;
+            box-shadow: inset 0px 0px 1px @neutralTertiaryAltColor;
         }
 
-        input:checked + span::before {
-            .sprite(@slicer-checkbox-selected);
-            opacity: 1;
+        &.selected {
+            border: none !important;
+
+            & + .slicerText {
+                color: @neutralDarkColor !important;
+            }
+
+            span.checkbox {
+                border-color: @neutralDarkColor;
+                background-color: @neutralDarkColor;
+                box-shadow: none;
+            }
         }
 
-        input.partiallySelected + span::before {
-            .sprite(@slicer-partially-selected);
-            opacity: 1;
+        &.partiallySelected {
+            span.checkbox {
+                background-color: transparent;
+                border-color: @neutralTertiaryAltColor;
+            }
+
+            span.checkbox::before {
+                content: '';
+                height: 3px;
+                width: 3px;
+                position: absolute;
+                display: inline-block;
+                margin: 3px 0 0px 3px;
+                background-color: @neutralTertiaryAltColor;
+                box-shadow: 0px 0px 2px @neutralTertiaryAltColor;
+                border: none;
+            }
         }
     }
 
@@ -104,13 +159,120 @@
         font-size: 14px;
     }
 
-    .clear {
-        .sprite(@slicer-reset);
-        // The total margin is referred in the slicer.ts file. Any changes to these values should also be updated in the ts file
-        margin: 4px 2px;
-        float: right;
-        cursor: pointer;
+    &.isMultiSelectEnabled .slicerCheckbox.selected:not(.partiallySelected) {
+        /* TODO: Use a checkmark glyph rather than drawing a custom one using transforms and offsets. */
+        span.checkbox::before {
+            content: '';
+            height: 8px;
+            width: 3px;
+            position: absolute;
+            display: inline-block;
+            margin: -2px 0 0 3px;
+            border-right: 2px solid @whiteColor;
+            border-bottom: 2px solid @whiteColor;
+            transform: rotate(45deg);
+        }
     }
+}
+
+.horizontalSlicerContainer {
+    &.canScrollRight {
+        .navigationArrow.right {
+             visibility: visible;
+        }        
+    }
+
+    &.canScrollLeft {
+        .navigationArrow.left {
+             visibility: visible;
+        }        
+    }     
+
+    .navigationArrow {
+        visibility: hidden;
+        background-color: white;
+
+        &.right {
+            .sprite(@horizontal-slicer-right-arrow);
+            margin-left: 5px;
+        }
+
+        &.left {
+            .sprite(@horizontal-slicer-left-arrow);
+            margin-right: 5px;
+        }
+    }
+
+    .flexDisplay {
+        display: -ms-flexbox;
+        display: -webkit-flex;
+        display: flex;
+    }
+
+    .slicerBody {
+        align-items: center;
+        -ms-flex-align: center;
+        justify-content: space-between;
+        -ms-flex-direction: row;
+        flex-direction: row;
+    }
+
+    .slicerItemsContainer {
+        vertical-align: top;
+        width: 100%;
+        height: 100%;
+        -webkit-flex: 1; /* Chrome */
+        -ms-flex: 1; /* IE 10 */
+        flex: 1;
+    }
+
+    .slicerText {
+        -webkit-flex-direction: column;
+        -ms-flex-direction: column;
+        flex-direction: column;
+        -webkit-justify-content: center;
+        -ms-flex-pack: center;
+        justify-content: center;
+        -webkit-align-items: center;
+        -ms-flex-align: center;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+        padding-top: 4px;
+        padding-bottom: 4px;
+
+        &.selected, &.partiallySelected {
+            color: @whiteColor !important;
+        }
+
+        &:hover {
+            background-color: @neutralLightColor !important;
+        }
+
+        &.selected {
+            background-color: rgba(51,51,51,1.0) !important;
+        }
+
+        &.partiallySelected {
+            background-color: rgba(51,51,51,0.6) !important;
+        }
+
+        &.selected:hover, &.partiallySelected:hover {
+            background-color: @neutralTertiaryAltColor !important;
+        }
+
+        > span {
+            text-align: center;
+        }
+    }
+}
+
+.overflowingText {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
 }
 
 .visual svg {
@@ -186,7 +348,7 @@
         .axis path, .axis line {
             fill: none;
             stroke: @neutralSecondaryAltColor;
-            shape-rendering: crispEdges;
+            shape-rendering: @defaultShapeRendering;
         }
     }
 
@@ -245,7 +407,7 @@
         .axis path, .axis line {
             fill: none;
             stroke: @neutralSecondaryAltColor;
-            shape-rendering: crispEdges;
+            shape-rendering: @defaultShapeRendering;
         }
     }
 }
@@ -270,14 +432,14 @@
         .axis path, .axis line {
             fill: none;
             stroke: @neutralSecondaryAltColor;
-            shape-rendering: crispEdges;
+            shape-rendering: @defaultShapeRendering;
         }
     }
 
     .waterfall-connector {
         stroke: @chartConnectorColor;
         stroke-width: 1px;
-        shape-rendering: crispEdges;
+        shape-rendering: @defaultShapeRendering;
     }
 }
 
@@ -302,13 +464,21 @@
     }
 
     .hover-line {
-        stroke: @chartAxisGridLineColor;
-        fill: rgba(235, 94, 94, 1.0);
+        stroke: @interactiveHoverLineColor;
+        pointer-events: none;
 
         .interactive {
-            stroke: @interactiveHoverLineColor;
             stroke-width: 3px;
             opacity: 1;
+        }
+
+        .selection-circle {
+            stroke: @chartAxisGridLineColor;
+        }
+
+        .circle-item {
+            stroke: none;
+            pointer-events: none;
         }
     }
 
@@ -328,7 +498,7 @@
         .axis path, .axis line {
             fill: none;
             stroke: @neutralSecondaryAltColor;
-            shape-rendering: crispEdges;
+            shape-rendering: @defaultShapeRendering;
         }
 
         .line {
@@ -341,7 +511,7 @@
 
 .funnelChart {
     line {
-        shape-rendering: crispEdges;
+        shape-rendering: @defaultShapeRendering;
     }
 
     .percentBars {
@@ -358,21 +528,15 @@
     }
 
     .axis {
-        path, line {
+        font-family: @regularFontFamily;
+        font-size: 11px;
+
+        path {
             fill: none;
-            stroke: #000;
         }
 
-        .data-labels {
-            font-size: 12px;
-        }
-
-        .tick line {
-            display: none;
-        }
-
-        .domain {
-            display: none;
+        .tick text {
+            fill: @neutralSecondaryAltColor;
         }
     }
 }
@@ -469,7 +633,7 @@
         .axis path, .axis line {
             fill: none;
             stroke: @neutralSecondaryAltColor;
-            shape-rendering: crispEdges;
+            shape-rendering: @defaultShapeRendering;
         }
     }
 }
@@ -502,16 +666,20 @@
         .axis path, .axis line {
             fill: none;
             stroke: @neutralSecondaryAltColor;
-            shape-rendering: crispEdges;
+            shape-rendering: @defaultShapeRendering;
         }
+    }
+
+    .play-axis-container {
+        position: absolute;
+        left: 16px;
+        bottom: 35px;
     }
 
     .button-container {
         height: 24px;
         width: 24px;
         overflow: hidden;
-        -moz-border-radius: 13px;
-        -webkit-border-radius: 13px;
         border-radius: 13px;
         border: 1px solid @neutralSecondaryColor;
         margin: 10px;
@@ -557,6 +725,10 @@
         right: 16px;
         color: @neutralSecondaryAltColor2;
         opacity: 0.5;
+        pointer-events: none;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
 }
 
@@ -622,6 +794,8 @@
 
 .tablixContainer {
     overflow: auto;
+    /** Preserve previous dashboard tile font-size */
+    font-size: 11px;
 
     .bi-tablix {
         position: relative;
@@ -631,7 +805,6 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
-            -o-user-select: none;
             user-select: none;
             cursor: default;
         }
@@ -644,7 +817,6 @@
             margin: 0px;
             font-family: @semiboldFontFamily;
             color: @neutralSecondaryColor;
-            font-size: 14px;
             font-weight: normal;
         }
 
@@ -665,12 +837,35 @@
             border-bottom-width: 1pt;
             border-bottom-style: solid;
             border-bottom-color: #CCCCCC;
-            font-size: 16px;
             /* Having a right padding of 5px is crucial to make sure that we do not fire click events on the table column
                header (and trigger sorting) when resizing a column.  The allowed offset from the parent td's right border
                to trigger resizing is 4px (see TablixResizer.resizeHandleSize) and thus less than the 5px padding.
             */
             padding: 0px 5px 0px 10px;
+        }
+
+        .bi-sort-icon-container {
+            float: right;
+        }
+
+        .bi-table-column-header {
+             div.future {
+              display: none;
+             }
+
+             div.sorted {
+              display: inline-block;
+             }
+
+            & > div:hover {
+                div.sorted {
+                    display: none;
+                }
+
+                div.future {
+                    display: inline-block;
+                }
+            }
         }
 
         .bi-table-cell-numeric {
@@ -683,14 +878,12 @@
             border-bottom-color: #E8E8E8;
             font-family: @semiboldFontFamily;
             color: @neutralPrimaryColor;
-            font-size: 14px;
             padding: 0px 0px 0px 10px;
         }
 
         .bi-table-last-row {
             font-family: @semiboldFontFamily;
             color: @neutralPrimaryColor;
-            font-size: 14px;
             padding: 0px 0px 0px 10px;
         }
 
@@ -700,7 +893,6 @@
             border-top-color: #CCCCCC;
             font-family: @boldFontFamily;
             color: @neutralPrimaryColor;
-            font-size: 14px;
             padding: 0px 5px 0px 10px;
         }
 
@@ -744,7 +936,6 @@
             text-align: right;
             font-family: @semiboldFontFamily;
             color: @neutralPrimaryColor;
-            font-size: 14px;
             padding: 0px 5px 0px 10px;
         }
 
@@ -789,7 +980,6 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
-            -o-user-select: none;
             user-select: none;
             cursor: default;
         }
@@ -802,7 +992,6 @@
             margin: 0px;
             font-family: @semiboldFontFamily;
             color: @neutralSecondaryColor;
-            font-size: 11px;
             font-weight: normal;
         }
 
@@ -823,8 +1012,21 @@
             border-bottom-width: 1pt;
             border-bottom-style: solid;
             border-bottom-color: #CCCCCC;
-            font-size: 11px;
             padding: 0px 5px 0px 10px;
+        }
+
+        .bi-sort-icon-container {
+            float: right;
+        }
+
+        .bi-table-column-header {
+             div.future {
+              display: none;
+             }
+
+             div.sorted {
+              display: inline-block;
+             }
         }
 
         .bi-table-cell-numeric {
@@ -837,14 +1039,12 @@
             border-bottom-color: #E8E8E8;
             font-family: @semiboldFontFamily;
             color: @neutralPrimaryColor;
-            font-size: 11px;
             padding: 0px 0px 0px 10px;
         }
 
         .bi-table-last-row {
             font-family: @semiboldFontFamily;
             color: @neutralPrimaryColor;
-            font-size: 11px;
             padding: 0px 0px 0px 10px;
         }
 
@@ -855,12 +1055,12 @@
             font-family: @regularFontFamily;
             font-weight: bold;
             color: @neutralPrimaryColor;
-            font-size: 11px;
             padding: 0px 5px 0px 10px;
         }
 
         .bi-tablix-header {
             padding: 0px 5px 0px 10px;
+            text-align: left;
         }
 
         .bi-tablix-row-header-leaf {
@@ -895,7 +1095,6 @@
             text-align: right;
             font-family: @regularFontFamily;
             color: @neutralPrimaryColor;
-            font-size: 11px;
             padding: 0px 5px 0px 10px;
         }
 
@@ -931,8 +1130,6 @@
     color: #333;
     background: rgba(255,255,255,1);
     /* css3 */
-    -webkit-border-radius: 0px;
-    -moz-border-radius: 0px;
     border-radius: 0px;
 }
 
@@ -1006,6 +1203,7 @@
         .labels {
             font-family: @regularFontFamily;
             fill: @whiteColor;
+            pointer-events: none;
 
             .majorLabel {
                 font-size: 12px;
@@ -1017,301 +1215,63 @@
         }
     }
 
-    div {
-        &.kpiTrafficLightSingle0 {
-            .sprite(@kpi-traffic-light-single0)
-        }
-
-        &.kpiTrafficLightSingle1 {
-            .sprite(@kpi-traffic-light-single1)
-        }
-
-        &.kpiTrafficLightSingle2 {
-            .sprite(@kpi-traffic-light-single2)
-        }
-
-        &.kpiThreeFlagsColored0 {
-            .sprite(@kpi-three-flags-colored0)
-        }
-
-        &.kpiThreeFlagsColored1 {
-            .sprite(@kpi-three-flags-colored1)
-        }
-
-        &.kpiThreeFlagsColored2 {
-            .sprite(@kpi-three-flags-colored2)
-        }
-
-        &.kpiThreeStarsColored0 {
-            .sprite(@kpi-three-stars-colored0)
-        }
-
-        &.kpiThreeStarsColored1 {
-            .sprite(@kpi-three-stars-colored1)
-        }
-
-        &.kpiThreeStarsColored2 {
-            .sprite(@kpi-three-stars-colored2)
-        }
-
-        &.kpiThreeSymbolsUnCircledColored0 {
-            .sprite(@kpi-three-symbols-un-circled-colored0)
-        }
-
-        &.kpiThreeSymbolsUnCircledColored1 {
-            .sprite(@kpi-three-symbols-un-circled-colored1)
-        }
-
-        &.kpiThreeSymbolsUnCircledColored2 {
-            .sprite(@kpi-three-symbols-un-circled-colored2)
-        }
-
-        &.kpiRoadSigns0 {
-            .sprite(@kpi-road-signs0);
-        }
-
-        &.kpiRoadSigns1 {
-            .sprite(@kpi-road-signs1);
-        }
-
-        &.kpiRoadSigns2 {
-            .sprite(@kpi-road-signs2);
-        }
-
-        &.kpiTrafficLight0 {
-            .sprite(@kpi-traffic-light0);
-        }
-
-        &.kpiTrafficLight1 {
-            .sprite(@kpi-traffic-light1);
-        }
-
-        &.kpiTrafficLight2 {
-            .sprite(@kpi-traffic-light2);
-        }
-
-        &.kpiShapes0 {
-            .sprite(@kpi-shapes0);
-        }
-
-        &.kpiShapes1 {
-            .sprite(@kpi-shapes1);
-        }
-
-        &.kpiShapes2 {
-            .sprite(@kpi-shapes2);
-        }
-
-        &.kpiFiveBars0 {
-            .sprite(@kpi-five-bars-colored0);
-        }
-
-        &.kpiFiveBars1 {
-            .sprite(@kpi-five-bars-colored1);
-        }
-
-        &.kpiFiveBars2 {
-            .sprite(@kpi-five-bars-colored2);
-        }
-
-        &.kpiFiveBars3 {
-            .sprite(@kpi-five-bars-colored3);
-        }
-
-        &.kpiFiveBars4 {
-            .sprite(@kpi-five-bars-colored4);
-        }
-
-        &.kpiFiveBoxes0 {
-            .sprite(@kpi-five-boxes-colored0);
-        }
-
-        &.kpiFiveBoxes1 {
-            .sprite(@kpi-five-boxes-colored1);
-        }
-
-        &.kpiFiveBoxes2 {
-            .sprite(@kpi-five-boxes-colored2);
-        }
-
-        &.kpiFiveBoxes3 {
-            .sprite(@kpi-five-boxes-colored3);
-        }
-
-        &.kpiFiveBoxes4 {
-            .sprite(@kpi-five-boxes-colored4);
-        }
-
-        &.kpiGauge0 {
-            .sprite(@kpi-gauge-ascending0);
-        }
-
-        &.kpiGauge1 {
-            .sprite(@kpi-gauge-ascending1);
-        }
-
-        &.kpiGauge2 {
-            .sprite(@kpi-gauge-ascending2);
-        }
-
-        &.kpiGauge3 {
-            .sprite(@kpi-gauge-ascending3);
-        }
-
-        &.kpiGauge4 {
-            .sprite(@kpi-gauge-ascending4);
-        }
-
-        &.kpiTrafficLightSingleBig0 {
-            .sprite(@kpi-traffic-light-single0)
-        }
-
-        &.kpiTrafficLightSingleBig1 {
-            .sprite(@kpi-traffic-light-single1)
-        }
-
-        &.kpiTrafficLightSingleBig2 {
-            .sprite(@kpi-traffic-light-single2)
-        }
-
-        &.kpiThreeFlagsBigColored0 {
-            .sprite(@kpi-three-flags-colored0)
-        }
-
-        &.kpiThreeFlagsBigColored1 {
-            .sprite(@kpi-three-flags-colored1)
-        }
-
-        &.kpiThreeFlagsBigColored2 {
-            .sprite(@kpi-three-flags-colored2)
-        }
-
-        &.kpiThreeStarsBigColored0 {
-            .sprite(@kpi-three-stars-colored0)
-        }
-
-        &.kpiThreeStarsBigColored1 {
-            .sprite(@kpi-three-stars-colored1)
-        }
-
-        &.kpiThreeStarsBigColored2 {
-            .sprite(@kpi-three-stars-colored2)
-        }
-
-        &.kpiThreeSymbolsUnCircledBigColored0 {
-            .sprite(@kpi-three-symbols-un-circled-colored0)
-        }
-
-        &.kpiThreeSymbolsUnCircledBigColored1 {
-            .sprite(@kpi-three-symbols-un-circled-colored1)
-        }
-
-        &.kpiThreeSymbolsUnCircledBigColored2 {
-            .sprite(@kpi-three-symbols-un-circled-colored2)
-        }
-
-        &.kpiRoadSignsBig0 {
-            .sprite(@kpi-road-signs0);
-        }
-
-        &.kpiRoadSignsBig1 {
-            .sprite(@kpi-road-signs1);
-        }
-
-        &.kpiRoadSignsBig2 {
-            .sprite(@kpi-road-signs2);
-        }
-
-        &.kpiTrafficLightBig0 {
-            .sprite(@kpi-traffic-light0);
-        }
-
-        &.kpiTrafficLightBig1 {
-            .sprite(@kpi-traffic-light1);
-        }
-
-        &.kpiTrafficLightBig2 {
-            .sprite(@kpi-traffic-light2);
-        }
-
-        &.kpiShapesBig0 {
-            .sprite(@kpi-shapes0);
-        }
-
-        &.kpiShapesBig1 {
-            .sprite(@kpi-shapes1);
-        }
-
-        &.kpiShapesBig2 {
-            .sprite(@kpi-shapes2);
-        }
-
-        &.kpiFiveBarsBig0 {
-            .sprite(@kpi-five-bars-colored0);
-        }
-
-        &.kpiFiveBarsBig1 {
-            .sprite(@kpi-five-bars-colored1);
-        }
-
-        &.kpiFiveBarsBig2 {
-            .sprite(@kpi-five-bars-colored2);
-        }
-
-        &.kpiFiveBarsBig4 {
-            .sprite(@kpi-five-bars-colored3);
-        }
-
-        &.kpiFiveBarsBig5 {
-            .sprite(@kpi-five-bars-colored4);
-        }
-
-        &.kpiFiveBoxesBig0 {
-            .sprite(@kpi-five-boxes-colored0);
-        }
-
-        &.kpiFiveBoxesBig1 {
-            .sprite(@kpi-five-boxes-colored1);
-        }
-
-        &.kpiFiveBoxesBig2 {
-            .sprite(@kpi-five-boxes-colored2);
-        }
-
-        &.kpiFiveBoxesBig3 {
-            .sprite(@kpi-five-boxes-colored3);
-        }
-
-        &.kpiFiveBoxesBig4 {
-            .sprite(@kpi-five-boxes-colored4);
-        }
-
-        &.kpiGaugeBig0 {
-            .sprite(@kpi-gauge-ascending0);
-        }
-
-        &.kpiGaugeBig1 {
-            .sprite(@kpi-gauge-ascending1);
-        }
-
-        &.kpiGaugeBig2 {
-            .sprite(@kpi-gauge-ascending2);
-        }
-
-        &.kpiGaugeBig3 {
-            .sprite(@kpi-gauge-ascending3);
-        }
-
-        &.kpiGaugeBig4 {
-            .sprite(@kpi-gauge-ascending4);
+    .powervisuals-glyph {
+        font-size: inherit;
+
+        &.big-kpi {
+            font-size: 48px;
         }
     }
+    /* Adding custom styles to the listView jQuery Scrollbar. */
+    .scroll-wrapper {
+        width: 100%;
+        height: 100%;
+        display: block;
+
+        .scroll-content {
+            height: inherit;
+        }
+
+        .scroll-element {
+            &.scroll-x {
+                height: 8px !important;
+            }
+
+            &.scroll-y {
+                width: 8px !important;
+            }
+
+            .scroll-element_track {
+                background-color: transparent !important;
+            }
+
+            .scroll-element_outer, .scroll-bar {
+                .no-border-radius;
+            }
+
+            .scroll-bar {
+                background-color: @neutralTertiaryAltColor !important;
+                opacity: 0;
+            }
+        }
+    }
+    /* Only show the scrollbars on hover or when being dragged. */
+    .scroll-wrapper:hover .scroll-element .scroll-bar,
+    .scroll-wrapper .scroll-element.scroll-draggable .scroll-bar {
+        opacity: 1;
+    }
+
+    &.disable-events{
+        pointer-events: none;
+}
 }
 
 .interactive-legend {
     white-space: nowrap;
     text-align: left;
     overflow: hidden;
+    touch-action: none;
+    cursor: pointer;
 
     .title {
         font-family: @lightFontFamily;
@@ -1348,9 +1308,25 @@
         max-width: 390px;
     }
 
+    div.tooltip-header {
+        word-wrap: break-word;
+        max-width: 260px;
+        font-weight: bold;
+        color: @whiteColor;
+        letter-spacing: 1px;
+        padding-bottom: 4px;
+    }
+
     .tooltip-row {
         display: table-row;
         line-height: 16px;
+    }
+
+    div.tooltip-color-cell {
+        display: table-cell;
+        vertical-align: top;
+        max-width: 13px;
+        padding-right: 4px;
     }
 
     div.tooltip-title-cell {
@@ -1366,6 +1342,7 @@
     div.tooltip-value-cell {
         display: table-cell;
         word-wrap: break-word;
+        font-family: @regularFontFamily;
         max-width: 260px;
         font-weight: bold;
         color: @whiteColor;
@@ -1401,6 +1378,27 @@
     }
 }
 
+.labelGraphicsContext {
+    .label {
+        font-size: 12px;
+        text-anchor: middle;
+        font-family: @regularSecondaryFontFamily;
+    } 
+
+    .catagorylabel {
+        font-size: 12px;
+        text-anchor: middle;
+        font-family: @regularSecondaryFontFamily;
+    }
+}
+
+    .leader-lines {
+    .line-label {
+        opacity: 0.5;
+    }
+}
+
+/* Kept around for funnel labels; can be removed once it's moved to the new system */
 .data-labels {
     font-size: 12px;
     text-anchor: middle;
@@ -1412,6 +1410,7 @@
 .richtextbox {
     color: @neutralPrimaryColor;
     pointer-events: all;
+    white-space: pre-wrap;
 
     a {
         color: @defaultLinkColor;
@@ -1429,12 +1428,10 @@
 }
 
 div.ql-toolbar {
-    padding: 4px;
-    background: @neutralPrimaryColor;
-    color: @whiteColor;
     white-space: nowrap;
     overflow-x: hidden;
     font-size: 14px;
+
     // TODO: fix SELECT dropdown arrow in IE
     /*
     select::-ms-expand {
@@ -1442,20 +1439,11 @@ div.ql-toolbar {
     }
     */
     .ql-format-group {
-        display: inline-block;
         vertical-align: middle;
-        margin: 0px 2px;
     }
 
     select.ql-picker {
-        margin: 3px;
         padding: 3px;
-        background: @neutralPrimaryColorAlt;
-        border: 1px solid @blackColor;
-    }
-
-    select.ql-font {
-        width: 122px;
     }
 
     label {
@@ -1464,8 +1452,16 @@ div.ql-toolbar {
 
     .ql-format-button {
         margin: 3px;
+        padding: 4px;
+        font-size: @largeFontSize;
         display: inline-block;
         vertical-align: middle;
+
+        &:hover,
+        &.ql-active {
+            background: @themePrimaryColor;
+            color: @neutralPrimaryColor;
+        }
     }
 
     .toolbar-url-input {
@@ -1473,7 +1469,11 @@ div.ql-toolbar {
         vertical-align: middle;
 
         .ql-link div {
-            height: 100%;
+            height: 24px;
+            width: 24px;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         .ql-link-tooltip {
@@ -1524,98 +1524,76 @@ div.ql-toolbar {
         }
     }
 
-    .ql-format-button:hover {
-        background: @themePrimaryColor;
-        color: @neutralPrimaryColor;
+    &.stackedToolbar {
+        box-shadow: none;
+        position: inherit;
+        
+        .ql-link-tooltip {
+            a {
+                margin: 0;
+            }
+
+            .url {
+                max-width: 135px;
+                overflow: hidden;
+                display: inline-block;
+            }
+
+            &.editing .url {
+                display: none;
+            }
+
+            .input {
+                width: 175px;
+                margin: 0;
+            }
+        }
+
+        .ql-format-group {
+            margin-top: 8px;
+            display: block;
+            float: left;
+        }
+
+        label {
+            display: none;
+        }
+
+        select.ql-font {
+            width: 180px;
+        }
+
+        select.ql-size {
+            width: 60px;
+            margin-left: 10px;
+        }
     }
 
-    .ql-format-button.ql-active {
-        background: @themePrimaryColor;
-        color: @neutralPrimaryColor;
+    &.overlayedToolbar {
+        padding: 4px;
+
+        select.ql-picker {
+            margin: 3px;
+        }
+
+        .ql-format-group {
+            display: inline-block;
+            margin: 0px 2px;
+        }
+
+        select.ql-font {
+            width: 122px;
+        }
     }
 
-    .ql-format-button[data-value="left"] {
-        .sprite(@left-align-text-white);
-    }
+    &.darkToolbar {
+        background: @neutralPrimaryColor;
+        color: @whiteColor;
 
-    .ql-format-button[data-value="left"].ql-active {
-        .sprite(@left-align-text-black);
-    }
-
-    .ql-format-button[data-value="left"]:hover {
-        .sprite(@left-align-text-black);
-    }
-
-    .ql-format-button[data-value="right"] {
-        .sprite(@right-align-text-white);
-    }
-
-    .ql-format-button[data-value="right"].ql-active {
-        .sprite(@right-align-text-black);
-    }
-
-    .ql-format-button[data-value="right"]:hover {
-        .sprite(@right-align-text-black);
-    }
-
-    .ql-format-button[data-value="center"] {
-        .sprite(@center-align-text-white);
-    }
-
-    .ql-format-button[data-value="center"].ql-active {
-        .sprite(@center-align-text-black);
-    }
-
-    .ql-format-button[data-value="center"]:hover {
-        .sprite(@center-align-text-black);
-    }
-
-    .ql-format-button.ql-bold {
-        .sprite(@bold-text-white);
-    }
-
-    .ql-format-button.ql-bold.ql-active {
-        .sprite(@bold-text-black);
-    }
-
-    .ql-format-button.ql-bold:hover {
-        .sprite(@bold-text-black);
-    }
-
-    .ql-format-button.ql-italic {
-        .sprite(@italic-text-white);
-    }
-
-    .ql-format-button.ql-italic.ql-active {
-        .sprite(@italic-text-black);
-    }
-
-    .ql-format-button.ql-italic:hover {
-        .sprite(@italic-text-black);
-    }
-
-    .ql-format-button.ql-underline {
-        .sprite(@underline-text-white);
-    }
-
-    .ql-format-button.ql-underline.ql-active {
-        .sprite(@underline-text-black);
-    }
-
-    .ql-format-button.ql-underline:hover {
-        .sprite(@underline-text-black);
-    }
-
-    .ql-format-button.ql-link {
-        .sprite(@insert-link-white);
-    }
-
-    .ql-format-button.ql-link.ql-active {
-        .sprite(@insert-link-black);
-    }
-
-    .ql-format-button.ql-link:hover {
-        .sprite(@insert-link-black);
+        select.ql-picker {
+            background: @neutralPrimaryColorAlt;
+            border: 1px solid @blackColor;
+        }
     }
 }
 
@@ -1693,7 +1671,7 @@ div.ql-toolbar {
     }
 }
 
-.clearCatcher {
+.clearCatcher, .backgroundRect {
     fill-opacity: 0;
 }
 
@@ -1702,10 +1680,21 @@ div.ql-toolbar {
 
     &.sad {
         .owlGaugeBg {
-            .st0{ fill:#EF4137; }
-            .st1{ fill:#FAAF42; }
-            .st2{ fill:#F15B2A; }
-            .st3{ fill:#F15B2A; }
+            .st0 {
+                fill: #EF4137;
+            }
+
+            .st1 {
+                fill: #FAAF42;
+            }
+
+            .st2 {
+                fill: #F15B2A;
+            }
+
+            .st3 {
+                fill: #F15B2A;
+            }
         }
 
         .owlGaugeTail {
@@ -1715,10 +1704,21 @@ div.ql-toolbar {
 
     &.meh {
         .owlGaugeBg {
-            .st0{ fill:#F18D05; }
-            .st1{ fill:#FAAF42; }
-            .st2{ fill:#F15B2A; }
-            .st3{ fill:#F15B2A; }
+            .st0 {
+                fill: #F18D05;
+            }
+
+            .st1 {
+                fill: #FAAF42;
+            }
+
+            .st2 {
+                fill: #F15B2A;
+            }
+
+            .st3 {
+                fill: #F15B2A;
+            }
         }
 
         .owlGaugeTail {
@@ -1728,10 +1728,21 @@ div.ql-toolbar {
 
     &.happy {
         .owlGaugeBg {
-            .st0{ fill:#32742C; }
-            .st1{ fill:#D0D102; }
-            .st2{ fill:#61AE24; }
-            .st3{ fill:#23AA65; }
+            .st0 {
+                fill: #32742C;
+            }
+
+            .st1 {
+                fill: #D0D102;
+            }
+
+            .st2 {
+                fill: #61AE24;
+            }
+
+            .st3 {
+                fill: #23AA65;
+            }
         }
 
         .owlGaugeTail {
@@ -1740,7 +1751,7 @@ div.ql-toolbar {
     }
 
     > svg {
-        position:absolute;
+        position: absolute;
         transition: all 0.25s;
     }
 
@@ -1771,66 +1782,43 @@ div.ql-toolbar {
     }
 
     @keyframes owlTailAmbientAnimation {
-        0% { transform: rotate(2deg); }
-        50% { transform: rotate(-2deg); }
-        100% { transform: rotate(2deg); }
-    }
-}
-    
-.streamGraph {
-    .axis{
-        path, line {
-            fill: none;
-            stroke: black;
-            shape-rendering: crispEdges;
+        0% {
+            transform: rotate(2deg);
         }
 
-        text {
-            font-family: sans-serif;
-            font-size: 11px;
+        50% {
+            transform: rotate(-2deg);
+        }
+
+        100% {
+            transform: rotate(2deg);
         }
     }
 }
-<<<<<<< HEAD
 
-
-.nodeLinkText {
-    text-shadow:
-   -1px -1px 0 white,  
-    1px -1px 0 white,
-    -1px 1px 0 white,
-     1px 1px 0 white;
-}
-
-.nodeLinkLinkText {
-    text-shadow:
-   -1px -1px 0 white,  
-    1px -1px 0 white,
-    -1px 1px 0 white,
-     1px 1px 0 white;
-}
-=======
-    
-.radarChart {
-    .axis {
-        path, line {
-            fill: none;
-            stroke: grey;
-            stroke-width: 1px;
-        }
-
-        text {
-            font-family: sans-serif;
-            font-size: 11px;
-        }
-    }
-    .segments {
-        path, line {
-            fill: none;
-            stroke: grey;
-            stroke-opacity: 0.75;
-            stroke-width: 0.3px;
-        }
+.visual-sandbox {
+    border: none;
+    overflow: hidden;
+    //adding this because cors block fonts for sandboxed visuals.
+    .tooltip-container .tooltip-row {
+        font-size: 9px;
     }
 }
->>>>>>> Microsoft/master
+
+.x-ref-line {
+    stroke-width: 3px;
+    stroke-opacity: 0.5;
+}
+
+.y1-ref-line {
+    stroke-width: 3px;
+    stroke-opacity: 0.5;
+}
+.kpiVisual {
+    .goalText {
+        fill: #333333;
+        font-family: @regularFontFamily;
+        font-size: 15px;
+        text-anchor: middle;
+    }
+}

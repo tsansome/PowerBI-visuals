@@ -65,7 +65,6 @@
 /// <reference path="capabilities/gauge.capabilities.ts"/>
 /// <reference path="capabilities/imageVisual.capabilities.ts"/>
 /// <reference path="capabilities/scriptVisual.capabilities.ts"/>
-/// <reference path="capabilities/samples/consoleWriter.capabilities.ts"/>
 
 /// <reference path="capabilities/lineChart.capabilities.ts"/>
 /// <reference path="capabilities/map.capabilities.ts"/>
@@ -104,6 +103,7 @@
 /// <reference path="common/columnChartUtil.ts"/>
 /// <reference path="common/converterHelper.ts"/>
 /// <reference path="common/dataLabelUtils.ts"/>
+/// <reference path="common/donutLabelUtils.ts"/>
 /// <reference path="common/newDataLabelUtils.ts"/>
 /// <reference path="common/dataRoleHelper.ts"/>
 /// <reference path="common/kpiUtil.ts"/>

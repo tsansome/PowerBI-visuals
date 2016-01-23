@@ -424,7 +424,11 @@ module powerbi.visuals {
         public static converter(dataView: DataView[]): DataViewCategorical {
             if (dataView == null || dataView.length === 0 || dataView[0].categorical == null || dataView[0].categorical.values == null || dataView[0].categorical.values.length === 0) {
                 return null;
-            }            
+            }         
+            //we also need to check that a group field has been added
+            if (dataView[0].categorical.values[0].source.groupName == null) {
+                return null;
+            }   
             //we need to look at the sort property to see whether we should do ascending or descending
             var sortOrder = GapAnalysis.statementSortOrderDefault;
             if (dataView) {

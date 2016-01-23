@@ -1,10 +1,6 @@
-# Welcome to my Power BI playground!
-
-## Added visuals
-
-So far i have added one visual, called a node graph.
-
-## Information about the forked project
+# Microsoft Power BI visuals
+[![Build status](https://ci.appveyor.com/api/projects/status/77d940234217vpap/branch/master?svg=true)](https://ci.appveyor.com/project/powerbi-gitbot/powerbi-visuals)
+[![Build Status](https://travis-ci.org/Microsoft/PowerBI-visuals.svg?branch=master)](https://travis-ci.org/Microsoft/PowerBI-visuals)
 
 The Microsoft Power BI visuals project provides high quality data visualizations that you can use to extend [Power BI](https://powerbi.microsoft.com/).  The project contains over 20 visualization types, the framework to run them, and the testing infrastructure that enables you to build high quality visualizations.  The framework provides all the interfaces you need to integrate fully with Power BI's selection, filtering, and other UI experiences.  The code is written in [TypeScript](http://www.typescriptlang.org/) so it's easier to build and debug. Everything compiles down to JavaScript and runs in modern web browsers.  The visuals are built using [D3](http://d3js.org/) but you can use your favorite technology like [WebGL](https://en.wikipedia.org/wiki/WebGL), [Canvas](https://en.wikipedia.org/wiki/Canvas_element), or [SVG](https://en.wikipedia.org/wiki/Scalable_Vector_Graphics). This gives you everything you need to build custom visualizations for Power BI.
 
